@@ -267,6 +267,22 @@ pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5
 .tile img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
 textarea.field{height:auto;min-height:140px;padding:10px 12px;font-family:'Geist Mono',monospace;font-size:12.5px;line-height:1.6;resize:vertical}
 .linkbtn{border:0;background:transparent;padding:0;font-family:'Geist Mono',monospace;font-size:12px;color:var(--accent-text)}
+.help{font-size:12px;line-height:1.45;color:var(--faint)}
+.fieldrow{display:flex;gap:8px;align-items:center}.fieldrow .field{flex:1;min-width:0}
+[data-type="shortcut"]:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
+.notes{max-height:220px;overflow:auto;padding:12px 14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line2);font-size:13px;line-height:1.55;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.progress{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .2s ease}
+.updbtn{height:40px;padding:0 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);background:var(--accent-soft);color:var(--accent-text);display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.fieldwrap{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.hotkey{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--input)}
+.hotkey .hk-actions{display:flex;justify-content:flex-end;gap:8px}
+.hotkey.rec{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.hotkey .caps{min-height:32px;display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.hotkey .ph{font-size:13px;color:var(--faint)}
+.hotkey.rec .ph{color:var(--accent-text)}
+kbd{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 9px;border-radius:8px;border:1px solid var(--line);border-bottom-width:3px;background:var(--raised);color:var(--text);font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:500}
+.caps .plus{color:var(--faint);font-size:12px}
 .soon{font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--raised);color:var(--faint)}
 </style>
 </head>
@@ -290,7 +306,10 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 const BUILTIN = 'opendeckn3.builtin';
-const CONFIG_DIR = '~/.config/opendeckn3';
+let CONFIG_DIR = '~/.config/opendeckn3';   // in der Desktop-App: echter Pfad
+const pluginsDir = () => CONFIG_DIR + (CONFIG_DIR.includes('\\') ? '\\plugins' : '/plugins');
+// In der Desktop-App (Tauri) gibt es echte Systemfunktionen statt Kopier-Platzhaltern.
+const desktop = window.__TAURI__ ? (cmd, args) => window.__TAURI__.core.invoke(cmd, args) : null;
 const PROFILE_ID = /^[A-Za-z0-9_\-][A-Za-z0-9_.\-]*$/;
 
 /* ---------- Lokale Einstellungen (nur Komfort, pro Browser) ---------- */
@@ -335,6 +354,16 @@ const ICONS = {
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>',
   duplicate: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>',
+  keyboard: '<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M6.5 14h.01M17 14h.01M9.5 14h5"/>',
+  text: '<path d="M5 7.5V5h14v2.5M12 5v14M9 19h6"/>',
+  volumeDown: '<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>',
+  mute: '<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/>',
+  media: '<path d="M4.5 5.5l8 6.5-8 6.5v-13z"/><path d="M16 6v12M20 6v12"/>',
+  next: '<path d="M5 5.5l9 6.5-9 6.5v-13z"/><path d="M18.5 5.5v13"/>',
+  previous: '<path d="M19 5.5l-9 6.5 9 6.5v-13z"/><path d="M5.5 5.5v13"/>',
+  stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
+  app: '<path d="M13 15l-4-4c1.2-4.5 4.5-7.6 10.5-8.5C18.6 8.5 15.5 11.8 13 15z"/><path d="M9 11l-4.5.5 2.5-4h4M13 15l-.5 4.5 4-2.5v-4M5 19c.5-2 1.5-3 3-3.2"/><circle cx="15.5" cy="8.5" r="1.2"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9M12 3C9.5 5.6 8.2 8.6 8.2 12s1.3 6.4 3.8 9"/>',
   grip: '<g fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></g>'
 };
 const ic = (n, s = 18, sw = 1.75) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ICONS.key}</svg>`;
@@ -343,18 +372,33 @@ const LOGO = (s = 30) => `<svg width="${s}" height="${s}" viewBox="0 0 30 30" ar
 const KCOL = {
   camera: ['#0F2236', '#8CCBFF'], screen: ['#191D3B', '#B3BCFF'], rec: ['#2A1416', '#E7A3A3'],
   counter: ['#0D2927', '#5FF0E2'], terminal: ['#18230F', '#B4EA8A'], mic: ['#2A1832', '#E6B3FF'], profile: ['#22252B', '#D7DBE1'],
-  brightness: ['#2C240E', '#F7D886'], volume: ['#10202D', '#9DD6FF'], grid: ['#1C2A2A', '#5FF0E2'], key: ['#1C2230', '#C9D3E3']
+  brightness: ['#2C240E', '#F7D886'], volume: ['#10202D', '#9DD6FF'], grid: ['#1C2A2A', '#5FF0E2'], key: ['#1C2230', '#C9D3E3'],
+  keyboard: ['#1E2235', '#A5B4FC'], text: ['#231F30', '#C4B5FD'], volumeDown: ['#10202D', '#9DD6FF'], mute: ['#2A1416', '#F7A0A0'],
+  media: ['#0E2A20', '#6EE7B7'], next: ['#0E2A20', '#6EE7B7'], previous: ['#0E2A20', '#6EE7B7'], stop: ['#0E2A20', '#6EE7B7'],
+  app: ['#2B1B0F', '#FDBA74'], globe: ['#0F2236', '#7DD3FC']
 };
 
 /* ---------- Katalog-Hilfen ---------- */
 // Icon-Art aus Plugin-/Aktions-UUID ableiten (Plugins liefern oft kein Icon).
 function kindFor(pluginUuid, actionUuid) {
   const a = (actionUuid || '').toLowerCase();
-  if (pluginUuid === BUILTIN) return a.endsWith('.brightness') ? 'brightness' : 'profile';
+  if (pluginUuid === BUILTIN) {
+    return { brightness: 'brightness', profile: 'profile', hotkey: 'keyboard', text: 'text', volume: 'volume',
+      media: 'media', launch: 'app', url: 'globe', command: 'terminal' }[a.slice(BUILTIN.length + 1)] || 'key';
+  }
   const rules = [['count', 'counter'], ['bright', 'brightness'], ['volume', 'volume'], ['audio', 'volume'], ['mute', 'mic'], ['mic', 'mic'],
     ['record', 'rec'], ['scene', 'camera'], ['obs', 'camera'], ['shell', 'terminal'], ['command', 'terminal'], ['run', 'terminal'], ['profile', 'profile']];
   const hit = rules.find(([k]) => a.includes(k) || (pluginUuid || '').toLowerCase().includes(k));
   return hit ? hit[1] : 'key';
+}
+// Icon für eine belegte Taste – Lautstärke/Medien zeigen ihre gewählte Funktion.
+function kindOf(s, ctl = 'Keypad') {
+  const k = kindFor(s.plugin, s.action);
+  if (s.plugin !== BUILTIN || ctl !== 'Keypad') return k;
+  const mode = s.settings && s.settings.mode;
+  if (k === 'volume') return mode === 'up' ? 'volume' : mode === 'down' ? 'volumeDown' : 'mute';
+  if (k === 'media') return { next: 'next', previous: 'previous', stop: 'stop' }[mode] || 'media';
+  return k;
 }
 const actKey = (plugin, action) => plugin + '::' + action;
 function findAction(plugin, action) {
@@ -367,8 +411,8 @@ function actionByKey(key) {
   return findAction(key.slice(0, i), key.slice(i + 2));
 }
 const ctlOf = (a) => (a && a.controllers && a.controllers.length ? a.controllers : ['Keypad']);
-function tileHTML(plugin, action, iconUrl, size, iconSize, radius = 9) {
-  const kind = kindFor(plugin, action); const c = KCOL[kind];
+function tileHTML(plugin, action, iconUrl, size, iconSize, radius = 9, kind = kindFor(plugin, action)) {
+  const c = KCOL[kind] || KCOL.key;
   const inner = iconUrl ? `<img src="${esc(iconUrl)}" alt="">` : ic(kind, iconSize);
   return `<span class="tile" style="width:${size}px;height:${size}px;border-radius:${radius}px;background:${c[0]};color:${c[1]}">${inner}</span>`;
 }
@@ -386,7 +430,11 @@ const S = {
   sel: 'k0', test: true, pressed: null, flip: false,
   drag: null, over: null, q: '', closed: {}, pluginSel: null, json: false,
   ob: { step: 0, copied: false, placed: false },
-  menu: null, popover: null, modal: null
+  menu: null, popover: null, modal: null,
+  autostart: false,
+  // Updates (nur Desktop-App)
+  appVersion: null, update: null, updCanInstall: false, upd: { busy: false, error: '' },
+  updAuto: local.get('updAuto', true), updPre: local.get('updPre', true), updLast: local.get('updLast', null)
 };
 
 const cur = () => S.devices[S.devId] || S.lost[S.devId] || null;
@@ -401,8 +449,19 @@ const isLive = () => ['virtual', 'connected'].includes(devState());
 const parseId = (id) => ({ c: id[0] === 'k' ? 'keys' : 'encoders', p: +id.slice(1), ctl: id[0] === 'k' ? 'Keypad' : 'Encoder' });
 const slot = (id) => { const d = cur(); if (!d) return null; const { c, p } = parseId(id); return d.profile[c][p] || null; };
 const slotName = (id) => { const { p } = parseId(id); return id[0] === 'k' ? 'K' + p + (p < 6 ? ' · Display' : ' · Taste') : 'E' + p + (p === 1 ? ' · großer Regler' : ' · Drehregler'); };
+// Entspricht builtin::default_label im Dienst (Beschriftung auf dem Gerät).
+function builtinLabel(inst) {
+  const v = (k) => String((inst.settings || {})[k] ?? '').trim();
+  switch (inst.action.slice(BUILTIN.length + 1)) {
+    case 'hotkey': return v('shortcut');
+    case 'profile': return v('profile') ? '→ ' + v('profile') : '';
+    case 'launch': { const n = v('path').replace(/"/g, '').split(/[\\/]/).pop(); return n.replace(/\.[^.]+$/, ''); }
+    case 'url': { const u = v('url'); return (u.split('://')[1] ?? u).split(/[/?#]/)[0].replace(/^www\./, ''); }
+    default: return '';
+  }
+}
 function defaultTitle(inst) {
-  if (inst.plugin === BUILTIN && inst.action.endsWith('.profile')) return '→ ' + (inst.settings.profile || '?');
+  if (inst.plugin === BUILTIN) { const l = builtinLabel(inst); if (l) return l; }
   const f = findAction(inst.plugin, inst.action);
   return f ? f.a.name : inst.action.split('.').pop();
 }
@@ -515,6 +574,7 @@ function onEvent(ev) {
       if (i.type === 'encoderDown' || i.type === 'encoderTwist') flash('e' + i.encoder);
       break;
     }
+    case 'actionError': if (mine) toast('err', `${slotName((ev.controller === 'Keypad' ? 'k' : 'e') + ev.position).split(' ')[0]}: ${ev.message}`); break;
     case 'feedback': if (mine) toast('ok', `Rückmeldung von ${slotName((ev.controller === 'Keypad' ? 'k' : 'e') + ev.position).split(' ')[0]}`); break;
     case 'pluginStatus': {
       const p = S.catalog.find((x) => x.uuid === ev.plugin);
@@ -551,10 +611,9 @@ function viewSlots(d) {
     const f = findAction(s.plugin, s.action);
     const runtime = d.titles[p];
     return {
-      id, pos: p, kind: kindFor(s.plugin, s.action),
-      img: p < 6 ? d.previews[p] : null,
+      id, pos: p, kind: kindOf(s),
+      img: p < 6 ? d.previews[p] : null,   // enthält den Titel bereits (vom Dienst gezeichnet)
       icon: f && f.a.icon,
-      overlay: s.title ?? runtime ?? null,
       title: s.title ?? runtime ?? defaultTitle(s)
     };
   });
@@ -563,7 +622,7 @@ function viewSlots(d) {
     if (!s) return { id, pos: p, empty: true, label: 'Frei', sub: '', value: null };
     const bright = s.plugin === BUILTIN && s.action.endsWith('.brightness');
     return {
-      id, pos: p, kind: kindFor(s.plugin, s.action), label: s.title ?? defaultTitle(s),
+      id, pos: p, kind: kindOf(s, 'Encoder'), label: s.title ?? defaultTitle(s),
       sub: bright ? d.brightness + ' %' : '', value: bright ? d.brightness : null
     };
   });
@@ -595,7 +654,7 @@ function deviceHTML(v, o = {}) {
   const dk = (x) => {
     let inner;
     if (x.empty) inner = `<span class="screen empty">${ic('plus', 22)}</span>`;
-    else if (x.img) inner = `<span class="screen img"><img src="${esc(x.img)}" alt="">${x.overlay ? `<span class="ov">${esc(x.overlay)}</span>` : ''}</span>`;
+    else if (x.img) inner = `<span class="screen img"><img src="${esc(x.img)}" alt=""></span>`;
     else {
       const c = KCOL[x.kind] || KCOL.key;
       const glyph = x.icon ? `<img src="${esc(x.icon)}" alt="" style="width:30px;height:30px">` : ic(x.kind, 26);
@@ -685,6 +744,7 @@ function barHTML() {
       <input type="range" min="0" max="100" value="${bri}" data-in="brightness" ${off ? 'disabled' : ''}>
       <output>${bri} %</output>
     </label>
+    ${S.update ? `<button type="button" class="updbtn" data-act="showUpdate" title="OpenDeckN3 ${esc(S.update.version)} ist verfügbar">${ic('arrow', 15)}Update</button>` : ''}
     <button type="button" class="btn icon" data-act="nav" data-arg="settings" aria-label="Einstellungen" aria-current="${S.route === 'settings' ? 'page' : 'false'}" style="background:var(--panel2);${S.route === 'settings' ? 'color:var(--accent-text)' : ''}">${ic('gear', 18)}</button>
   </header>`;
 }
@@ -747,12 +807,60 @@ function stageInner() {
   });
 }
 
-function settingsEditorHTML(s) {
+// Formular aus dem settingsSchema einer Aktion (eingebaute Aktionen, künftig auch Plugins).
+function schemaFormHTML(s, schema) {
   const d = cur();
-  if (s.plugin === BUILTIN && s.action.endsWith('.profile')) {
-    const list = d.profiles.includes(s.settings.profile) || !s.settings.profile ? d.profiles : [s.settings.profile, ...d.profiles];
-    return `<label>Wechseln zu Profil<select class="field" data-in="profileTarget"><option value="" ${s.settings.profile ? '' : 'selected'} disabled>Profil wählen …</option>${list.map((id) => `<option ${id === s.settings.profile ? 'selected' : ''}>${esc(id)}</option>`).join('')}</select></label>`;
-  }
+  const ctl = parseId(S.sel).ctl;
+  const fields = schema.filter((f) => !f.controllers || f.controllers.includes(ctl));
+  if (!fields.length) return '<div style="font-size:13px;color:var(--faint)">Keine Einstellungen nötig.</div>';
+  return fields.map((f) => {
+    const v = s.settings[f.key] ?? f.default ?? '';
+    const at = `data-in="sfield" data-key="${esc(f.key)}" data-type="${esc(f.type)}"`;
+    const ph = f.placeholder ? `placeholder="${esc(f.placeholder)}"` : '';
+    let input;
+    switch (f.type) {
+      case 'select':
+        input = `<select class="field" ${at}>${f.options.map(([val, l]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
+        break;
+      case 'profile': {
+        const list = d.profiles.includes(v) || !v ? d.profiles : [v, ...d.profiles];
+        input = `<select class="field" ${at}><option value="" ${v ? '' : 'selected'} disabled>Profil wählen …</option>${list.map((id) => `<option ${id === v ? 'selected' : ''}>${esc(id)}</option>`).join('')}</select>`;
+        break;
+      }
+      case 'number':
+        input = `<input class="field" type="number" ${at} value="${esc(v)}" min="${f.min ?? ''}" max="${f.max ?? ''}">`;
+        break;
+      case 'shortcut': {
+        // Recorder statt Textfeld: Kombination wird per Tastendruck festgelegt.
+        const rec = S.rec === f.key;
+        const caps = rec
+          ? (S.recPreview ? capsHTML(S.recPreview) + '<span class="ph">+ …</span>' : '<span class="ph pulse">Drücke jetzt die Tastenkombination …</span>')
+          : v ? capsHTML(String(v)) : '<span class="ph">Noch keine Taste festgelegt</span>';
+        const buttons = rec
+          ? `<button type="button" class="btn ghost" data-act="cancelRec">Abbrechen</button>`
+          : `<button type="button" class="btn" data-act="startRec" data-arg="${esc(f.key)}">${ic('keyboard', 16)}${v ? 'Neu aufnehmen' : 'Aufnehmen'}</button>${v
+            ? `<button type="button" class="btn icon" data-act="clearField" data-arg="${esc(f.key)}" aria-label="Leeren" title="Leeren">${ic('x', 16)}</button>` : ''}`;
+        return `<div class="fieldwrap">${esc(f.label)}<div class="hotkey ${rec ? 'rec' : ''}" role="group" aria-label="${esc(f.label)}">
+          <div class="caps" aria-live="polite">${caps}</div><div class="hk-actions">${buttons}</div></div>${f.help ? `<span class="help">${esc(f.help)}</span>` : ''}</div>`;
+      }
+      case 'file':
+        input = `<span class="fieldrow"><input class="field mono" ${at} value="${esc(v)}" ${ph} spellcheck="false">${desktop
+          ? `<button type="button" class="btn" data-act="browseFile" data-arg="${esc(f.key)}">${ic('folder', 16)}Durchsuchen …</button>` : ''}</span>`;
+        break;
+      case 'textarea':
+        input = `<textarea class="field" ${at} ${ph} rows="3" style="min-height:84px;font-family:inherit">${esc(v)}</textarea>`;
+        break;
+      default:
+        input = `<input class="field" ${at} value="${esc(v)}" ${ph} spellcheck="false">`;
+    }
+    return `<label>${esc(f.label)}${input}${f.help ? `<span class="help">${esc(f.help)}</span>` : ''}</label>`;
+  }).join('');
+}
+
+function settingsEditorHTML(s) {
+  const f = findAction(s.plugin, s.action);
+  const schema = f && f.a.settingsSchema;
+  if (schema && !S.json) return schemaFormHTML(s, schema);
   if (S.json) {
     return `<textarea class="field" data-in="json" spellcheck="false" aria-label="Einstellungen als JSON">${esc(JSON.stringify(s.settings, null, 2))}</textarea><div class="err" id="jsonErr"></div>`;
   }
@@ -786,10 +894,10 @@ function inspectorHTML() {
   const preview = isDisplay && d.previews[pos];
   const warn = !p ? 'Plugin ist nicht installiert – die Belegung bleibt erhalten.'
     : !p.connected ? 'Plugin läuft nicht – die Belegung bleibt erhalten.' : '';
-  const isProfile = s.plugin === BUILTIN && s.action.endsWith('.profile');
+  const isProfile = false;
   return `<aside class="insp" id="insp" aria-label="Inspektor">${head}
     <div style="display:flex;gap:14px;align-items:center">
-      ${tileHTML(s.plugin, s.action, f && f.a.icon, 52, 26, 14)}
+      ${tileHTML(s.plugin, s.action, f && f.a.icon, 52, 26, 14, kindOf(s, parseId(S.sel).ctl))}
       <div style="min-width:0;display:flex;flex-direction:column;gap:3px">
         <b style="font-size:18px;font-weight:600">${esc(name)}</b>
         <span style="font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px"><span class="dot" style="width:7px;height:7px;background:${p && p.connected ? 'var(--ok)' : 'var(--faint)'}"></span>${esc(p ? p.name : s.plugin)}${p ? ' · v' + esc(p.version) : ''}</span>
@@ -800,7 +908,7 @@ function inspectorHTML() {
     <section><h3>Darstellung</h3>
       <label>Titel<input class="field" data-in="title" value="${esc(s.title ?? '')}" placeholder="${esc(defaultTitle(s))}"></label>
       ${isDisplay ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px">
-        ${preview ? `<span class="tile" style="width:56px;height:56px;border-radius:10px;overflow:hidden"><img src="${esc(preview)}" alt="Aktuelles Tastenbild"></span>` : tileHTML(s.plugin, s.action, f && f.a.icon, 56, 24, 10)}
+        ${preview ? `<span class="tile" style="width:56px;height:56px;border-radius:10px;overflow:hidden"><img src="${esc(preview)}" alt="Aktuelles Tastenbild"></span>` : tileHTML(s.plugin, s.action, f && f.a.icon, 56, 24, 10, kindOf(s))}
         <button type="button" class="btn" data-act="pickImage">${ic('image', 16)}Bild wählen</button>
         <button type="button" class="btn ghost" data-act="resetImage" ${s.image ? '' : 'disabled'}>Zurücksetzen</button>
       </div>` : ''}
@@ -871,10 +979,13 @@ function offlineHTML() {
   return `<main class="blank"><div role="alert" style="max-width:520px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center">
     <span class="tile" style="width:72px;height:72px;border-radius:22px;background:color-mix(in srgb,var(--err) 12%,transparent);border:1px solid color-mix(in srgb,var(--err) 35%,transparent);color:var(--err)">${ic('plug', 32)}</span>
     <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-.02em">${connecting ? 'Verbinde mit dem Dienst …' : 'Dienst läuft nicht'}</h1>
-    <p style="margin:0;font-size:16px;line-height:1.6;color:var(--muted)">Die Oberfläche erreicht den Hintergrunddienst unter <span class="mono" style="color:var(--text)">ws://127.0.0.1:${esc(S.port)}</span> nicht. Starte <span class="mono" style="color:var(--text)">opendeckn3d</span> oder prüfe den API-Port in den Einstellungen.</p>
+    <p style="margin:0;font-size:16px;line-height:1.6;color:var(--muted)">${desktop
+      ? `Der eingebaute Dienst ist unter <span class="mono" style="color:var(--text)">ws://127.0.0.1:${esc(S.port)}</span> nicht erreichbar. Ursache steht im Log – oft belegt ein anderes Programm den Port.`
+      : `Die Oberfläche erreicht den Hintergrunddienst unter <span class="mono" style="color:var(--text)">ws://127.0.0.1:${esc(S.port)}</span> nicht. Starte <span class="mono" style="color:var(--text)">opendeckn3d</span> oder prüfe den API-Port in den Einstellungen.`}</p>
     <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px">
       <button type="button" class="btn primary lg" data-act="retry">${ic('refresh', 16)}Erneut verbinden</button>
-      <button type="button" class="btn lg" data-act="copyStart">${ic('copy', 16)}Startbefehl kopieren</button>
+      ${desktop ? `<button type="button" class="btn lg" data-act="openLog">${ic('file', 16)}Log öffnen</button>`
+        : `<button type="button" class="btn lg" data-act="copyStart">${ic('copy', 16)}Startbefehl kopieren</button>`}
     </div>
     <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)"><span class="spin" style="border-top-color:var(--warn)"></span>Automatischer Versuch alle 5 s</div>
   </div></main>`;
@@ -902,7 +1013,7 @@ function pluginsHTML() {
           <span style="display:flex;align-items:center;gap:8px;width:100%;font-size:13px">${stateEl(p)}<span style="color:var(--muted)">${n} ${n === 1 ? 'Aktion' : 'Aktionen'}</span><span class="chip" style="margin-left:auto;font-size:11px;padding:2px 8px">${esc(p.category)}</span></span>
         </button>`;
       }).join('')}</div>
-      <p style="margin:0;font-size:13px;color:var(--faint)">Plugins liegen in <span class="mono" style="color:var(--muted)">${CONFIG_DIR}/plugins/</span> und sprechen das OpenDeck-/Stream-Deck-Plugin-Protokoll (docs/PLUGIN_API.md).</p>
+      <p style="margin:0;font-size:13px;color:var(--faint)">Plugins liegen in <span class="mono" style="color:var(--muted)">${esc(pluginsDir())}</span> und sprechen das OpenDeck-/Stream-Deck-Plugin-Protokoll (docs/PLUGIN_API.md).</p>
     </main>
     ${dp ? `<aside class="detail" aria-label="Plugin-Details">
       <div style="display:flex;align-items:center;gap:14px">
@@ -923,7 +1034,8 @@ function pluginsHTML() {
         </div>`).join('')}
       </div>
       <div style="margin-top:auto;display:flex;flex-wrap:wrap;gap:10px">
-        <button type="button" class="btn" data-act="copyPath" data-arg="${CONFIG_DIR}/plugins">${ic('folder', 16)}Pfad kopieren</button>
+        ${desktop ? `<button type="button" class="btn" data-act="openPluginsDir">${ic('folder', 16)}Ordner öffnen</button>`
+          : `<button type="button" class="btn" data-act="copyPath" data-arg="${esc(pluginsDir())}">${ic('folder', 16)}Pfad kopieren</button>`}
       </div>
     </aside>` : ''}
   </div>`;
@@ -936,14 +1048,17 @@ function settingsHTML() {
   const soon = '<span class="soon">folgt</span>';
   return `<div class="settings">
     <nav class="snav" aria-label="Einstellungsbereiche"><h1 style="margin:0 0 14px 10px">Einstellungen</h1>
-      ${nav('allgemein', 'gear', 'Allgemein')}${nav('geraete', 'usb', 'Geräte')}${nav('erweitert', 'terminal', 'Erweitert')}${nav('ueber', 'info', 'Über')}
+      ${nav('allgemein', 'gear', 'Allgemein')}${nav('geraete', 'usb', 'Geräte')}${desktop ? nav('updates', 'refresh', 'Updates') : ''}${nav('erweitert', 'terminal', 'Erweitert')}${nav('ueber', 'info', 'Über')}
     </nav>
     <div class="sbody">
       <section class="scard" id="allgemein"><h2>Allgemein</h2>
         <div class="srow"><div class="t"><b>Sprache</b><span>Englisch folgt mit i18n</span></div><select class="field" disabled style="min-width:180px"><option>Deutsch</option></select></div>
         <div class="srow"><div class="t"><b>Theme</b><span>Dunkel ist Standard</span></div>${seg('theme', S.theme, [['dark', 'Dunkel'], ['light', 'Hell'], ['system', 'System']])}</div>
-        <div class="srow"><div class="t"><b>Beim Anmelden starten ${soon}</b><span>Kommt mit der Desktop-App (Meilenstein M1)</span></div>
-          <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Beim Anmelden starten" disabled style="opacity:.45"><span></span></button></div>
+        ${desktop
+          ? `<div class="srow"><div class="t"><b>Beim Anmelden starten</b><span>Startet unsichtbar im Infobereich (Tray)</span></div>
+          <button type="button" class="switch" role="switch" aria-checked="${S.autostart}" aria-label="Beim Anmelden starten" data-act="autostart"><span></span></button></div>`
+          : `<div class="srow"><div class="t"><b>Beim Anmelden starten ${soon}</b><span>Nur in der Desktop-App verfügbar</span></div>
+          <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Beim Anmelden starten" disabled style="opacity:.45"><span></span></button></div>`}
         <div class="srow"><div class="t"><b>Einrichtung</b><span>Assistent für den ersten Start erneut öffnen</span></div><button type="button" class="btn" data-act="restartOnboarding">${ic('play', 16)}Starten</button></div>
       </section>
       <section class="scard" id="geraete"><h2>Geräte</h2>
@@ -953,16 +1068,28 @@ function settingsHTML() {
           <select class="field" disabled style="min-width:180px"><option>Nie</option></select></div>
         <div class="srow"><div class="t"><b>Gehäusefarbe in der Vorschau</b><span>Passend zu deinem Gerät</span></div>${seg('finish', S.finish, [['dunkel', 'Dunkel'], ['weiss', 'Weiß']])}</div>
       </section>
+      ${desktop ? `<section class="scard" id="updates"><h2>Updates</h2>
+        <div class="srow"><div class="t"><b>Version ${esc(S.appVersion || '…')}</b><span>${S.update ? `Neu verfügbar: <b style="color:var(--accent-text)">${esc(S.update.version)}</b>` : S.updLast ? 'Zuletzt geprüft: ' + esc(new Date(S.updLast).toLocaleString('de-DE')) : 'Noch nicht geprüft'}</span></div>
+          ${S.update ? `<button type="button" class="btn primary" data-act="showUpdate">${ic('arrow', 16)}Update anzeigen</button>` : `<button type="button" class="btn" data-act="checkUpdates">${ic('refresh', 16)}Nach Updates suchen</button>`}</div>
+        <div class="srow"><div class="t"><b>Automatisch nach Updates suchen</b><span>Beim Start und alle 6 Stunden – du wirst immer gefragt</span></div>
+          <button type="button" class="switch" role="switch" aria-checked="${S.updAuto}" aria-label="Automatisch nach Updates suchen" data-act="toggleUpdAuto"><span></span></button></div>
+        <div class="srow"><div class="t"><b>Vorabversionen einbeziehen</b><span>Alpha- und Beta-Versionen mit den neuesten Funktionen</span></div>
+          <button type="button" class="switch" role="switch" aria-checked="${S.updPre}" aria-label="Vorabversionen einbeziehen" data-act="toggleUpdPre"><span></span></button></div>
+      </section>` : ''}
       <section class="scard" id="erweitert"><h2>Erweitert</h2>
         <div class="srow"><label class="t" for="port"><b>UI-API-Port</b><span>Bindet nur an 127.0.0.1 · Standard ${DEFAULT_API_PORT}</span></label>
           <input id="port" class="field mono" inputmode="numeric" value="${esc(S.port)}" data-in="port" style="width:120px"></div>
-        <div class="srow"><div class="t"><b>Konfigurationsordner</b><span class="mono" style="font-size:12px">${CONFIG_DIR}</span></div><button type="button" class="btn" data-act="copyPath" data-arg="${CONFIG_DIR}">${ic('copy', 16)}Pfad kopieren</button></div>
-        <div class="srow"><div class="t"><b>Protokoll</b><span>Ausführliches Log: <span class="mono">RUST_LOG=debug opendeckn3d</span></span></div><button type="button" class="btn" data-act="copyStart" data-arg="debug">${ic('copy', 16)}Befehl kopieren</button></div>
+        <div class="srow"><div class="t"><b>Konfigurationsordner</b><span class="mono" style="font-size:12px">${esc(CONFIG_DIR)}</span></div>${desktop
+          ? `<button type="button" class="btn" data-act="openConfigDir">${ic('folder', 16)}Öffnen</button>`
+          : `<button type="button" class="btn" data-act="copyPath" data-arg="${esc(CONFIG_DIR)}">${ic('copy', 16)}Pfad kopieren</button>`}</div>
+        ${desktop
+          ? `<div class="srow"><div class="t"><b>Protokoll</b><span>opendeckn3.log im Konfigurationsordner · Details mit Umgebungsvariable <span class="mono">RUST_LOG=debug</span></span></div><button type="button" class="btn" data-act="openLog">${ic('file', 16)}Log öffnen</button></div>`
+          : `<div class="srow"><div class="t"><b>Protokoll</b><span>Ausführliches Log: <span class="mono">RUST_LOG=debug opendeckn3d</span></span></div><button type="button" class="btn" data-act="copyStart" data-arg="debug">${ic('copy', 16)}Befehl kopieren</button></div>`}
       </section>
       <section class="scard" id="ueber" style="padding:20px;display:flex;flex-wrap:wrap;gap:20px;align-items:center">
         ${LOGO(56)}
         <div style="flex:1 1 300px;display:flex;flex-direction:column;gap:6px">
-          <b style="font-size:16px;font-weight:600">OpenDeckN3 <span class="mono" style="font-size:13px;font-weight:400;color:var(--muted)">v0.1.0</span></b>
+          <b style="font-size:16px;font-weight:600">OpenDeckN3 <span class="mono" style="font-size:13px;font-weight:400;color:var(--muted)">v${esc(S.appVersion || '0.1.0')}</span></b>
           <span style="font-size:13px;color:var(--muted);line-height:1.6">Lizenz GPL-3.0-or-later. Mit Dank an <a href="https://github.com/nekename/OpenDeck" target="_blank" rel="noopener">OpenDeck</a> und <a href="https://github.com/4ndv/opendeck-akp03" target="_blank" rel="noopener">opendeck-akp03</a>; HID über <span class="mono">mirajazz</span> (MPL-2.0).</span>
         </div>
       </section>
@@ -1075,7 +1202,30 @@ function renderOverlay() {
       <div style="display:flex;justify-content:flex-end;gap:10px"><button type="button" class="btn ghost" data-act="closeModal">Abbrechen</button><button type="button" class="btn danger" data-act="confirmDelete" id="confirmDelete">${ic('trash', 16)}Löschen</button></div>
     </div></div>`;
   }
+  if (S.modal && S.modal.kind === 'update' && S.update) {
+    const u = S.update, b = S.upd;
+    const notes = esc(u.notes || 'Keine Beschreibung.').replace(/^#+\s*(.+)$/gm, '<b>$1</b>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    const auto = S.updCanInstall && u.installerUrl;
+    let body;
+    if (b.done) body = `<div style="display:flex;align-items:center;gap:10px;color:var(--ok)">${ic('check', 18, 2.25)}Installer gestartet – OpenDeckN3 startet gleich neu.</div>`;
+    else if (b.busy) body = `<div style="display:flex;flex-direction:column;gap:8px"><div class="progress"><span id="updBar"></span></div>
+        <div id="updText" style="font-size:13px;color:var(--muted)">Lade herunter …</div></div>`;
+    else body = `<div style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px">
+        <button type="button" class="btn ghost" data-act="updateSkip">Überspringen</button>
+        <button type="button" class="btn ghost" data-act="closeModal">Später</button>
+        ${auto ? `<button type="button" class="btn primary" data-act="updateInstall" id="updGo">${ic('arrow', 16)}Jetzt aktualisieren</button>`
+          : `<button type="button" class="btn primary" data-act="updateOpenPage" id="updGo">${ic('external', 16)}Zur Download-Seite</button>`}</div>`;
+    html += `<div class="scrim" data-act="closeModal"><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgT" style="max-width:540px">
+      <div style="display:flex;align-items:center;gap:12px">${LOGO(40)}<div><h2 id="dlgT">Update verfügbar</h2>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px">OpenDeckN3 <b style="color:var(--text)">${esc(u.version)}</b>${u.prerelease ? ' <span class="badge virt">Vorabversion</span>' : ''} · du nutzt ${esc(S.appVersion || '?')}</div></div></div>
+      <div class="notes">${notes}</div>
+      ${b.error ? `<div class="err">${esc(b.error)}</div>` : ''}
+      ${body}
+      ${!b.busy && !b.done && auto ? '<div style="font-size:12px;color:var(--faint)">Der Installer wird von GitHub geladen, per Prüfsumme verifiziert und startet OpenDeckN3 danach neu. Deine Profile bleiben erhalten.</div>' : ''}
+    </div></div>`;
+  }
   $('#overlay').innerHTML = html;
+  if (S.modal && S.modal.kind === 'update' && $('#updGo')) $('#updGo').focus();
   if (S.modal && S.modal.kind === 'new') { const i = $('#newProfileName'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
   if (S.modal && S.modal.kind === 'delete') $('#confirmDelete').focus();
   if (S.menu) { const m = $('.ctx'); const r = m.getBoundingClientRect(); if (r.right > innerWidth - 8) m.style.left = (innerWidth - r.width - 8) + 'px'; if (r.bottom > innerHeight - 8) m.style.top = (innerHeight - r.height - 8) + 'px'; }
@@ -1174,7 +1324,21 @@ const ACTS = {
   test() { S.test = !S.test; render(); },
   group(arg) { S.closed[arg] = !S.closed[arg]; $('#liblist').innerHTML = libListHTML(); },
   clear() { clearSlot(S.sel); },
-  jsonMode() { S.json = !S.json; render(); },
+  jsonMode() { S.json = !S.json; S.rec = null; render(); },
+  startRec(key) { startRec(key); },
+  cancelRec() { stopRec(); },
+  clearField(key) {
+    const s = slot(S.sel); if (!s) return;
+    s.settings = { ...s.settings, [key]: '' }; render(); sendSettings(S.sel, s.settings);
+  },
+  async browseFile(key) {
+    const s = slot(S.sel); if (!s) return;
+    try {
+      const path = await desktop('plugin:dialog|open', { options: { title: 'Programm oder Datei wählen', multiple: false, directory: false } });
+      if (!path) return;
+      s.settings = { ...s.settings, [key]: String(path) }; render(); sendSettings(S.sel, s.settings);
+    } catch (e) { toast('err', 'Dateiauswahl: ' + e); }
+  },
   pickImage() {
     const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*';
     i.onchange = async () => {
@@ -1201,11 +1365,43 @@ const ACTS = {
     const { profile, next } = S.modal; S.modal = null; renderOverlay();
     try { await switchProfile(next); await api.run('deleteProfile', { device: S.devId, profile }); toast('ok', `Profil „${profile}“ gelöscht`); } catch { /* Toast */ }
   },
-  closeModal(arg, e) { if (e && e.target.closest('.dialog') && !e.target.closest('[data-act="closeModal"].btn')) return; S.modal = null; renderOverlay(); },
+  closeModal(arg, e) {
+    if (e && e.target.closest('.dialog') && !e.target.closest('[data-act="closeModal"].btn')) return;
+    if (S.upd.busy || S.upd.done) return; // Update läuft
+    S.modal = null; renderOverlay();
+  },
+  showUpdate() { S.upd = { busy: false, error: '' }; S.modal = { kind: 'update' }; renderOverlay(); },
+  checkUpdates() { checkUpdates(true); },
+  toggleUpdAuto() { S.updAuto = !S.updAuto; local.set('updAuto', S.updAuto); render(); },
+  toggleUpdPre() { S.updPre = !S.updPre; local.set('updPre', S.updPre); S.update = null; render(); },
+  updateSkip() { local.set('updSkip', S.update.version); S.update = null; S.modal = null; renderOverlay(); render(); },
+  updateOpenPage() { desktop('plugin:opener|open_url', { url: S.update.htmlUrl }).catch((e) => toast('err', String(e))); },
+  async updateInstall() {
+    S.upd = { busy: true, error: '' }; renderOverlay();
+    try {
+      await desktop('update_install', { update: S.update });
+      S.upd = { busy: false, done: true, error: '' };
+    } catch (e) {
+      S.upd = { busy: false, error: String(e) };
+    }
+    renderOverlay();
+  },
   menuEdit() { S.menu = null; renderOverlay(); const i = $('[data-in="title"]'); if (i) i.focus(); },
   menuClear() { const id = S.menu.id; S.menu = null; S.sel = id; renderOverlay(); clearSlot(id); },
   plugin(arg) { S.pluginSel = arg; render(); },
-  install() { toast('warn', `Installation per Datei folgt in M1 – bis dahin Plugin nach ${CONFIG_DIR}/plugins kopieren und Dienst neu starten`); },
+  install() { toast('warn', `Installation per Datei folgt – bis dahin Plugin nach ${pluginsDir()} kopieren und OpenDeckN3 neu starten`); },
+  openConfigDir() { desktop('open_config_dir').catch((e) => toast('err', String(e))); },
+  openPluginsDir() { desktop('open_plugins_dir').catch((e) => toast('err', String(e))); },
+  openLog() { desktop('open_log').catch((e) => toast('err', String(e))); },
+  async autostart() {
+    const want = !S.autostart;
+    try {
+      await desktop(want ? 'plugin:autostart|enable' : 'plugin:autostart|disable');
+      S.autostart = await desktop('plugin:autostart|is_enabled');
+      toast('ok', S.autostart ? 'Startet ab jetzt beim Anmelden' : 'Autostart ausgeschaltet');
+    } catch (e) { toast('err', 'Autostart: ' + e); }
+    render();
+  },
   copyPath(arg) { copy(arg, 'Pfad'); },
   copyStart(arg) { copy(arg === 'debug' ? 'RUST_LOG=debug opendeckn3d' : 'opendeckn3d', 'Befehl'); },
   retry() { S.conn = 'connecting'; render(); api.connect(); },
@@ -1229,7 +1425,12 @@ const ACTS = {
 };
 
 /* ---------- Ereignisse ---------- */
+document.addEventListener('keyup', (e) => {
+  // Die Windows-Taste allein (Startmenü) ist auch ein gültiges Kürzel.
+  if (S.rec && (e.key === 'Meta' || e.key === 'OS') && S.recPreview === 'Win') { e.preventDefault(); commitRec('Win'); }
+}, true);
 document.addEventListener('click', (e) => {
+  if (S.rec && !e.target.closest('.hotkey')) { stopRec(); }
   if (S.menu && !e.target.closest('.ctx')) { S.menu = null; renderOverlay(); }
   if (S.popover && !e.target.closest('.popover') && !e.target.closest('[data-act="popover"]')) { S.popover = null; render(); }
   const slotEl = e.target.closest('[data-slot]');
@@ -1260,6 +1461,12 @@ document.addEventListener('input', (e) => {
   if (k === 'q') { S.q = t.value; $('#liblist').innerHTML = libListHTML(); }
   else if (k === 'brightness' && d) { d.brightness = clamp(+t.value, 0, 100); syncBrightness(t); sendBrightness(d.brightness); }
   else if (k === 'title') { const s = slot(S.sel); if (!s) return; s.title = t.value || null; renderStage(); sendAppearance(S.sel, s); }
+  else if (k === 'sfield' && t.dataset.type !== 'shortcut') {
+    const s = slot(S.sel); if (!s) return;
+    let v = t.value;
+    if (t.dataset.type === 'number') { if (v.trim() === '' || isNaN(+v)) return; v = +v; }
+    s.settings = { ...s.settings, [t.dataset.key]: v }; renderStage(); sendSettings(S.sel, s.settings);
+  }
   else if (k === 'setting') {
     const s = slot(S.sel); if (!s) return;
     const old = s.settings[t.dataset.key];
@@ -1300,9 +1507,61 @@ document.addEventListener('submit', (e) => {
   switchProfile(v).then(() => toast('ok', `Profil „${v}“ angelegt`)).catch(() => {});
 });
 
+// Anzeige mit deutschen Tastennamen; gespeichert wird „Ctrl+Shift+M“ (der Dienst versteht beides).
+const KEY_DE = { Ctrl: 'Strg', Shift: 'Umschalt', Delete: 'Entf', Space: 'Leertaste', Insert: 'Einfg', Home: 'Pos1', End: 'Ende',
+  PageUp: 'Bild ↑', PageDown: 'Bild ↓', Up: '↑', Down: '↓', Left: '←', Right: '→', Backspace: '⌫', Enter: 'Enter ↵' };
+const capsHTML = (combo) => combo.split(' ').map((chord) => chord.split('+').map((k) => `<kbd>${esc(KEY_DE[k] || k)}</kbd>`).join('<span class="plus">+</span>')).join('<span class="plus">&nbsp;dann&nbsp;</span>');
+const modsOf = (e) => [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Win'].filter(Boolean);
+function startRec(key) { S.rec = key; S.recPreview = ''; S.recOther = false; render(); }
+function stopRec() { S.rec = null; S.recPreview = ''; render(); }
+function commitRec(combo) {
+  const key = S.rec; const s = slot(S.sel);
+  S.rec = null; S.recPreview = '';
+  if (!s || !key) { render(); return; }
+  s.settings = { ...s.settings, [key]: combo };
+  render(); renderStage();
+  api.run('setActionSettings', { ...slotParams(S.sel), settings: s.settings }).catch(() => {});
+}
+// Tastenkürzel-Recorder: gedrückte Kombination in Text wie „Ctrl+Shift+M“ übersetzen.
+function comboFromEvent(e) {
+  if (['Control', 'Shift', 'Alt', 'Meta', 'AltGraph', 'OS'].includes(e.key)) return null;
+  const mods = [];
+  if (e.ctrlKey) mods.push('Ctrl');
+  if (e.altKey) mods.push('Alt');
+  if (e.shiftKey) mods.push('Shift');
+  if (e.metaKey) mods.push('Win');
+  const named = { ' ': 'Space', Enter: 'Enter', Escape: 'Esc', Tab: 'Tab', Backspace: 'Backspace', Delete: 'Delete', Insert: 'Insert',
+    Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left',
+    ArrowRight: 'Right', CapsLock: 'CapsLock', PrintScreen: 'PrintScreen', Pause: 'Pause', AudioVolumeUp: 'VolumeUp',
+    AudioVolumeDown: 'VolumeDown', AudioVolumeMute: 'VolumeMute', MediaPlayPause: 'PlayPause', MediaTrackNext: 'Next', MediaTrackPrevious: 'Prev' };
+  let name = named[e.key] || (/^F\d{1,2}$/.test(e.key) ? e.key : null);
+  if (!name) {
+    if (/^Key[A-Z]$/.test(e.code)) name = e.code.slice(3);
+    else if (/^Digit\d$/.test(e.code)) name = e.code.slice(5);
+    else if (e.code === 'NumpadAdd' || e.key === '+') name = 'Plus';
+    else if (e.code === 'NumpadSubtract' || e.key === '-') name = 'Minus';
+    else if (e.key.length === 1) name = e.key.toUpperCase();
+    else return null;
+  }
+  return [...mods, name].join('+');
+}
 document.addEventListener('keydown', (e) => {
+  if (S.rec) {
+    // Aufnahme läuft: jede Taste gehört dem Recorder, nichts wird getippt.
+    e.preventDefault(); e.stopPropagation();
+    if (e.repeat) return;
+    if (e.key === 'Escape' && !modsOf(e).length) { stopRec(); return; }
+    const combo = comboFromEvent(e);
+    if (!combo) { // nur Zusatztaste gedrückt – live anzeigen und auf die eigentliche Taste warten
+      const preview = modsOf(e).join('+');
+      if (preview !== S.recPreview) { S.recPreview = preview; render(); }
+      return;
+    }
+    commitRec(combo);
+    return;
+  }
   if (e.key === 'Escape') {
-    if (S.modal) { S.modal = null; renderOverlay(); return; }
+    if (S.modal) { if (!S.upd.busy && !S.upd.done) { S.modal = null; renderOverlay(); } return; }
     if (S.menu) { S.menu = null; renderOverlay(); return; }
     if (S.popover) { S.popover = null; render(); return; }
   }
@@ -1311,7 +1570,7 @@ document.addEventListener('keydown', (e) => {
   if (!(e.target.closest && e.target.closest('.device [data-slot]'))) return;
   if (e.key.startsWith('Arrow')) { e.preventDefault(); moveSel(e.key); S.json = false; render(); }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); clearSlot(S.sel); }
-});
+}, true); // Capture-Phase: der Recorder bekommt Tasten vor allen anderen Handlern
 
 document.addEventListener('wheel', (e) => {
   const b = e.target.closest && e.target.closest('[data-enc]');
@@ -1363,9 +1622,56 @@ document.addEventListener('dragend', () => { if (S.drag) { S.drag = null; S.over
 
 matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (S.theme === 'system') applyTheme(); });
 
+// Desktop-App: echte Pfade/Autostart laden, externe Links im Standardbrowser öffnen.
+async function initDesktop() {
+  if (!desktop) return;
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[target="_blank"]');
+    if (!a) return;
+    e.preventDefault();
+    desktop('plugin:opener|open_url', { url: a.href }).catch((err) => toast('err', String(err)));
+  }, true);
+  try { const p = await desktop('desktop_paths'); CONFIG_DIR = p.config; S.appVersion = p.version; } catch { /* Standardpfad bleibt */ }
+  try { S.autostart = await desktop('plugin:autostart|is_enabled'); } catch { /* bleibt aus */ }
+  window.__TAURI__.event.listen('update-progress', ({ payload }) => {
+    const bar = $('#updBar'), text = $('#updText'); if (!bar) return;
+    const mb = (n) => (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+    const pct = payload.total ? Math.floor(payload.downloaded * 100 / payload.total) : null;
+    bar.style.width = (pct ?? 50) + '%';
+    text.textContent = pct === null ? `Lade herunter … ${mb(payload.downloaded)}` : `Lade herunter … ${pct} % (${mb(payload.downloaded)} von ${mb(payload.total)})`;
+  });
+  render();
+  // Beim Start (kurz verzögert) und alle 6 Stunden – gefragt wird immer.
+  setTimeout(() => { if (S.updAuto) checkUpdates(false); }, 8000);
+  setInterval(() => { if (S.updAuto) checkUpdates(false); }, 6 * 3600 * 1000);
+}
+
+// Fragt GitHub nach neuen Releases (über die Desktop-App, die den Download auch prüft).
+async function checkUpdates(manual) {
+  if (!desktop) return;
+  try {
+    const r = await desktop('update_check', { includePrerelease: S.updPre });
+    S.updLast = new Date().toISOString(); local.set('updLast', S.updLast);
+    S.updCanInstall = r.canInstall;
+    const u = r.update;
+    if (u && (manual || u.version !== local.get('updSkip', null))) {
+      const isNew = !S.update || S.update.version !== u.version;
+      S.update = u;
+      // Nicht mitten ins Onboarding oder einen anderen Dialog platzen.
+      if ((manual || isNew) && !S.modal && S.route !== 'onboarding') ACTS.showUpdate();
+    } else if (manual) {
+      toast('ok', `Du hast die neueste Version (${r.current})`);
+    }
+    render();
+  } catch (e) {
+    if (manual) toast('err', 'Update-Prüfung fehlgeschlagen: ' + e);
+  }
+}
+
 applyTheme();
 render();
 api.connect();
+initDesktop();
 </script>
 </body>
 </html>

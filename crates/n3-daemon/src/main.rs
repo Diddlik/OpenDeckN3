@@ -1,19 +1,10 @@
-//! `opendeckn3d` – the OpenDeckN3 background service.
-
-mod api;
-mod app;
-mod builtin;
-mod render;
-mod store;
-mod ui_server;
+//! `opendeckn3d` – the OpenDeckN3 service on the command line (Linux, headless,
+//! development). The desktop app embeds the same service, see `n3-desktop`.
 
 use std::path::PathBuf;
 
-use anyhow::Context;
 use clap::Parser;
-use n3_plugin::PluginHost;
-use serde_json::json;
-use tokio::sync::{broadcast, mpsc};
+use n3_daemon::{DEFAULT_API_PORT, DEFAULT_PLUGIN_PORT, DEFAULT_UI_PORT, Options};
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
 
@@ -31,13 +22,13 @@ struct Args {
     #[arg(long = "plugins-dir", value_name = "DIR")]
     plugins_dirs: Vec<PathBuf>,
     /// Port of the plugin WebSocket (Stream Deck SDK protocol).
-    #[arg(long, default_value_t = 57130)]
+    #[arg(long, default_value_t = DEFAULT_PLUGIN_PORT)]
     plugin_port: u16,
     /// Port of the UI WebSocket API.
-    #[arg(long, default_value_t = 57131)]
+    #[arg(long, default_value_t = DEFAULT_API_PORT)]
     api_port: u16,
     /// Port of the bundled web UI (http://127.0.0.1:<port>/).
-    #[arg(long, default_value_t = 57132)]
+    #[arg(long, default_value_t = DEFAULT_UI_PORT)]
     ui_port: u16,
     /// Do not serve the bundled web UI.
     #[arg(long)]
@@ -68,120 +59,49 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let config_dir = match args.config_dir {
         Some(dir) => dir,
-        None => dirs::config_dir()
-            .context("no config directory on this platform")?
-            .join("opendeckn3"),
+        None => n3_daemon::default_config_dir()?,
     };
     let ui_url = format!("http://127.0.0.1:{}/", args.ui_port);
 
-    // Single instance: a second start (e.g. via the Start menu) just opens the UI.
-    if std::net::TcpListener::bind(("127.0.0.1", args.api_port)).is_err() {
+    // Single instance: a second start just opens the UI.
+    if n3_daemon::is_running(args.api_port) {
         if args.open {
             tracing::info!("service already running, opening UI");
-            return app::open_url(&ui_url);
+            return n3_daemon::open_url(&ui_url);
         }
         anyhow::bail!(
-            "port {} is in use – is opendeckn3d already running?",
+            "port {} is in use – is OpenDeckN3 already running?",
             args.api_port
         );
     }
 
-    let default_plugins_dir = config_dir.join("plugins");
-    std::fs::create_dir_all(&default_plugins_dir)?;
-    let mut plugins_dirs = vec![default_plugins_dir];
-    plugins_dirs.extend(args.plugins_dirs.iter().cloned());
-    tracing::info!(config = %config_dir.display(), ?plugins_dirs, "starting");
+    let opts = Options {
+        extra_plugin_dirs: args.plugins_dirs,
+        plugin_port: args.plugin_port,
+        api_port: args.api_port,
+        ui_port: (!args.no_ui).then_some(args.ui_port),
+        allow_origins: args.allow_origins,
+        virtual_device: args.virtual_device,
+        hardware: !args.no_hardware,
+        ..Options::new(config_dir)
+    };
 
-    let token = CancellationToken::new();
-    let (device_tx, mut device_rx) = mpsc::channel(256);
-    let (plugin_tx, mut plugin_rx) = mpsc::channel(256);
-    let (api_tx, mut api_rx) = mpsc::channel::<api::ApiRequest>(64);
-    let (ui_tx, _) = broadcast::channel(256);
-
-    let plugins = PluginHost::start(args.plugin_port, plugin_tx).await?;
-    for dir in &plugins_dirs {
-        if let Err(err) = plugins.discover(dir).await {
-            tracing::warn!(dir = %dir.display(), %err, "cannot read plugin directory");
-        }
-    }
-    let mut app = app::App::new(
-        store::Store::new(&config_dir),
-        plugins.clone(),
-        ui_tx.clone(),
-        device_tx.clone(),
-        token.clone(),
-    );
-
-    let mut origins = args.allow_origins.clone();
-    for host in ["127.0.0.1", "localhost"] {
-        origins.push(format!("http://{host}:{}", args.ui_port));
-    }
-    // Future desktop shell (Tauri).
-    origins.extend(["tauri://localhost".into(), "http://tauri.localhost".into()]);
-    tokio::spawn(api::serve(
-        args.api_port,
-        api::AllowedOrigins::new(origins),
-        api_tx,
-        ui_tx,
-    ));
-    if !args.no_ui {
-        let (ui_port, api_port) = (args.ui_port, args.api_port);
-        tokio::spawn(async move {
-            if let Err(err) = ui_server::serve(ui_port, api_port).await {
-                tracing::error!(%err, "UI server failed");
-            }
-        });
-    }
-
-    if !args.no_hardware {
-        let (tx, token) = (device_tx.clone(), token.clone());
-        tokio::spawn(async move {
-            if let Err(err) = n3_driver::run_hid_watcher(tx, token).await {
-                tracing::error!(%err, "HID watcher failed");
-            }
-        });
-    }
-    if args.virtual_device {
-        tokio::spawn(n3_driver::virtual_deck::run_virtual_device(
-            device_tx.clone(),
-            token.clone(),
-        ));
-    }
-    drop(device_tx);
+    let shutdown = CancellationToken::new();
+    let mut service = tokio::spawn(n3_daemon::run(opts, shutdown.clone()));
 
     if !args.no_ui {
-        println!(
-            "\n  OpenDeckN3 läuft – Oberfläche: {ui_url}\n  Beenden: Strg+C oder dieses Fenster schließen.\n"
-        );
+        println!("\n  OpenDeckN3 läuft – Oberfläche: {ui_url}\n  Beenden: Strg+C\n");
         if args.open
-            && let Err(err) = app::open_url(&ui_url)
+            && let Err(err) = n3_daemon::open_url(&ui_url)
         {
             tracing::warn!(%err, "cannot open browser");
         }
     }
 
-    plugins
-        .launch_all(&json!({
-            "platform": std::env::consts::OS,
-            "version": env!("CARGO_PKG_VERSION"),
-            "language": "de",
-        }))
-        .await;
-
-    loop {
-        tokio::select! {
-            Some(event) = device_rx.recv() => app.on_device_event(event).await,
-            Some(msg) = plugin_rx.recv() => app.on_plugin_message(msg).await,
-            Some((command, reply)) = api_rx.recv() => {
-                let result = app.on_api_command(command).await.map_err(|e| format!("{e:#}"));
-                reply.send(result).ok();
-            }
-            _ = tokio::signal::ctrl_c() => break,
-        }
+    tokio::select! {
+        result = &mut service => return result?,
+        _ = tokio::signal::ctrl_c() => shutdown.cancel(),
     }
-
-    tracing::info!("shutting down");
-    token.cancel();
-    plugins.shutdown().await;
-    Ok(())
+    // Wait until plugins are stopped.
+    service.await?
 }

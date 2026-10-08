@@ -79,11 +79,14 @@ von Anfang an auf die N3-Familie (6 Display-Tasten, 3 Tasten, 3 Drehregler) zuge
 - Origin-Prüfung der UI-API, `startVirtualDevice`.
 
 ### M1 – Benutzbar
-- Desktop-App (z. B. Tauri) als Hülle um die Weboberfläche: Tray-Icon, Fenster, Dateidialoge.
-- Titel-Rendering auf Tasten (Schrift, Größe, Position, Farbe).
+- ✅ Desktop-App (Tauri) mit eingebettetem Dienst: Fenster, Tray, Autostart, Single-Instance, NSIS-Installer für Windows.
+- ✅ Auto-Update: prüft GitHub-Releases, fragt nach, lädt den Installer, verifiziert ihn per SHA-256 und startet neu.
+- ✅ Titel auf den Tasten-Displays (Geist-Schrift, automatisch verkleinert/gekürzt).
 - Plugin-Installation aus `.zip`/`.streamDeckPlugin`, Plugin-Neustart bei Absturz.
 - Tray-Icon, Autostart, Bildschirmschoner/Sleep nach Inaktivität.
-- Weitere eingebaute Aktionen: Hotkey, Programm starten, URL öffnen, Text eintippen, Multi-Aktion, Ordner/Seiten.
+- ✅ Eingebaute Aktionen wie im OpenDeck-Starterpaket: Tastenkürzel, Lautstärke, Medien, Programm öffnen, Website, Befehl,
+  Text eingeben – mit Einstellungsformularen in der UI.
+- Multi-Aktion, Ordner/Seiten.
 
 ### M2 – Komfort
 - Property Inspector (HTML-Einstellungsseiten der Plugins) in der UI.

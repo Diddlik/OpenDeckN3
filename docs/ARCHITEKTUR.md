@@ -42,7 +42,8 @@ flowchart LR
 | `n3-core` | Domänenmodell ohne I/O | `DeviceInfo`, `DeviceLayout`, `InputEvent`, `DeviceCommand`, `DeviceEvent`, `DeviceHandle`, `Profile`, `ActionInstance`, `SlotContext` |
 | `n3-driver` | Hardware: Modelltabelle, N3-Protokoll (über `mirajazz`), Hot-Plug, virtuelles Gerät | `models::SUPPORTED_MODELS`, `n3::process_input`, `run_hid_watcher`, `virtual_deck::run_virtual_device` |
 | `n3-plugin` | Plugin-Manifest, Protokoll, WebSocket-Server, Prozessverwaltung | `PluginHost`, `PluginManifest`, `InboundEvent`, `protocol::SlotRef` |
-| `n3-daemon` | Binary `opendeckn3d`: verdrahtet alles, Router, Store, UI-API, eingebaute Aktionen, liefert die Weboberfläche aus | `App`, `Store`, `ApiCommand`, `ui_server` |
+| `n3-desktop` | Desktop-App (Tauri 2): Fenster mit `ui/index.html`, Tray, Autostart, Single-Instance; startet den Dienst im selben Prozess, Log nach `<config>/opendeckn3.log` | `main.rs` |
+| `n3-daemon` | Bibliothek (`run(Options, shutdown)`) + CLI `opendeckn3d`: verdrahtet alles, Router, Store, UI-API, eingebaute Aktionen, liefert die Weboberfläche aus | `App`, `Store`, `ApiCommand`, `ui_server` |
 
 ## Laufzeitmodell
 
@@ -77,6 +78,27 @@ dem Plugin gehört und zum aktiven Profil passt → dekodiert Bild → `DeviceCo
 **Profilwechsel:** `willDisappear` für alle alten Instanzen → Profil laden → `willAppear` für alle
 neuen Instanzen → alle Display-Tasten mit Standardbild neu zeichnen → UI erhält `profileChanged`.
 
+## Eingebaute Aktionen & Tastenbilder
+
+- `n3-daemon/src/builtin.rs`: Katalog mit `settingsSchema`, Standardwerte, Beschriftung und Icon je Aktion, Auswertung der
+  Eingaben (`effect`) – getrennt von der Ausführung, damit die Logik ohne Desktop testbar ist.
+- `n3-daemon/src/system/`: Seiteneffekte auf dem Rechner – `shortcut` (Parser für `Ctrl+Shift+M`), `input` (eigener Thread mit
+  `enigo`: SendInput unter Windows, X11 unter Linux), `launch` (Programme, Dateien, Shell-Befehle ohne Konsolenfenster).
+  Fehler landen als UI-Event `actionError` beim Nutzer.
+- Tastenbilder werden in `render::compose_key` zusammengesetzt (144 px): Bild (Nutzer → Plugin zur Laufzeit → Zustandsbild →
+  Icon) plus Titel (Nutzer → Plugin → automatische Beschriftung eingebauter Aktionen), gezeichnet mit eingebetteter Schrift
+  Geist (OFL, `assets/fonts/`). Icons der eingebauten Aktionen: `assets/builtin/`, erzeugt mit `tools/make-builtin-icons.cjs`
+  aus den Icons der Oberfläche.
+
+## Updates (Desktop-App)
+
+`n3-desktop/src/updater.rs` fragt `api.github.com/repos/Diddlik/OpenDeckN3/releases` ab (beim Start nach 8 s und alle
+6 h, gesteuert von der Oberfläche; Vorabversionen optional). Ist ein Release neuer als die App-Version, zeigt die UI einen
+Dialog. „Jetzt aktualisieren“ lädt `…-windows-x64-setup.exe` (nur von `github.com/Diddlik/OpenDeckN3/releases/download/`),
+prüft ihn gegen `SHA256SUMS.txt` aus demselben Release und startet ihn mit `/P /UPDATE /R` (Fortschrittsfenster, keine neuen
+Verknüpfungen, Neustart danach) – dieselben Schalter wie Tauris eigener Updater. Die App beendet sich vorher selbst.
+`SHA256SUMS.txt` erzeugt der Release-Workflow; Releases ohne diese Datei werden nicht automatisch installiert.
+
 ## Persistenz
 
 Konfigurationsverzeichnis (Standard `~/.config/opendeckn3`, per `--config-dir` änderbar):
@@ -110,7 +132,6 @@ Alle binden nur an `127.0.0.1` und sind per CLI änderbar (`--plugin-port`, `--a
 
 ## Offene technische Punkte
 
-- Titel-Rendering (Schrift auf Tastenbild) fehlt – Titel werden bisher nur an die UI gemeldet.
 - SVG-Bilder von Plugins werden noch nicht unterstützt.
 - Plugin-Prozesse werden nach Absturz nicht automatisch neu gestartet.
 - Physische Lage der Drehregler/Tasten am Gerät mit echter Hardware verifizieren (siehe Gerätedoku).

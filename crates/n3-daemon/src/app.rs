@@ -27,6 +27,7 @@ use crate::{
     api::ApiCommand,
     builtin, render,
     store::{DeviceConfig, Store},
+    system::input::InputHandle,
 };
 
 pub struct DeviceState {
@@ -37,6 +38,8 @@ pub struct DeviceState {
     pub previews: BTreeMap<u8, String>,
     /// Titles set at runtime by plugins (not persisted, like Stream Deck).
     pub titles: BTreeMap<u8, String>,
+    /// Images set at runtime by plugins (`setImage`), cleared on profile switch.
+    pub runtime_images: BTreeMap<u8, DynamicImage>,
     pub encoders_pressed: Vec<bool>,
 }
 
@@ -99,6 +102,8 @@ pub struct App {
     /// Lets the UI start the virtual device at runtime.
     device_events: mpsc::Sender<DeviceEvent>,
     shutdown: CancellationToken,
+    /// Simulated keyboard input for built-in actions.
+    input: InputHandle,
 }
 
 impl App {
@@ -116,7 +121,17 @@ impl App {
             ui,
             device_events,
             shutdown,
+            input: InputHandle::spawn(),
         }
+    }
+
+    pub fn input(&self) -> InputHandle {
+        self.input.clone()
+    }
+
+    /// For events emitted from background tasks (e.g. failed built-in actions).
+    pub fn ui_sender(&self) -> broadcast::Sender<Value> {
+        self.ui.clone()
     }
 
     fn emit(&self, event: Value) {
@@ -193,6 +208,7 @@ impl App {
                 profile,
                 previews: BTreeMap::new(),
                 titles: BTreeMap::new(),
+                runtime_images: BTreeMap::new(),
                 encoders_pressed: vec![false; encoders],
             },
         );
@@ -232,7 +248,8 @@ impl App {
             InputEvent::EncoderTwist { encoder, ticks } => {
                 let pressed = self.device(device)?.encoders_pressed[encoder as usize];
                 if self.is_builtin(device, Controller::Encoder, encoder)? {
-                    return builtin::on_input(self, device, input).await;
+                    builtin::on_input(self, device, input).await;
+                    return Ok(());
                 }
                 self.send_slot_event(device, Controller::Encoder, encoder, |slot| {
                     slot.dial_rotate(ticks, pressed)
@@ -243,7 +260,8 @@ impl App {
         };
 
         if self.is_builtin(device, controller, position)? {
-            return builtin::on_input(self, device, input).await;
+            builtin::on_input(self, device, input).await;
+            return Ok(());
         }
         self.send_slot_event(device, controller, position, |slot| slot.simple(event))
             .await;
@@ -294,7 +312,7 @@ impl App {
         }
         let keys = state.handle.info.layout.display_keys;
         for key in 0..keys {
-            self.render_default(device, key).await;
+            self.redraw_key(device, key).await;
         }
     }
 
@@ -308,6 +326,7 @@ impl App {
         }
         if let Some(state) = self.devices.get_mut(device) {
             state.titles.clear();
+            state.runtime_images.clear();
         }
     }
 
@@ -328,7 +347,7 @@ impl App {
     }
 
     /// Image a key shows when no plugin has overridden it at runtime:
-    /// user image → manifest state image → manifest action icon → blank.
+    /// user image → built-in icon / manifest state image → manifest action icon → blank.
     async fn default_image(&self, device: &str, key: u8) -> Option<DynamicImage> {
         let instance = self.devices.get(device)?.profile.keys.get(&key)?;
         if let Some(url) = &instance.image {
@@ -338,7 +357,7 @@ impl App {
             }
         }
         if instance.plugin == BUILTIN_PLUGIN {
-            return None;
+            return builtin::icon(instance);
         }
         let plugin = self
             .plugins
@@ -360,8 +379,34 @@ impl App {
             .or_else(|| render::load_icon(&plugin.path, &action.icon))
     }
 
-    async fn render_default(&mut self, device: &str, key: u8) {
-        let image = self.default_image(device, key).await;
+    /// Title drawn on a key: user title → plugin title → built-in label.
+    fn key_title(&self, device: &str, key: u8) -> Option<String> {
+        let state = self.devices.get(device)?;
+        let instance = state.profile.keys.get(&key)?;
+        instance
+            .title
+            .clone()
+            .filter(|t| !t.trim().is_empty())
+            .or_else(|| state.titles.get(&key).cloned())
+            .or_else(|| {
+                (instance.plugin == BUILTIN_PLUGIN)
+                    .then(|| builtin::default_label(instance))
+                    .flatten()
+            })
+    }
+
+    /// Recomposes a display key from its image and title and sends it out.
+    async fn redraw_key(&mut self, device: &str, key: u8) {
+        let runtime = self
+            .devices
+            .get(device)
+            .and_then(|s| s.runtime_images.get(&key).cloned());
+        let base = match runtime {
+            Some(image) => Some(image),
+            None => self.default_image(device, key).await,
+        };
+        let title = self.key_title(device, key);
+        let image = render::compose_key(base, title.as_deref());
         self.set_key_image(device, key, image).await;
     }
 
@@ -503,12 +548,12 @@ impl App {
                 let slot = self.resolve_context(plugin, &context)?;
                 if slot.controller == Controller::Keypad {
                     let state = self.device_mut(&slot.device)?;
-                    match &payload.title {
-                        Some(title) => state.titles.insert(slot.position, title.clone()),
+                    match payload.title.clone().filter(|t| !t.is_empty()) {
+                        Some(title) => state.titles.insert(slot.position, title),
                         None => state.titles.remove(&slot.position),
                     };
+                    self.redraw_key(&slot.device, slot.position).await;
                 }
-                // TODO: render titles onto the key image (needs font rendering).
                 self.emit(json!({
                     "event": "keyTitle", "device": slot.device,
                     "controller": slot.controller, "position": slot.position,
@@ -520,14 +565,16 @@ impl App {
                 if slot.controller != Controller::Keypad {
                     return Ok(());
                 }
-                match payload.image.as_deref().filter(|s| !s.is_empty()) {
-                    Some(url) => {
-                        let image = render::decode_data_url(url)?;
-                        self.set_key_image(&slot.device, slot.position, Some(image))
-                            .await;
-                    }
-                    None => self.render_default(&slot.device, slot.position).await,
-                }
+                let image = match payload.image.as_deref().filter(|s| !s.is_empty()) {
+                    Some(url) => Some(render::decode_data_url(url)?),
+                    None => None,
+                };
+                let state = self.device_mut(&slot.device)?;
+                match image {
+                    Some(image) => state.runtime_images.insert(slot.position, image),
+                    None => state.runtime_images.remove(&slot.position),
+                };
+                self.redraw_key(&slot.device, slot.position).await;
             }
             InboundEvent::SetState { context, payload } => {
                 let slot = self.resolve_context(plugin, &context)?;
@@ -535,7 +582,11 @@ impl App {
                     i.state = payload.state
                 })?;
                 if slot.controller == Controller::Keypad {
-                    self.render_default(&slot.device, slot.position).await;
+                    // A state change shows the state's image again.
+                    self.device_mut(&slot.device)?
+                        .runtime_images
+                        .remove(&slot.position);
+                    self.redraw_key(&slot.device, slot.position).await;
                 }
             }
             InboundEvent::ShowOk { context } | InboundEvent::ShowAlert { context } => {
@@ -593,7 +644,15 @@ impl App {
                 action,
                 settings,
             } => {
+                if plugin == BUILTIN_PLUGIN {
+                    anyhow::ensure!(builtin::exists(&action), "unknown built-in action {action}");
+                }
                 self.clear_slot(&device, controller, position).await?;
+                let settings = match settings {
+                    Some(settings) => Some(settings),
+                    None if plugin == BUILTIN_PLUGIN => Some(builtin::default_settings(&action)),
+                    None => None,
+                };
                 let mut instance = ActionInstance::new(plugin, action);
                 if let Some(settings) = settings {
                     instance.settings = settings;
@@ -608,7 +667,7 @@ impl App {
                 self.send_slot_event(&device, controller, position, |s| s.simple("willAppear"))
                     .await;
                 if controller == Controller::Keypad {
-                    self.render_default(&device, position).await;
+                    self.redraw_key(&device, position).await;
                 }
                 self.emit(json!({ "event": "slotChanged", "device": device }));
                 Ok(Value::Null)
@@ -636,6 +695,12 @@ impl App {
                     s.simple("didReceiveSettings")
                 })
                 .await;
+                if controller == Controller::Keypad
+                    && self.is_builtin(&device, controller, position)?
+                {
+                    // Label and icon of built-ins depend on their settings.
+                    self.redraw_key(&device, position).await;
+                }
                 self.emit(json!({ "event": "slotChanged", "device": device }));
                 Ok(Value::Null)
             }
@@ -651,7 +716,7 @@ impl App {
                     i.image = image;
                 })?;
                 if controller == Controller::Keypad {
-                    self.render_default(&device, position).await;
+                    self.redraw_key(&device, position).await;
                 }
                 self.emit(json!({ "event": "slotChanged", "device": device }));
                 Ok(Value::Null)
@@ -701,6 +766,7 @@ impl App {
         {
             if controller == Controller::Keypad {
                 state.titles.remove(&position);
+                state.runtime_images.remove(&position);
             }
             let profile = state.profile.clone();
             self.store.save_profile(device, &profile)?;

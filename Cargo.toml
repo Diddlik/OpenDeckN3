@@ -1,6 +1,20 @@
 [workspace]
 resolver = "3"
-members = ["crates/n3-core", "crates/n3-driver", "crates/n3-plugin", "crates/n3-daemon"]
+members = [
+    "crates/n3-core",
+    "crates/n3-driver",
+    "crates/n3-plugin",
+    "crates/n3-daemon",
+    "crates/n3-desktop",
+]
+# The desktop app needs the platform webview (WebView2 / WebKitGTK) to build,
+# so plain `cargo build`/`cargo test` skip it. Build it with `-p n3-desktop`.
+default-members = [
+    "crates/n3-core",
+    "crates/n3-driver",
+    "crates/n3-plugin",
+    "crates/n3-daemon",
+]
 
 [workspace.package]
 version = "0.1.0"
@@ -13,6 +27,7 @@ rust-version = "1.87"
 n3-core = { path = "crates/n3-core" }
 n3-driver = { path = "crates/n3-driver" }
 n3-plugin = { path = "crates/n3-plugin" }
+n3-daemon = { path = "crates/n3-daemon" }
 
 anyhow = "1"
 thiserror = "2"

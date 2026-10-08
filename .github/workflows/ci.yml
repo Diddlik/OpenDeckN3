@@ -25,3 +25,17 @@ jobs:
           ./target/debug/opendeckn3d --virtual --no-hardware --plugins-dir plugins/examples --config-dir "$RUNNER_TEMP/n3cfg" &
           sleep 2
           node tools/smoke-test.mjs
+
+  desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: WebKitGTK & Tray-Bibliotheken
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy -p n3-desktop --all-targets -- -D warnings
