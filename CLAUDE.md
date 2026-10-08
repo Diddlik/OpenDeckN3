@@ -1,6 +1,8 @@
 # Hinweise für Claude / Mitwirkende
 
-- Projektziel und Begriffe: `docs/VORHABEN.md`; Aufbau: `docs/ARCHITEKTUR.md`.
+- Projektziel und Begriffe: `docs/VORHABEN.md`; Aufbau: `docs/ARCHITEKTUR.md`; Technik-Übersicht: `docs/ENTWICKLUNG.md`.
+- `README.md` ist die Produktseite (Marketing, wenig Technik). Technisches gehört nach `docs/`. Screenshots in
+  `docs/images/` mit `tools/screenshots/` neu erzeugen, wenn sich die Oberfläche sichtbar ändert.
 - Rust-Workspace (Edition 2024). Vor jedem Commit:
   `cargo fmt --all && cargo clippy --all-targets -- -D warnings && cargo test`
 - End-to-End ohne Hardware:

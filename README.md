@@ -1,97 +1,158 @@
-# OpenDeckN3
+<p align="center">
+  <img src="docs/images/hero.png" alt="OpenDeckN3 – Dein Stream-Controller. Endlich richtig gesteuert." width="100%">
+</p>
 
-Quelloffene Steuer-Software für Stream-Controller – zuerst für den **TreasLin N3** (USB `5548:1001`) –
-mit Plugin-System (Stream-Deck-SDK-kompatibel), Profilen und einer API für eine moderne Oberfläche.
+<p align="center">
+  <a href="https://github.com/Diddlik/OpenDeckN3/releases"><img src="https://img.shields.io/github/v/release/Diddlik/OpenDeckN3?include_prereleases&label=Version&color=35E0D0&style=for-the-badge" alt="Neueste Version"></a>
+  <a href="https://github.com/Diddlik/OpenDeckN3/releases"><img src="https://img.shields.io/github/downloads/Diddlik/OpenDeckN3/total?label=Downloads&color=8B7CFF&style=for-the-badge" alt="Downloads"></a>
+  <a href="https://github.com/Diddlik/OpenDeckN3/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Diddlik/OpenDeckN3/ci.yml?branch=main&label=Build&style=for-the-badge" alt="Build"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/Lizenz-GPL--3.0-1E2228?style=for-the-badge" alt="Lizenz GPL-3.0"></a>
+</p>
 
-> **Status:** Grundgerüst (Meilenstein M0) plus Weboberfläche nach dem Claude-Design-Entwurf.
-> Dienst, N3-Treiber, Plugin-Host, Profile, UI-API und Oberfläche funktionieren (getestet mit dem virtuellen Gerät).
+<p align="center">
+  <b>Neun Tasten. Drei Regler. Deine Regeln.</b><br>
+  OpenDeckN3 macht aus deinem <b>TreasLin N3</b> ein richtiges Werkzeug – mit einer App, die Spaß macht,<br>
+  Profilen für jede Situation und Plugins für alles, was dir einfällt. Kostenlos und Open Source.
+</p>
 
-Inspiriert von und basierend auf Erkenntnissen aus
-[nekename/OpenDeck](https://github.com/nekename/OpenDeck) und
-[4ndv/opendeck-akp03](https://github.com/4ndv/opendeck-akp03).
+<p align="center">
+  <a href="https://github.com/Diddlik/OpenDeckN3/releases"><img src="https://img.shields.io/badge/⬇%20Für%20Windows%20herunterladen-35E0D0?style=for-the-badge&logoColor=062320" alt="Für Windows herunterladen" height="42"></a>
+</p>
 
-## Dokumentation
+---
 
-| Dokument | Inhalt |
+## ✨ So fühlt es sich an
+
+<p align="center">
+  <img src="docs/images/demo.gif" alt="Tasten drücken und Drehregler drehen – die App zeigt alles live" width="680">
+</p>
+
+Drück eine Taste, dreh am Regler – die App zeigt es **in Echtzeit**. Was auf deinem Gerät leuchtet,
+siehst du genauso in der Vorschau. Keine Überraschungen, kein Rätselraten.
+
+## 🚀 Warum OpenDeckN3?
+
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>🖱️ Drag &amp; Drop</h3>
+      Aktion aus der Bibliothek greifen, auf eine Taste ziehen, fertig. Passt eine Aktion nicht auf einen Drehregler, sagt dir die App das schon beim Ziehen.
+    </td>
+    <td width="33%" valign="top">
+      <h3>🗂️ Profile für alles</h3>
+      Streaming, Gaming, Office – jedes Profil hat seine eigene Belegung. Umschalten per Klick oder direkt mit einer Taste am Gerät.
+    </td>
+    <td width="33%" valign="top">
+      <h3>🎨 Dein Look</h3>
+      Eigene Bilder und Titel für jede Taste, Dark &amp; Light Mode und eine Vorschau, die aussieht wie dein echtes Gerät.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>🔌 Plugins</h3>
+      Erweiterbar über Plugins im bewährten Stream-Deck-Stil – schreib eigene Aktionen in JavaScript, Python oder jeder anderen Sprache.
+    </td>
+    <td valign="top">
+      <h3>🪟 Immer da, nie im Weg</h3>
+      Echte Desktop-App mit Symbol im Infobereich. Fenster zu – OpenDeckN3 läuft leise weiter. Auf Wunsch startet es mit Windows.
+    </td>
+    <td valign="top">
+      <h3>🔒 Lokal &amp; privat</h3>
+      Kein Konto, keine Cloud, kein Tracking. Alles bleibt auf deinem Rechner – und der Code ist offen für alle.
+    </td>
+  </tr>
+</table>
+
+## 🖼️ Einblicke
+
+<p align="center">
+  <img src="docs/images/editor-dark.png" alt="Editor im Dark Mode" width="49%">
+  <img src="docs/images/editor-light.png" alt="Editor im Light Mode" width="49%">
+</p>
+<p align="center"><sub>Der Editor – im Dark und Light Mode. Links die Aktionen, in der Mitte dein Gerät, rechts alle Details zur gewählten Taste.</sub></p>
+
+<p align="center">
+  <img src="docs/images/onboarding.png" alt="Einrichtungsassistent" width="49%">
+  <img src="docs/images/plugins.png" alt="Plugin-Übersicht" width="49%">
+</p>
+<p align="center"><sub>Ein kurzer Assistent beim ersten Start – und alle Plugins auf einen Blick.</sub></p>
+
+## ⚡ In 3 Schritten startklar
+
+| | |
+| :---: | --- |
+| **1** | **Herunterladen** – den Installer unter [Releases](https://github.com/Diddlik/OpenDeckN3/releases) holen. Keine Admin-Rechte nötig. |
+| **2** | **Installieren &amp; starten** – OpenDeckN3 öffnet sich und begrüßt dich mit einem kurzen Assistenten. |
+| **3** | **Loslegen** – TreasLin N3 anstecken, Aktionen auf die Tasten ziehen, fertig. |
+
+> 💡 **Noch kein Gerät zur Hand?** Einfach „Virtuelles Gerät verwenden“ wählen und alles ausprobieren –
+> Tasten drückst du per Klick, Regler drehst du mit dem Mausrad.
+
+## 🎛️ Unterstützte Geräte
+
+| Gerät | Status |
 | --- | --- |
-| [docs/VORHABEN.md](docs/VORHABEN.md) | **Definition des Vorhabens**: Ziele, Nicht-Ziele, Begriffe, Meilensteine |
-| [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md) | Komponenten, Datenfluss, Persistenz, Erweiterungspunkte |
-| [docs/GERAET_TREASLIN_N3.md](docs/GERAET_TREASLIN_N3.md) | Hardware: Layout, HID-Codes, Bildformat, udev |
-| [docs/PLUGIN_API.md](docs/PLUGIN_API.md) | Plugins schreiben: Manifest, Protokoll, Events |
-| [docs/UI_API.md](docs/UI_API.md) | WebSocket-API für Oberflächen |
-| [docs/UI_DESIGN_BRIEF.md](docs/UI_DESIGN_BRIEF.md) | **Design-Brief für Claude Design** |
+| **TreasLin N3** – 6 Display-Tasten, 3 Tasten, 3 Drehregler | ✅ unterstützt |
+| Weitere Geräte der N3-Familie (Mirabox N3, Ajazz AKP03 …) | 🔜 geplant |
 
-## Projektstruktur
+## 🗺️ Was als Nächstes kommt
 
-```text
-crates/
-  n3-core/     Domänenmodell (Geräte, Eingaben, Profile)
-  n3-driver/   TreasLin-N3-Treiber (via mirajazz), Hot-Plug, virtuelles Gerät
-  n3-plugin/   Plugin-Host (Manifest, Prozesse, WebSocket-Protokoll)
-  n3-daemon/   Dienst (Bibliothek + CLI `opendeckn3d`): Router, Profile, eingebaute Aktionen, UI-API
-  n3-desktop/  Desktop-App „OpenDeckN3“ (Tauri): Fenster, Tray, Autostart, eingebetteter Dienst
-plugins/examples/  Beispiel-Plugin „Zähler“ (Node, ohne Abhängigkeiten)
-tools/smoke-test.mjs  End-to-End-Test gegen den laufenden Dienst
-udev/          Linux-Regeln für Gerätezugriff
-assets/        App-Icon (erzeugt mit tools/make-icon.py)
-ui/            Oberfläche (Desktop-App-Fenster bzw. Browser) + Claude-Design-Prototyp
-```
+- [x] Desktop-App mit Tray, Autostart und Installer
+- [x] Profile, eigene Bilder, Plugins, virtuelles Testgerät
+- [ ] Titel direkt auf den Tasten-Displays
+- [ ] Plugins per Klick installieren
+- [ ] Mehr eingebaute Aktionen: Hotkeys, Programme starten, Medien, Multi-Aktionen
+- [ ] Automatischer Profilwechsel je nach aktivem Programm
+- [ ] Weitere Geräte
 
-## Windows: Desktop-App
+Ideen oder Wünsche? [Erzähl uns davon!](https://github.com/Diddlik/OpenDeckN3/issues)
 
-OpenDeckN3 ist unter Windows eine Desktop-App (Tauri): eigenes Fenster, Symbol im Infobereich (Tray), kein Browser,
-kein Konsolenfenster. Der Dienst läuft in der App mit.
+## ❓ Häufige Fragen
 
-1. Neueste Version unter [Releases](https://github.com/Diddlik/OpenDeckN3/releases) laden – oder den neuesten Lauf unter
-   **Actions → Windows-Installer** öffnen und bei **Artifacts** `OpenDeckN3-…-windows-x64` herunterladen.
-2. `OpenDeckN3-…-setup.exe` ausführen (keine Admin-Rechte nötig; SmartScreen-Warnung, da unsigniert:
-   „Weitere Informationen“ → „Trotzdem ausführen“). Alternativ das portable ZIP entpacken und `OpenDeckN3.exe` starten.
-3. **Fenster schließen** = App läuft im Tray weiter. **Beenden** über Rechtsklick aufs Tray-Symbol.
-   Autostart lässt sich in den Einstellungen einschalten (startet dann unsichtbar im Tray).
+<details>
+<summary><b>Windows warnt beim Installieren – ist das normal?</b></summary>
 
-**Release erstellen:** *Actions → Windows-Installer → Run workflow* mit `release_tag` (z. B. `v0.1.0-alpha.2`) starten –
-GitHub legt Tag und Release mit Installer und ZIP an. Tags mit Bindestrich (`-alpha`, `-beta`) werden als Pre-release markiert.
-Ein lokal gepushtes Tag `v*` funktioniert ebenso. Fertige Versionen: [Releases](https://github.com/Diddlik/OpenDeckN3/releases).
+Ja. Der Installer ist (noch) nicht digital signiert, deshalb zeigt Windows SmartScreen eine Warnung.
+Klicke auf <i>„Weitere Informationen“ → „Trotzdem ausführen“</i>.
+</details>
 
-Hinweise: Profile und Log (`opendeckn3.log`) liegen in `%APPDATA%\opendeckn3`. Das Beispiel-Plugin braucht Node.js ≥ 22.
-Die Hersteller-Software des N3 sollte nicht gleichzeitig laufen. Ein zweiter Start holt nur das vorhandene Fenster nach vorn.
-Benötigt die WebView2-Laufzeit (in Windows 10/11 enthalten, der Installer lädt sie sonst nach).
+<details>
+<summary><b>Mein Gerät wird nicht erkannt.</b></summary>
 
-Desktop-App selbst bauen: `cd crates/n3-desktop && npx @tauri-apps/cli@2 build` (Installer) oder
-`cargo run -p n3-desktop` (Entwicklung; unter Linux werden `libwebkit2gtk-4.1-dev` und `libayatana-appindicator3-dev` benötigt).
+Schließe die Hersteller-Software des N3, falls sie läuft – es kann immer nur ein Programm mit dem Gerät sprechen.
+Unter Linux braucht OpenDeckN3 einmalig Zugriffsrechte (die App zeigt dir den passenden Befehl).
+</details>
 
-## Schnellstart
+<details>
+<summary><b>Läuft OpenDeckN3 auch unter Linux?</b></summary>
 
-Voraussetzungen: Rust ≥ 1.87, für Plugins/Tests Node.js ≥ 22.
+Ja, OpenDeckN3 funktioniert unter Linux – aktuell noch über den Quellcode. Fertige Pakete folgen.
+Wie das geht, steht in der <a href="docs/ENTWICKLUNG.md">Entwickler-Doku</a>.
+</details>
 
-```sh
-# Bauen und testen
-cargo build
-cargo test
+<details>
+<summary><b>Wo liegen meine Profile?</b></summary>
 
-# Linux: Zugriff auf das Gerät erlauben (einmalig)
-sudo cp udev/40-opendeckn3.rules /etc/udev/rules.d/
-sudo udevadm control --reload-rules && sudo udevadm trigger
+Unter Windows in <code>%APPDATA%\opendeckn3</code>, unter Linux in <code>~/.config/opendeckn3</code>.
+Sie bleiben auch bei einer Deinstallation erhalten. In der App: <i>Einstellungen → Konfigurationsordner → Öffnen</i>.
+</details>
 
-# Dienst mit echtem Gerät starten
-cargo run -p n3-daemon
+<details>
+<summary><b>Kostet OpenDeckN3 etwas?</b></summary>
 
-# Desktop-App starten (Fenster statt Browser)
-cargo run -p n3-desktop
+Nein. OpenDeckN3 ist freie Software unter der GPL-3.0 – kostenlos, ohne Werbung, ohne Abo.
+</details>
 
-# …oder nur den Dienst, ohne Hardware mit virtuellem N3 und Beispiel-Plugin
-cargo run -p n3-daemon -- --virtual --no-hardware --plugins-dir plugins/examples
+## 🛠️ Für Entwickler
 
-# Oberfläche im Browser öffnen
-#   http://127.0.0.1:57132/
+Du willst Plugins schreiben, mitbauen oder schauen, wie alles funktioniert?
+Alles Technische findest du in der **[Entwickler-Doku](docs/ENTWICKLUNG.md)** – von der
+[Architektur](docs/ARCHITEKTUR.md) über die [Plugin-Schnittstelle](docs/PLUGIN_API.md) bis zum [Projektziel](docs/VORHABEN.md).
 
-# In zweitem Terminal: End-to-End-Test über die UI-API
-node tools/smoke-test.mjs
-```
+## 💚 Danke
 
-Optionen: `opendeckn3d --help` (`--config-dir`, `--plugins-dir` (zusätzlich zu `<config>/plugins`), `--open`, `--plugin-port`, `--api-port`, `--ui-port`, `--no-ui`, `--allow-origin`, `--virtual`, `--no-hardware`).
-Log-Level über `RUST_LOG`, z. B. `RUST_LOG=debug` oder `RUST_LOG=n3_driver=trace`.
+OpenDeckN3 steht auf den Schultern großartiger Projekte:
+[OpenDeck](https://github.com/nekename/OpenDeck), [opendeck-akp03](https://github.com/4ndv/opendeck-akp03),
+[mirajazz](https://github.com/4ndv/mirajazz) und [Tauri](https://tauri.app).
 
-## Lizenz
-
-GPL-3.0-or-later, siehe [LICENSE](LICENSE).
+<p align="center"><sub>Mit ❤️ gebaut · <a href="LICENSE">GPL-3.0-or-later</a></sub></p>
