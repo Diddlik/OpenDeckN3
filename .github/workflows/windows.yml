@@ -79,6 +79,11 @@ jobs:
           Copy-Item -Recurse plugins\examples\* "$dir\plugins"
           Compress-Archive -Path $dir -DestinationPath "target\installer\OpenDeckN3-$v-windows-x64-portable.zip" -Force
 
+          # Beispiel-Plugin als installierbare Datei (Plugin-Katalog: plugins/registry.json).
+          $plugin = "de.opendeckn3.counter"
+          Compress-Archive -Path "plugins\examples\$plugin.sdPlugin" -DestinationPath "$env:RUNNER_TEMP\$plugin.zip" -Force
+          Copy-Item "$env:RUNNER_TEMP\$plugin.zip" "target\installer\$plugin.streamDeckPlugin"
+
           # Prüfsummen – der Auto-Updater der App installiert nur verifizierte Installer.
           Push-Location target\installer
           Get-ChildItem -File | ForEach-Object {

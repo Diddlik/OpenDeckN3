@@ -6,6 +6,7 @@
 mod api;
 mod app;
 mod builtin;
+mod plugin_install;
 mod render;
 mod store;
 mod system;
@@ -20,6 +21,7 @@ use tokio::sync::{broadcast, mpsc};
 use tokio_util::sync::CancellationToken;
 
 pub use app::open_url;
+pub use plugin_install::DEFAULT_REGISTRY;
 
 pub const DEFAULT_PLUGIN_PORT: u16 = 57130;
 pub const DEFAULT_API_PORT: u16 = 57131;
@@ -40,6 +42,8 @@ pub struct Options {
     pub allow_origins: Vec<String>,
     pub virtual_device: bool,
     pub hardware: bool,
+    /// Plugin catalogs (`registry.json`, URL or file path).
+    pub plugin_registries: Vec<String>,
 }
 
 impl Options {
@@ -53,6 +57,7 @@ impl Options {
             allow_origins: Vec::new(),
             virtual_device: false,
             hardware: true,
+            plugin_registries: vec![DEFAULT_REGISTRY.to_owned()],
         }
     }
 
@@ -75,10 +80,11 @@ pub fn is_running(api_port: u16) -> bool {
 
 /// Runs the service until `shutdown` is cancelled.
 pub async fn run(opts: Options, shutdown: CancellationToken) -> anyhow::Result<()> {
-    let default_plugins_dir = opts.plugins_dir();
-    std::fs::create_dir_all(&default_plugins_dir)?;
-    let mut plugins_dirs = vec![default_plugins_dir];
-    plugins_dirs.extend(opts.extra_plugin_dirs.iter().cloned());
+    let user_plugins_dir = std::path::absolute(opts.plugins_dir())?;
+    std::fs::create_dir_all(&user_plugins_dir)?;
+    // Installed plugins (user dir, scanned last) win over bundled copies.
+    let mut plugins_dirs = opts.extra_plugin_dirs.clone();
+    plugins_dirs.push(user_plugins_dir.clone());
     tracing::info!(config = %opts.config_dir.display(), ?plugins_dirs, "starting");
 
     let token = shutdown.child_token();
@@ -93,6 +99,12 @@ pub async fn run(opts: Options, shutdown: CancellationToken) -> anyhow::Result<(
             tracing::warn!(dir = %dir.display(), %err, "cannot read plugin directory");
         }
     }
+    let installer = plugin_install::Installer::new(
+        user_plugins_dir.clone(),
+        opts.plugin_registries.clone(),
+        plugins.clone(),
+        api_tx.clone(),
+    )?;
     let mut app = app::App::new(
         store::Store::new(&opts.config_dir),
         plugins.clone(),
@@ -100,6 +112,7 @@ pub async fn run(opts: Options, shutdown: CancellationToken) -> anyhow::Result<(
         device_tx.clone(),
         token.clone(),
     );
+    app.set_plugin_dirs(user_plugins_dir, opts.extra_plugin_dirs.clone());
 
     let mut origins = opts.allow_origins.clone();
     if let Some(ui_port) = opts.ui_port {
@@ -157,6 +170,10 @@ pub async fn run(opts: Options, shutdown: CancellationToken) -> anyhow::Result<(
             Some(event) = device_rx.recv() => app.on_device_event(event).await,
             Some(msg) = plugin_rx.recv() => app.on_plugin_message(msg).await,
             Some((command, reply)) = api_rx.recv() => {
+                if plugin_install::Installer::handles(&command) {
+                    installer.spawn(command, reply);
+                    continue;
+                }
                 let result = app.on_api_command(command).await.map_err(|e| format!("{e:#}"));
                 reply.send(result).ok();
             }

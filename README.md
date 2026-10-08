@@ -50,7 +50,7 @@ siehst du genauso in der Vorschau. Keine Überraschungen, kein Rätselraten.
   <tr>
     <td valign="top">
       <h3>🔌 Plugins</h3>
-      Erweiterbar über Plugins im bewährten Stream-Deck-Stil – schreib eigene Aktionen in JavaScript, Python oder jeder anderen Sprache.
+      Erweiterbar über Plugins im bewährten Stream-Deck-Stil – per Klick aus dem Katalog, direkt von GitHub oder als Datei installiert. Eigene Aktionen schreibst du in JavaScript, Python oder jeder anderen Sprache.
     </td>
     <td valign="top">
       <h3>🪟 Immer da, nie im Weg</h3>
@@ -118,7 +118,7 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit Symbol und 
 - [x] Profile, eigene Bilder, Plugins, virtuelles Testgerät
 - [x] Titel direkt auf den Tasten-Displays
 - [x] Eingebaut: Tastenkürzel, Lautstärke, Medien, Programme, Websites, Befehle, Text
-- [ ] Plugins per Klick installieren
+- [x] Plugins per Klick installieren – aus Datei oder direkt aus GitHub-Releases
 - [ ] Multi-Aktionen und Ordner
 - [ ] Automatischer Profilwechsel je nach aktivem Programm
 - [ ] Weitere Geräte

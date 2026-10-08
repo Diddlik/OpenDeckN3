@@ -105,6 +105,16 @@ Gemeinsame Felder: `event`, `action`, `context`, `device`, `payload`.
 
 Nicht unterstützte Events werden ignoriert (Debug-Log).
 
+## Verteilen & installieren
+
+Ein Plugin wird als ZIP des `<uuid>.sdPlugin`-Ordners weitergegeben (Endung `.streamDeckPlugin` oder `.zip`).
+Installiert wird es in der App unter **Plugins → Aus Datei …** (oder Datei auf die Seite ziehen) bzw. aus einem
+GitHub-Release über **Plugins → Katalog**. Wie man ein Plugin auf GitHub veröffentlicht und in den Katalog bringt:
+[PLUGINS_VEROEFFENTLICHEN.md](PLUGINS_VEROEFFENTLICHEN.md).
+
+Bei einem Update beendet der Dienst den alten Prozess, ersetzt den Ordner und startet die neue Version; danach
+bekommt das Plugin wie gewohnt `willAppear` für seine Belegungen.
+
 ## Noch nicht unterstützt
 
 `sendToPropertyInspector`, `sendToPlugin`, `setFeedback`, `setFeedbackLayout`, `switchToProfile`,

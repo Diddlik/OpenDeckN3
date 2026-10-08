@@ -6,6 +6,7 @@
 
 use std::{
     collections::{BTreeMap, HashMap},
+    path::{Path, PathBuf},
     sync::Arc,
 };
 
@@ -104,6 +105,10 @@ pub struct App {
     shutdown: CancellationToken,
     /// Simulated keyboard input for built-in actions.
     input: InputHandle,
+    /// Where installed plugins live (`<config>/plugins`, absolute).
+    plugins_dir: PathBuf,
+    /// Bundled/extra plugin directories (read-only for the app).
+    extra_plugin_dirs: Vec<PathBuf>,
 }
 
 impl App {
@@ -122,7 +127,14 @@ impl App {
             device_events,
             shutdown,
             input: InputHandle::spawn(),
+            plugins_dir: PathBuf::new(),
+            extra_plugin_dirs: Vec::new(),
         }
+    }
+
+    pub fn set_plugin_dirs(&mut self, plugins_dir: PathBuf, extra: Vec<PathBuf>) {
+        self.plugins_dir = plugins_dir;
+        self.extra_plugin_dirs = extra;
     }
 
     pub fn input(&self) -> InputHandle {
@@ -768,6 +780,11 @@ impl App {
                 }
                 Ok(json!({ "device": n3_driver::virtual_deck::VIRTUAL_DEVICE_ID }))
             }
+            ApiCommand::ActivatePlugin { staged } => self.activate_plugin(&staged).await,
+            ApiCommand::UninstallPlugin { plugin } => self.uninstall_plugin(&plugin).await,
+            ApiCommand::InstallPlugin { .. } | ApiCommand::PluginStore { .. } => {
+                bail!("handled by the installer")
+            }
         }
     }
 
@@ -809,6 +826,85 @@ impl App {
         }))
     }
 
+    /// Moves an unpacked plugin into the plugins directory (replacing an
+    /// older version) and starts it.
+    async fn activate_plugin(&mut self, staged: &Path) -> anyhow::Result<Value> {
+        let manifest = n3_plugin::PluginManifest::read(staged)?;
+        anyhow::ensure!(
+            manifest.uuid.is_some() || staged.extension().is_some_and(|e| e == "sdPlugin"),
+            "manifest.json needs a UUID (or the plugin folder must be named <uuid>.sdPlugin)"
+        );
+        let uuid = n3_plugin::plugin_uuid(&manifest, staged);
+        crate::plugin_install::validate_uuid(&uuid)?;
+        let target = self.plugins_dir.join(format!("{uuid}.sdPlugin"));
+
+        let previous = self.plugins.get(&uuid).await;
+        if let Some(previous) = &previous {
+            self.plugins.stop(&uuid).await;
+            if previous.path.starts_with(&self.plugins_dir) && previous.path != target {
+                remove_dir(&previous.path).await?;
+            }
+        }
+        if target.exists() {
+            remove_dir(&target).await?;
+        }
+        std::fs::rename(staged, &target)
+            .with_context(|| format!("moving plugin to {}", target.display()))?;
+        let plugin = self.plugins.add(&target).await?;
+        let started = self.plugins.start_plugin(&uuid).await;
+        if let Err(err) = &started {
+            tracing::error!(plugin = %uuid, %err, "failed to start installed plugin");
+        }
+        tracing::info!(plugin = %uuid, version = %plugin.manifest.version, "plugin installed");
+        self.emit(json!({ "event": "pluginsChanged", "plugin": uuid }));
+        Ok(json!({
+            "plugin": uuid,
+            "name": plugin.manifest.name,
+            "version": plugin.manifest.version,
+            "previousVersion": previous.map(|p| p.manifest.version),
+            "started": started.is_ok(),
+            "startError": started.err().map(|e| format!("{e:#}")),
+        }))
+    }
+
+    async fn uninstall_plugin(&mut self, uuid: &str) -> anyhow::Result<Value> {
+        let plugin = self
+            .plugins
+            .get(uuid)
+            .await
+            .context("plugin is not installed")?;
+        anyhow::ensure!(
+            plugin.path.starts_with(&self.plugins_dir),
+            "bundled plugins cannot be removed"
+        );
+        self.plugins.stop(uuid).await;
+        self.plugins.remove(uuid).await;
+        remove_dir(&plugin.path).await?;
+        // A bundled copy with the same UUID takes over again.
+        let mut fallback = None;
+        for dir in &self.extra_plugin_dirs {
+            let Ok(entries) = std::fs::read_dir(dir) else {
+                continue;
+            };
+            for path in entries.flatten().map(|e| e.path()) {
+                if let Ok(manifest) = n3_plugin::PluginManifest::read(&path)
+                    && n3_plugin::plugin_uuid(&manifest, &path) == uuid
+                {
+                    fallback = Some(path);
+                }
+            }
+        }
+        if let Some(path) = fallback
+            && self.plugins.add(&path).await.is_ok()
+            && let Err(err) = self.plugins.start_plugin(uuid).await
+        {
+            tracing::error!(plugin = %uuid, %err, "failed to start bundled plugin");
+        }
+        tracing::info!(plugin = %uuid, "plugin removed");
+        self.emit(json!({ "event": "pluginsChanged", "plugin": uuid }));
+        Ok(json!({ "plugin": uuid }))
+    }
+
     async fn catalog(&self) -> Value {
         let mut plugins = vec![builtin::catalog_entry()];
         for plugin in self.plugins.plugins().await {
@@ -833,6 +929,8 @@ impl App {
                 "author": plugin.manifest.author,
                 "version": plugin.manifest.version,
                 "category": plugin.manifest.category,
+                "description": plugin.manifest.description,
+                "removable": plugin.path.starts_with(&self.plugins_dir),
                 "connected": self.plugins.is_connected(&plugin.uuid).await,
                 "actions": actions,
             }));
@@ -857,4 +955,23 @@ pub fn open_url(url: &str) -> anyhow::Result<()> {
         .spawn()
         .with_context(|| format!("running {program}"))?;
     Ok(())
+}
+
+/// `remove_dir_all` with retries: on Windows a just-killed plugin process can
+/// hold its files for a moment.
+async fn remove_dir(path: &Path) -> anyhow::Result<()> {
+    let mut attempt = 0;
+    loop {
+        match std::fs::remove_dir_all(path) {
+            Ok(()) => return Ok(()),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+            Err(err) if attempt >= 10 => {
+                return Err(err).with_context(|| format!("removing {}", path.display()));
+            }
+            Err(_) => {
+                attempt += 1;
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            }
+        }
+    }
 }
