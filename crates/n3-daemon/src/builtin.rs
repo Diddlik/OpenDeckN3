@@ -56,8 +56,7 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
                 "controllers": controllers, "icon": null, "settingsSchema": schema,
             })
         };
-    let shortcut_help =
-        "Auf „Aufnehmen“ klicken und die Tasten drücken, z. B. Strg+Umschalt+M. Esc bricht ab.";
+    let shortcut_help = "Ins Feld klicken und die Tasten drücken, z. B. Strg+Umschalt+M – wird sofort übernommen. Esc bricht ab.";
     vec![
         action(
             HOTKEY,
