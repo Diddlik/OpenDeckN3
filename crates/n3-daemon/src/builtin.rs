@@ -121,7 +121,11 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
             vec![
                 with(
                     field("path", "Programm / Datei", "file", KEYPAD),
-                    json!({ "placeholder": "z. B. C:\\Windows\\notepad.exe oder spotify" }),
+                    json!({
+                        "placeholder": "z. B. C:\\Windows\\notepad.exe oder spotify",
+                        "source": "apps",
+                        "help": "Installiertes Programm aus der Liste wählen – oder Pfad eintragen bzw. „Durchsuchen …“ (Programm, Datei oder Ordner).",
+                    }),
                 ),
                 with(
                     field("args", "Argumente", "text", KEYPAD),
@@ -243,6 +247,14 @@ pub fn default_label(instance: &ActionInstance) -> Option<String> {
         SWITCH_PROFILE => format!("→ {}", setting(instance, "profile")),
         LAUNCH => {
             let path = setting(instance, "path").trim_matches('"');
+            // Application-menu entries carry their display name.
+            if path.ends_with(".desktop")
+                && let Some(entry) =
+                    crate::system::apps::DesktopEntry::read(std::path::Path::new(path))
+                && !entry.name.is_empty()
+            {
+                return Some(entry.name);
+            }
             let name = path.rsplit(['/', '\\']).next().unwrap_or(path);
             name.rsplit_once('.')
                 .map(|(stem, _)| stem)

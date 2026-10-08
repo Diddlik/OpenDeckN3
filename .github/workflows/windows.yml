@@ -53,7 +53,7 @@ jobs:
         run: cargo test
 
       - name: Dienst (CLI) und Discord-Plugin bauen
-        run: cargo build --release -p n3-daemon -p opendeckn3-discord
+        run: cargo build --release -p n3-daemon -p opendeckn3-discord -p opendeckn3-obs -p opendeckn3-homeassistant
 
       - name: Desktop-App + Installer bauen (Tauri)
         shell: pwsh
@@ -84,18 +84,21 @@ jobs:
           Compress-Archive -Path "plugins\examples\$plugin.sdPlugin" -DestinationPath "$env:RUNNER_TEMP\$plugin.zip" -Force
           Copy-Item "$env:RUNNER_TEMP\$plugin.zip" "target\installer\$plugin.streamDeckPlugin"
 
-          # Discord-Plugin (Windows-Binary); Plugin-Version = Release-Version, damit der Katalog Updates erkennt.
-          $discord = "$env:RUNNER_TEMP\discord\de.opendeckn3.discord.sdPlugin"
-          Remove-Item -Recurse -Force "$env:RUNNER_TEMP\discord" -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force $discord | Out-Null
-          Copy-Item -Recurse plugins\discord\de.opendeckn3.discord.sdPlugin\* $discord
-          Copy-Item target\release\opendeckn3-discord.exe $discord
-          # Textersetzung statt JSON-Rundreise (PowerShell verändert sonst verschachtelte Arrays).
-          $m = Get-Content "$discord\manifest.json" -Raw -Encoding utf8
-          $m = $m -replace '"Version":\s*"[^"]*"', ('"Version": "' + $v + '"')
-          [IO.File]::WriteAllText("$discord\manifest.json", $m)
-          Compress-Archive -Path $discord -DestinationPath "$env:RUNNER_TEMP\discord.zip" -Force
-          Copy-Item "$env:RUNNER_TEMP\discord.zip" "target\installer\de.opendeckn3.discord-windows.streamDeckPlugin"
+          # Eigene Plugins (Windows-Binaries); Plugin-Version = Release-Version, damit der Katalog Updates erkennt.
+          foreach ($p in @("discord", "obs", "homeassistant")) {
+            $uuid = "de.opendeckn3.$p"
+            $dir = "$env:RUNNER_TEMP\pkg-$p\$uuid.sdPlugin"
+            Remove-Item -Recurse -Force "$env:RUNNER_TEMP\pkg-$p" -ErrorAction SilentlyContinue
+            New-Item -ItemType Directory -Force $dir | Out-Null
+            Copy-Item -Recurse "plugins\$p\$uuid.sdPlugin\*" $dir
+            Copy-Item "target\release\opendeckn3-$p.exe" $dir
+            # Textersetzung statt JSON-Rundreise (PowerShell verändert sonst verschachtelte Arrays).
+            $m = Get-Content "$dir\manifest.json" -Raw -Encoding utf8
+            $m = $m -replace '"Version":\s*"[^"]*"', ('"Version": "' + $v + '"')
+            [IO.File]::WriteAllText("$dir\manifest.json", $m)
+            Compress-Archive -Path $dir -DestinationPath "$env:RUNNER_TEMP\$p.zip" -Force
+            Copy-Item "$env:RUNNER_TEMP\$p.zip" "target\installer\$uuid-windows.streamDeckPlugin"
+          }
 
           # Prüfsummen – der Auto-Updater der App installiert nur verifizierte Installer.
           Push-Location target\installer

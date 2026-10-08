@@ -1,0 +1,18 @@
+[package]
+name = "opendeckn3-homeassistant"
+description = "OpenDeckN3-Plugin: Home Assistant (Webhooks, Dienste, Schalter, Dimmer, Zustände) über die REST-API"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "opendeckn3-homeassistant"
+path = "src/main.rs"
+
+[dependencies]
+n3-plugin-sdk.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots", "json"] }

@@ -479,7 +479,13 @@ function builtinLabel(inst) {
   switch (inst.action.slice(BUILTIN.length + 1)) {
     case 'hotkey': return v('shortcut');
     case 'profile': return v('profile') ? '→ ' + v('profile') : '';
-    case 'launch': { const n = v('path').replace(/"/g, '').split(/[\\/]/).pop(); return n.replace(/\.[^.]+$/, ''); }
+    case 'launch': {
+      // Name aus der Programmliste, sonst Dateiname ohne Endung.
+      const apps = S.popts[BUILTIN + '|apps|'];
+      const hit = apps && apps.options && apps.options.find(([p]) => p === v('path'));
+      if (hit) return hit[1];
+      const n = v('path').replace(/"/g, '').split(/[\\/]/).pop(); return n.replace(/\.[^.]+$/, '');
+    }
     case 'url': { const u = v('url'); return (u.split('://')[1] ?? u).split(/[/?#]/)[0].replace(/^www\./, ''); }
     default: return '';
   }
@@ -867,15 +873,16 @@ const shown = (f, schema, vals) => !f.showIf || Object.entries(f.showIf).every((
 });
 
 // Auswahlliste, deren Einträge das Plugin liefert (schema: source, dependsOn).
-function sourceSelectHTML(plugin, f, vals, at) {
+function sourceSelectHTML(plugin, f, vals, at, texts = {}) {
   const k = plugin + '|' + f.source + '|' + (f.dependsOn || []).map((d) => vals[d] ?? '').join('|');
   const st = S.popts[k];
   if (!st) loadOptions(plugin, f, vals, k);
   const v = vals[f.key] ?? '';
   const missingDep = (f.dependsOn || []).some((d) => !vals[d]);
   let opts = st && st.options ? st.options : [];
-  if (v && !opts.some(([val]) => String(val) === String(v))) opts = [[v, (st && st.loading) || !st ? 'Lade …' : `${v} (nicht gefunden)`], ...opts];
-  const placeholder = missingDep ? 'Erst oben auswählen …' : !st || st.loading ? 'Lade …' : opts.length ? 'Bitte wählen …' : 'Keine Einträge';
+  const custom = v && !opts.some(([val]) => String(val) === String(v));
+  if (custom) opts = [[v, texts.custom || ((st && st.loading) || !st ? 'Lade …' : `${v} (nicht gefunden)`)], ...opts];
+  const placeholder = missingDep ? 'Erst oben auswählen …' : !st || st.loading ? 'Lade …' : opts.length ? (texts.choose || 'Bitte wählen …') : 'Keine Einträge';
   const select = `<span class="fieldrow"><select class="field" ${at} ${missingDep && !v ? 'disabled' : ''}>
       <option value="" ${v ? '' : 'selected'} disabled>${esc(placeholder)}</option>
       ${opts.map(([val, l]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}
@@ -931,7 +938,9 @@ function schemaFormHTML(s, schema) {
           <div class="caps" aria-live="polite">${caps}</div><div class="hk-actions">${buttons}</div></div>${f.help ? `<span class="help">${esc(f.help)}</span>` : ''}</div>`;
       }
       case 'file':
-        input = `<span class="fieldrow"><input class="field mono" ${at} value="${esc(v)}" ${ph} spellcheck="false">${desktop
+        // Optional: Auswahlliste (z. B. installierte Programme) über dem Pfadfeld.
+        input = (f.source ? sourceSelectHTML(s.plugin, f, s.settings, `data-in="sfield" data-key="${esc(f.key)}" data-type="pick"`,
+          { choose: 'Installiertes Programm wählen …', custom: 'Eigener Pfad (siehe unten)' }) : '') + `<span class="fieldrow"><input class="field mono" ${at} value="${esc(v)}" ${ph} spellcheck="false">${desktop
           ? `<button type="button" class="btn" data-act="browseFile" data-arg="${esc(f.key)}">${ic('folder', 16)}Durchsuchen …</button>` : ''}</span>`;
         break;
       case 'textarea':
@@ -1110,6 +1119,8 @@ function globalSettingsHTML(p) {
         return `<button type="button" class="btn ${f.primary ? 'primary' : ''}" data-act="gbutton" data-arg="${esc(f.key)}">${ic(f.primary ? 'plug' : 'refresh', 16)}${esc(f.label)}</button>${help}`;
       case 'select':
         return `<label>${esc(f.label)}<select class="field" ${at}>${f.options.map(([val, l]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${help}</label>`;
+      case 'textarea':
+        return `<label>${esc(f.label)}<textarea class="field" ${at} rows="4" style="min-height:96px" spellcheck="false" ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''}>${esc(v)}</textarea>${help}</label>`;
       case 'password':
         return `<label>${esc(f.label)}<input class="field mono" type="password" ${at} value="${esc(v)}" autocomplete="off" spellcheck="false">${help}</label>`;
       default:
@@ -1782,7 +1793,7 @@ document.addEventListener('input', (e) => {
     s.settings = { ...s.settings, [t.dataset.key]: v }; renderStage(); sendSettings(S.sel, s.settings);
     const f = findAction(s.plugin, s.action);
     const schema = (f && f.a.settingsSchema) || [];
-    if (schema.some((x) => (x.dependsOn || []).includes(t.dataset.key) || (x.showIf && t.dataset.key in x.showIf))) render();
+    if (t.dataset.type === 'pick' || schema.some((x) => (x.dependsOn || []).includes(t.dataset.key) || (x.showIf && t.dataset.key in x.showIf))) render();
   }
   else if (k === 'setting') {
     const s = slot(S.sel); if (!s) return;

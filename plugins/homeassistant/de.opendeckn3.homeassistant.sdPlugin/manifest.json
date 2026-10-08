@@ -1,0 +1,254 @@
+{
+  "UUID": "de.opendeckn3.homeassistant",
+  "Name": "Home Assistant",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Steuert Home Assistant: Webhooks auslösen, Dienste aufrufen, Geräte schalten, Licht und Lautstärke per Drehregler dimmen, Zustände wie Temperaturen anzeigen.",
+  "Category": "Home Assistant",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-homeassistant.exe",
+  "CodePathLin": "opendeckn3-homeassistant",
+  "CodePathMac": "opendeckn3-homeassistant",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    },
+    {
+      "Platform": "mac"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "text",
+      "key": "url",
+      "label": "Adresse",
+      "placeholder": "http://homeassistant.local:8123"
+    },
+    {
+      "type": "password",
+      "key": "token",
+      "label": "Langlebiges Zugriffstoken",
+      "help": "In Home Assistant: Profil (unten links) → Sicherheit → „Langlebige Zugriffstoken“ → Token erstellen. Für Webhooks nicht nötig."
+    },
+    {
+      "type": "textarea",
+      "key": "webhooks",
+      "label": "Webhooks",
+      "placeholder": "Licht Wohnzimmer = licht_wz\nGute Nacht = gute_nacht",
+      "help": "Eine Zeile pro Webhook: Name = Webhook-ID. Die ID steht im Webhook-Auslöser der Automation."
+    },
+    {
+      "type": "button",
+      "key": "connect",
+      "label": "Verbindung prüfen",
+      "primary": true
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.homeassistant.webhook",
+      "Name": "Webhook",
+      "Tooltip": "Löst einen Home-Assistant-Webhook aus (Automationen mit Webhook-Auslöser)",
+      "Icon": "imgs/webhook",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/webhook"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "webhook",
+          "label": "Webhook",
+          "source": "webhooks",
+          "help": "Webhooks einmalig unter Plugins → Home Assistant → Einstellungen anlegen."
+        },
+        {
+          "type": "text",
+          "key": "webhookId",
+          "label": "Webhook-ID",
+          "showIf": {
+            "webhook": "__custom"
+          },
+          "placeholder": "z. B. licht_wohnzimmer"
+        },
+        {
+          "type": "select",
+          "key": "method",
+          "label": "Methode",
+          "options": [
+            [
+              "POST",
+              "POST"
+            ],
+            [
+              "PUT",
+              "PUT"
+            ],
+            [
+              "GET",
+              "GET"
+            ]
+          ],
+          "default": "POST"
+        },
+        {
+          "type": "textarea",
+          "key": "payload",
+          "label": "Daten (optional)",
+          "placeholder": "{\"quelle\": \"n3\"}",
+          "help": "JSON oder Text; in der Automation als trigger.json bzw. trigger.data verfügbar."
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.homeassistant.service",
+      "Name": "Dienst ausführen",
+      "Tooltip": "Ruft einen Home-Assistant-Dienst auf (Szene, Skript, Licht …)",
+      "Icon": "imgs/service",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/service"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "service",
+          "label": "Dienst",
+          "source": "services"
+        },
+        {
+          "type": "select",
+          "key": "entity",
+          "label": "Entität (optional)",
+          "source": "entities",
+          "dependsOn": [
+            "service"
+          ]
+        },
+        {
+          "type": "textarea",
+          "key": "data",
+          "label": "Daten (optional, JSON)",
+          "placeholder": "{\"brightness_pct\": 60}"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.homeassistant.toggle",
+      "Name": "Schalter",
+      "Tooltip": "Schaltet eine Entität um (Licht, Steckdose, Rollladen …) und zeigt ihren Zustand",
+      "Icon": "imgs/power",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/power"
+        },
+        {
+          "Image": "imgs/power-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "entity",
+          "label": "Entität",
+          "source": "toggleable"
+        },
+        {
+          "type": "select",
+          "key": "showState",
+          "label": "Zustand als Text",
+          "options": [
+            [
+              "no",
+              "Nein"
+            ],
+            [
+              "yes",
+              "Ja"
+            ]
+          ],
+          "default": "no"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.homeassistant.dimmer",
+      "Name": "Dimmer",
+      "Tooltip": "Drehregler: Helligkeit/Lautstärke/Position ändern, drücken = an/aus",
+      "Icon": "imgs/dimmer",
+      "Controllers": [
+        "Encoder",
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/dimmer"
+        },
+        {
+          "Image": "imgs/dimmer-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "entity",
+          "label": "Entität",
+          "source": "dimmable"
+        },
+        {
+          "type": "number",
+          "key": "step",
+          "label": "Schritt (%)",
+          "default": 10,
+          "min": 1,
+          "max": 50,
+          "help": "Pro Raste"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.homeassistant.state",
+      "Name": "Zustand anzeigen",
+      "Tooltip": "Zeigt den Zustand einer Entität, z. B. Temperatur",
+      "Icon": "imgs/sensor",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/sensor"
+        },
+        {
+          "Image": "imgs/sensor-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "entity",
+          "label": "Entität",
+          "source": "entities"
+        }
+      ]
+    }
+  ]
+}

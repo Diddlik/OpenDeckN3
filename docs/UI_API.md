@@ -133,7 +133,7 @@ type InputEvent =
 | `uninstallPlugin` | `plugin` | `{ plugin }` – nur installierte, nicht mitgelieferte Plugins; Belegungen bleiben im Profil |
 | `pluginStore` | `refresh?` (Cache von 10 min umgehen) | `{ plugins: StoreEntry[], registries: string[], errors: string[] }` |
 | `getGlobalSettings` | `plugin` | globale Einstellungen des Plugins (Objekt) |
-| `pluginRequest` | `plugin`, `payload` (z. B. `{ request: "guilds" }`) | Antwort des Plugins (`sendToPropertyInspector`), z. B. `{ options: [[wert, text], …] }`; Fehler, wenn das Plugin `error` liefert oder nicht läuft |
+| `pluginRequest` | `plugin`, `payload` (z. B. `{ request: "guilds" }`; für `opendeckn3.builtin` beantwortet der Dienst `{ request: "apps" }` selbst: installierte Programme – Windows: Startmenü-Verknüpfungen, Linux: `.desktop`-Einträge, macOS: `.app`) | Antwort des Plugins (`sendToPropertyInspector`), z. B. `{ options: [[wert, text], …] }`; Fehler, wenn das Plugin `error` liefert oder nicht läuft |
 | `setGlobalSettings` | `plugin`, `settings` | zusammengeführte Einstellungen – `settings` wird in die vorhandenen gemischt (vom Plugin gespeicherte Werte wie Tokens bleiben); Plugin erhält `didReceiveGlobalSettings` |
 
 Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.
@@ -202,7 +202,7 @@ Plugin-UUID `opendeckn3.builtin`, Aktions-UUIDs `opendeckn3.builtin.<name>`:
 | `hotkey` | `shortcut`, `clockwise`, `anticlockwise` (z. B. `Ctrl+Shift+M`, mehrere mit Leerzeichen) | drückt `shortcut` | drehen = `clockwise`/`anticlockwise` je Raste |
 | `volume` | `mode` (`mute`/`up`/`down`), `step` (1–10) | Funktion aus `mode` | drehen = lauter/leiser |
 | `media` | `mode` (`playpause`/`next`/`previous`/`stop`) | Funktion aus `mode` | drehen = Titel vor/zurück |
-| `launch` | `path`, `args` | Programm/Datei/Ordner öffnen | – |
+| `launch` | `path` (Auswahlliste installierter Programme oder eigener Pfad), `args` | Programm/Datei/Ordner öffnen | – |
 | `url` | `url` (http/https) | im Standardbrowser öffnen | – |
 | `command` | `command`, `clockwise`, `anticlockwise` (`%d` = Rasten) | Shell-Befehl (`cmd /C` bzw. `sh -c`) | drehen = `clockwise`/`anticlockwise` |
 | `text` | `text` | Text tippen | – |

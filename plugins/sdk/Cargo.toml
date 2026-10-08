@@ -1,0 +1,14 @@
+[package]
+name = "n3-plugin-sdk"
+description = "Kleine Hilfsbibliothek für OpenDeckN3-Plugins in Rust (Verbindung zum Host, Tastenzustand, Einstellungen)"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-tungstenite.workspace = true
+futures-util.workspace = true

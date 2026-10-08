@@ -151,6 +151,22 @@ impl App {
         payload: Value,
         reply: tokio::sync::oneshot::Sender<Result<Value, String>>,
     ) {
+        if plugin == BUILTIN_PLUGIN {
+            // Built-in dropdowns are answered here (scanning runs off the main loop).
+            tokio::spawn(async move {
+                let result = match payload["request"].as_str() {
+                    Some("apps") => {
+                        tokio::task::spawn_blocking(crate::system::apps::installed_apps)
+                            .await
+                            .map(|apps| json!({ "options": apps }))
+                            .map_err(|e| e.to_string())
+                    }
+                    _ => Err("unbekannte Anfrage".into()),
+                };
+                reply.send(result).ok();
+            });
+            return;
+        }
         // Forget requests a plugin never answered.
         self.plugin_requests
             .retain(|_, (_, at, _)| at.elapsed() < std::time::Duration::from_secs(30));
