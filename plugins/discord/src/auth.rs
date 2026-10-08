@@ -119,36 +119,69 @@ pub async fn sign_in(
         return Err(NeedsAuthorize.into());
     }
 
-    let code = match authorize(&rpc, &creds.client_id, true).await {
+    // Without a secret (public client) the code is bound to a PKCE verifier.
+    let pkce = creds.client_secret.is_empty().then(Pkce::new).transpose()?;
+    let code = match authorize(&rpc, &creds.client_id, true, pkce.as_ref()).await {
         Ok(code) => code,
         Err(err) if err.to_string().to_lowercase().contains("scope") => {
-            authorize(&rpc, &creds.client_id, false).await?
+            authorize(&rpc, &creds.client_id, false, pkce.as_ref()).await?
         }
         Err(err) => return Err(err),
     };
-    let tokens = token_request(
-        &http,
-        creds,
-        &[
-            ("grant_type", "authorization_code"),
-            ("code", &code),
-            ("redirect_uri", &creds.redirect_uri),
-        ],
-    )
-    .await?;
+    let mut params = vec![
+        ("grant_type", "authorization_code"),
+        ("code", code.as_str()),
+        ("redirect_uri", creds.redirect_uri.as_str()),
+    ];
+    if let Some(pkce) = &pkce {
+        params.push(("code_verifier", pkce.verifier.as_str()));
+    }
+    let tokens = token_request(&http, creds, &params).await?;
     let user = authenticate(&rpc, &tokens).await?;
     Ok(Session { rpc, tokens, user })
 }
 
-async fn authorize(rpc: &Rpc, client_id: &str, extra: bool) -> anyhow::Result<String> {
+/// PKCE (RFC 7636): random verifier, its SHA-256 as challenge.
+pub struct Pkce {
+    pub verifier: String,
+    pub challenge: String,
+}
+
+impl Pkce {
+    pub fn new() -> anyhow::Result<Self> {
+        use base64::Engine;
+        use sha2::Digest;
+        let mut random = [0u8; 48];
+        getrandom::fill(&mut random).map_err(|e| anyhow!("no randomness: {e}"))?;
+        let b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD;
+        let verifier = b64.encode(random);
+        let challenge = b64.encode(sha2::Sha256::digest(verifier.as_bytes()));
+        Ok(Self {
+            verifier,
+            challenge,
+        })
+    }
+}
+
+async fn authorize(
+    rpc: &Rpc,
+    client_id: &str,
+    extra: bool,
+    pkce: Option<&Pkce>,
+) -> anyhow::Result<String> {
     let mut scopes: Vec<&str> = BASE_SCOPES.to_vec();
     if extra {
         scopes.extend(EXTRA_SCOPES);
     }
+    let mut args = json!({ "client_id": client_id, "scopes": scopes });
+    if let Some(pkce) = pkce {
+        args["code_challenge"] = json!(pkce.challenge);
+        args["code_challenge_method"] = json!("S256");
+    }
     let data = rpc
         .call_with_timeout(
             "AUTHORIZE",
-            json!({ "client_id": client_id, "scopes": scopes }),
+            args,
             None,
             // The user has to confirm the popup in Discord.
             Duration::from_secs(300),
@@ -256,6 +289,9 @@ mod tests {
     use std::sync::{Arc, Mutex};
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
+    /// The token tests share `OPENDECKN3_DISCORD_API` and run one at a time.
+    static API_ENV: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
     /// Tiny HTTP server answering the token endpoint; records request bodies.
     async fn fake_token_server(log: Arc<Mutex<Vec<String>>>) -> String {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -288,6 +324,7 @@ mod tests {
 
     #[tokio::test]
     async fn full_authorization_flow() {
+        let _env = API_ENV.lock().await;
         let log = Arc::new(Mutex::new(Vec::new()));
         let base = fake_token_server(log.clone()).await;
         // SAFETY: tests in this module run the token server; nothing else reads it.
@@ -347,6 +384,55 @@ mod tests {
         };
         let session = sign_in(rpc, &creds(), Some(tokens), false).await.unwrap();
         assert_eq!(session.user, "max");
+    }
+
+    #[tokio::test]
+    async fn public_client_uses_pkce() {
+        let _env = API_ENV.lock().await;
+        let log = Arc::new(Mutex::new(Vec::new()));
+        let base = fake_token_server(log.clone()).await;
+        // SAFETY: see full_authorization_flow.
+        unsafe { std::env::set_var("OPENDECKN3_DISCORD_API", &base) };
+        let challenge = Arc::new(Mutex::new(String::new()));
+        let seen = challenge.clone();
+        let stream = fake_discord(move |f| {
+            let data = match f["cmd"].as_str().unwrap() {
+                "AUTHORIZE" => {
+                    assert_eq!(f["args"]["code_challenge_method"], "S256");
+                    *seen.lock().unwrap() =
+                        f["args"]["code_challenge"].as_str().unwrap().to_owned();
+                    json!({ "code": "C" })
+                }
+                _ => json!({ "user": { "username": "x" } }),
+            };
+            vec![json!({ "cmd": f["cmd"], "nonce": f["nonce"], "data": data })]
+        });
+        let (tx, _rx) = mpsc::unbounded_channel();
+        let rpc = Rpc::handshake(stream, "42", tx).await.unwrap();
+        let public = Credentials {
+            client_secret: String::new(),
+            ..creds()
+        };
+        sign_in(rpc, &public, None, true).await.unwrap();
+        let req = log.lock().unwrap().last().unwrap().clone();
+        assert!(!req.contains("client_secret"), "{req}");
+        let verifier = req
+            .split("code_verifier=")
+            .nth(1)
+            .unwrap()
+            .split(['&', '\r', '\n'])
+            .next()
+            .unwrap()
+            .to_owned();
+        use base64::Engine;
+        use sha2::Digest;
+        let expected = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .encode(sha2::Sha256::digest(verifier.as_bytes()));
+        assert_eq!(
+            *challenge.lock().unwrap(),
+            expected,
+            "challenge = S256(verifier)"
+        );
     }
 
     #[tokio::test]
