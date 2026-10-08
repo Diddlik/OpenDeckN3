@@ -70,6 +70,9 @@ ws.addEventListener("open", async () => {
     assert(state.devices[0].profiles.includes("gaming"), "new profile created");
     await call("switchProfile", { device: DEVICE, profile: "default" });
 
+    const started = await call("startVirtualDevice");
+    assert(started.device === DEVICE, "startVirtualDevice is idempotent");
+
     const bad = await call("switchProfile", { device: DEVICE, profile: "../x" }).catch((e) => e);
     assert(bad instanceof Error, "invalid profile id rejected");
     console.log("all checks passed");

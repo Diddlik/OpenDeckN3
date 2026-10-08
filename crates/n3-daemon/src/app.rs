@@ -20,7 +20,8 @@ use n3_plugin::{
     protocol::SlotRef,
 };
 use serde_json::{Value, json};
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, mpsc};
+use tokio_util::sync::CancellationToken;
 
 use crate::{
     api::ApiCommand,
@@ -95,15 +96,26 @@ pub struct App {
     pub plugins: PluginHost,
     pub devices: HashMap<String, DeviceState>,
     ui: broadcast::Sender<Value>,
+    /// Lets the UI start the virtual device at runtime.
+    device_events: mpsc::Sender<DeviceEvent>,
+    shutdown: CancellationToken,
 }
 
 impl App {
-    pub fn new(store: Store, plugins: PluginHost, ui: broadcast::Sender<Value>) -> Self {
+    pub fn new(
+        store: Store,
+        plugins: PluginHost,
+        ui: broadcast::Sender<Value>,
+        device_events: mpsc::Sender<DeviceEvent>,
+        shutdown: CancellationToken,
+    ) -> Self {
         Self {
             store,
             plugins,
             devices: HashMap::new(),
             ui,
+            device_events,
+            shutdown,
         }
     }
 
@@ -489,11 +501,13 @@ impl App {
             }
             InboundEvent::SetTitle { context, payload } => {
                 let slot = self.resolve_context(plugin, &context)?;
-                let state = self.device_mut(&slot.device)?;
-                match &payload.title {
-                    Some(title) => state.titles.insert(slot.position, title.clone()),
-                    None => state.titles.remove(&slot.position),
-                };
+                if slot.controller == Controller::Keypad {
+                    let state = self.device_mut(&slot.device)?;
+                    match &payload.title {
+                        Some(title) => state.titles.insert(slot.position, title.clone()),
+                        None => state.titles.remove(&slot.position),
+                    };
+                }
                 // TODO: render titles onto the key image (needs font rendering).
                 self.emit(json!({
                     "event": "keyTitle", "device": slot.device,
@@ -655,6 +669,18 @@ impl App {
                 .await;
                 Ok(Value::Null)
             }
+            ApiCommand::StartVirtualDevice => {
+                if !self
+                    .devices
+                    .contains_key(n3_driver::virtual_deck::VIRTUAL_DEVICE_ID)
+                {
+                    tokio::spawn(n3_driver::virtual_deck::run_virtual_device(
+                        self.device_events.clone(),
+                        self.shutdown.child_token(),
+                    ));
+                }
+                Ok(json!({ "device": n3_driver::virtual_deck::VIRTUAL_DEVICE_ID }))
+            }
         }
     }
 
@@ -673,7 +699,9 @@ impl App {
             .remove(&position)
             .is_some()
         {
-            state.titles.remove(&position);
+            if controller == Controller::Keypad {
+                state.titles.remove(&position);
+            }
             let profile = state.profile.clone();
             self.store.save_profile(device, &profile)?;
         }

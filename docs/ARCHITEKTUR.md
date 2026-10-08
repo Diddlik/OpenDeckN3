@@ -22,7 +22,7 @@ flowchart LR
         P2[Plugin B]
     end
 
-    UI[Desktop-UI<br/>Claude-Design-Entwurf]
+    UI[Weboberfläche ui/index.html<br/>http://127.0.0.1:57132]
 
     N3 <-- HID --> DRV
     DRV -- DeviceEvent --> APP
@@ -42,7 +42,7 @@ flowchart LR
 | `n3-core` | Domänenmodell ohne I/O | `DeviceInfo`, `DeviceLayout`, `InputEvent`, `DeviceCommand`, `DeviceEvent`, `DeviceHandle`, `Profile`, `ActionInstance`, `SlotContext` |
 | `n3-driver` | Hardware: Modelltabelle, N3-Protokoll (über `mirajazz`), Hot-Plug, virtuelles Gerät | `models::SUPPORTED_MODELS`, `n3::process_input`, `run_hid_watcher`, `virtual_deck::run_virtual_device` |
 | `n3-plugin` | Plugin-Manifest, Protokoll, WebSocket-Server, Prozessverwaltung | `PluginHost`, `PluginManifest`, `InboundEvent`, `protocol::SlotRef` |
-| `n3-daemon` | Binary `opendeckn3d`: verdrahtet alles, Router, Store, UI-API, eingebaute Aktionen | `App`, `Store`, `ApiCommand` |
+| `n3-daemon` | Binary `opendeckn3d`: verdrahtet alles, Router, Store, UI-API, eingebaute Aktionen, liefert die Weboberfläche aus | `App`, `Store`, `ApiCommand`, `ui_server` |
 
 ## Laufzeitmodell
 
@@ -95,9 +95,10 @@ Dateien werden atomar geschrieben (temporäre Datei + Rename).
 | Port | Zweck |
 | --- | --- |
 | `57130` | Plugin-WebSocket (Stream-Deck-SDK-Protokoll) |
-| `57131` | UI-API-WebSocket |
+| `57131` | UI-API-WebSocket (nur erlaubte Browser-Origins, siehe UI_API.md) |
+| `57132` | Weboberfläche (eingebettetes `ui/index.html`) |
 
-Beide binden nur an `127.0.0.1` und sind per CLI änderbar (`--plugin-port`, `--api-port`).
+Alle binden nur an `127.0.0.1` und sind per CLI änderbar (`--plugin-port`, `--api-port`, `--ui-port`).
 
 ## Erweiterungspunkte
 

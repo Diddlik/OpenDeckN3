@@ -6,6 +6,18 @@ Dadurch kann die UI unabhängig gestaltet und ausgetauscht werden (Tauri-App, We
 - Adresse: `ws://127.0.0.1:57131` (änderbar mit `--api-port`)
 - Format: JSON-Textnachrichten
 - Zum Entwickeln ohne Hardware: `opendeckn3d --virtual --no-hardware`
+- Die mitgelieferte Weboberfläche liegt unter `http://127.0.0.1:57132/` (`--ui-port`, abschaltbar mit `--no-ui`).
+
+### Zugriffsschutz (Origin)
+
+Browser senden beim Verbindungsaufbau immer einen `Origin`-Header. Der Dienst akzeptiert nur:
+
+- Verbindungen **ohne** `Origin` (native Programme, Node-Skripte, Tauri-Backend),
+- die eigene Weboberfläche (`http://127.0.0.1:<ui-port>`, `http://localhost:<ui-port>`),
+- `tauri://localhost` / `http://tauri.localhost` (künftige Desktop-App),
+- zusätzliche Origins per `--allow-origin <origin>` (z. B. ein Vite-Dev-Server).
+
+Alle anderen Origins erhalten HTTP 403 – so kann keine fremde Webseite das Gerät fernsteuern.
 
 ## Nachrichtenformat
 
@@ -102,6 +114,7 @@ type InputEvent =
 | `setActionAppearance` | `device`, `controller`, `position`, `title?`, `image?` | `null` – `image: null` = Standardbild |
 | `setBrightness` | `device`, `value` (0–100) | `null` |
 | `simulateInput` | `device`, `input: InputEvent` | `null` – wie echte Eingabe (ideal für das virtuelle Gerät) |
+| `startVirtualDevice` | – | `{ device: "virtual-n3" }` – startet das virtuelle N3, falls es noch nicht läuft |
 
 Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.
 

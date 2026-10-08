@@ -1,0 +1,1371 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenDeckN3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============ Design-Tokens ============ */
+:root,[data-theme="dark"]{
+  --bg:#0B0D10;--stage:#0E1014;--panel:#121519;--panel2:#171A1F;--raised:#1E2228;--hover:#22262D;
+  --line:#2A2F37;--line2:#1F242B;--text:#ECEEF1;--muted:#A0A7B2;--faint:#8A929E;
+  --accent:#35E0D0;--accent-ink:#062320;--accent-text:#35E0D0;--accent-soft:rgba(53,224,208,.14);
+  --ok:#4ADE80;--warn:#F5B841;--err:#F26D6D;--err-text:#F7A0A0;
+  --dot:rgba(255,255,255,.05);--shadow:0 16px 40px rgba(0,0,0,.45);--input:#0E1014;
+  color-scheme:dark;
+}
+[data-theme="light"]{
+  --bg:#F4F5F7;--stage:#ECEEF1;--panel:#FFFFFF;--panel2:#FAFAFB;--raised:#EEF0F3;--hover:#E8EBEF;
+  --line:#DDE1E6;--line2:#E4E7EB;--text:#14171C;--muted:#545C69;--faint:#69717E;
+  --accent:#0B8A80;--accent-ink:#FFFFFF;--accent-text:#0B7F76;--accent-soft:rgba(11,138,128,.12);
+  --ok:#15803D;--warn:#A16207;--err:#C42B2B;--err-text:#B42323;
+  --dot:rgba(0,0,0,.06);--shadow:0 16px 40px rgba(20,23,28,.12);--input:#FFFFFF;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Geist',system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent-text)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:'Geist Mono',ui-monospace,monospace}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.app{min-height:100vh;display:flex;flex-direction:column}
+
+/* ============ Grundbausteine ============ */
+.btn{height:40px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:var(--raised);display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:500;text-decoration:none;color:var(--text);white-space:nowrap}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:600}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.danger{border-color:color-mix(in srgb,var(--err) 45%,transparent);background:color-mix(in srgb,var(--err) 8%,transparent);color:var(--err-text)}
+.btn.lg{height:46px;padding:0 20px;font-size:15px;border-radius:12px}
+.btn.icon{width:40px;padding:0}
+.field{height:40px;border-radius:10px;border:1px solid var(--line);background:var(--input);padding:0 12px;font-size:14px;min-width:0}
+select.field{padding:0 10px}
+.chip{font-size:10px;font-weight:600;letter-spacing:.02em;padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
+.switch{width:46px;height:28px;flex:none;border-radius:999px;border:0;background:var(--line);padding:3px;display:flex}
+.switch span{width:22px;height:22px;border-radius:50%;background:var(--muted);transition:transform .18s ease}
+.switch[aria-checked="true"]{background:var(--accent)}
+.switch[aria-checked="true"] span{transform:translateX(18px);background:var(--accent-ink)}
+.seg{display:flex;padding:4px;gap:4px;border-radius:12px;background:var(--input);border:1px solid var(--line)}
+.seg button{height:32px;padding:0 14px;border-radius:8px;border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:500}
+.seg button[aria-checked="true"]{background:var(--raised);color:var(--text);box-shadow:0 1px 0 rgba(0,0,0,.15)}
+.spin{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin 1s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{50%{opacity:.35}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.pulse{animation:pulse 1.6s ease-in-out infinite}
+.rise{animation:rise .25s ease}
+pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5px;line-height:1.7;white-space:pre-wrap;overflow-x:auto}
+.codebox{border-radius:14px;border:1px solid var(--line2);background:var(--panel);overflow:hidden}
+.codebox-head{display:flex;align-items:center;justify-content:space-between;padding:8px 10px 8px 14px;border-bottom:1px solid var(--line2);font-size:13px;color:var(--muted)}
+
+/* ============ Titelleiste ============ */
+.bar{min-height:64px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line2);display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;position:relative;z-index:20}
+.brand{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.brand b{color:var(--accent-text);font-weight:600}
+.nav{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--panel2);border:1px solid var(--line2)}
+.nav button{height:32px;padding:0 12px;border-radius:9px;border:0;background:transparent;color:var(--muted);display:flex;align-items:center;gap:7px;font-size:13px;font-weight:500}
+.nav button[aria-current="page"]{background:var(--raised);color:var(--text)}
+.bar .grow{flex:1}
+.devsel{height:40px;padding:0 10px 0 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);display:flex;align-items:center;gap:10px;position:relative}
+.badge{font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px}
+.badge.virt{background:rgba(160,132,255,.16);color:#B9A4FF}
+[data-theme="light"] .badge.virt{color:#6D4BD8}
+.badge.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.bright{height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);display:flex;align-items:center;gap:10px;color:#E3B341}
+.bright input{width:120px;accent-color:var(--accent)}
+.bright output{font-family:'Geist Mono',monospace;font-size:12px;color:var(--text);width:40px;text-align:right}
+.popover{position:absolute;top:calc(100% + 6px);right:0;min-width:280px;padding:6px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);box-shadow:var(--shadow);z-index:50}
+.popover button{width:100%;display:flex;align-items:center;gap:10px;padding:10px;border:0;border-radius:8px;background:transparent;text-align:left}
+.popover button:hover{background:var(--hover)}
+.popover small{display:block;font-family:'Geist Mono',monospace;font-size:11px;color:var(--faint)}
+
+/* ============ Editor-Layout ============ */
+.editor{flex:1;display:grid;grid-template-columns:280px minmax(0,1fr) 340px;min-height:0}
+@media (max-width:1180px){.editor{grid-template-columns:260px minmax(0,1fr)}.insp{grid-column:1 / -1;border-left:0!important;border-top:1px solid var(--line2)}}
+@media (max-width:760px){.editor{grid-template-columns:minmax(0,1fr)}.lib{border-right:0!important;border-bottom:1px solid var(--line2)}}
+
+/* Bibliothek */
+.lib{background:var(--panel);border-right:1px solid var(--line2);padding:20px 14px 16px;display:flex;flex-direction:column;gap:14px}
+.search{display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--input);color:var(--faint)}
+.search input{flex:1;min-width:0;height:100%;border:0;background:transparent;outline:none;font-size:14px;color:var(--text)}
+.grp{display:flex;align-items:center;gap:6px;height:32px;width:100%;padding:0 6px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:13px;font-weight:600;text-align:left}
+.grp svg{transition:transform .15s ease}
+.grp[aria-expanded="true"] svg{transform:rotate(90deg)}
+.grp .n{margin-left:auto;font-family:'Geist Mono',monospace;font-size:11px;font-weight:400;color:var(--faint)}
+.item{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:6px 8px 6px 4px;border-radius:10px;border:1.5px solid transparent;background:transparent;text-align:left;cursor:grab;user-select:none}
+.item:hover{background:var(--hover)}
+.item.dragging{border-style:dashed;border-color:var(--accent);opacity:.5}
+.item .grip{color:var(--line);display:flex}
+.tile{width:34px;height:34px;flex:none;border-radius:9px;display:flex;align-items:center;justify-content:center}
+.item .nm{font-size:14px;font-weight:500}
+.item .meta{display:flex;gap:4px;margin-top:4px}
+
+/* Bühne */
+.center{padding:24px 28px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.head h1{margin:2px 0 0;font-size:22px;font-weight:600;letter-spacing:-.01em}
+.toggle{display:flex;align-items:center;gap:10px;height:36px;padding:0 12px 0 8px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);font-size:13px;font-weight:500}
+.toggle .switch{width:34px;height:20px;padding:2px}
+.toggle .switch span{width:16px;height:16px}
+.toggle[aria-pressed="true"] .switch{background:var(--accent)}
+.toggle[aria-pressed="true"] .switch span{transform:translateX(14px);background:var(--accent-ink)}
+.stage{flex:1;min-height:540px;position:relative;border-radius:20px;border:1px solid var(--line2);background-color:var(--stage);background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:22px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:32px 16px;overflow:hidden;transition:border-color .2s}
+.stage.dragmode{border-color:color-mix(in srgb,var(--accent) 45%,transparent)}
+.hint{display:flex;align-items:center;gap:14px;max-width:460px;padding:14px 18px 14px 14px;border-radius:16px;background:var(--panel2);border:1px solid var(--line);box-shadow:var(--shadow)}
+.hint .tile{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent-text)}
+.pill{position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:13px;color:var(--muted);white-space:nowrap}
+.status{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font-size:13px;color:var(--muted)}
+.status .mono{font-size:12px}
+
+/* Inspektor */
+.insp{background:var(--panel);border-left:1px solid var(--line2);padding:24px;display:flex;flex-direction:column;gap:22px}
+.insp h3{margin:0;font-size:13px;font-weight:600;color:var(--muted)}
+.insp section{display:flex;flex-direction:column;gap:12px}
+.insp label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.insp .row{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;gap:10px}
+.empty-card{border:1.5px dashed var(--line);border-radius:16px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.danger{margin-top:auto;padding-top:16px;border-top:1px solid var(--line2)}
+.danger h3{color:var(--err)!important}
+
+/* ============ Gerät (Layout nach Produktfoto) ============ */
+.device{--dim:1;width:700px;padding:30px 32px 18px 36px;border-radius:30px;border:1px solid #2E333B;background:linear-gradient(180deg,#23272E 0%,#17191E 100%);box-shadow:0 40px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.07);display:flex;flex-direction:column;gap:10px;color:#ECEEF1;flex:none;transition:filter .3s,opacity .3s;--well:#191C21;--wellline:#2C3139;--trk:#2A2F37;--lbl:#D7DBE1;--lblEmpty:#8A929E;--sub:#8A929E;--eng:#6B7280}
+.device.white{background:linear-gradient(180deg,#F7F8FA 0%,#E3E6EA 100%);border-color:#D3D7DD;box-shadow:0 40px 80px rgba(0,0,0,.35),inset 0 1px 0 #fff;--well:#E9ECEF;--wellline:#D0D4DA;--trk:#C9CED5;--lbl:#2B3038;--lblEmpty:#6B7280;--sub:#5B6370;--eng:#8A929E}
+.device.offline{filter:grayscale(1);opacity:.45;pointer-events:none}
+.dev-row{display:flex;gap:40px;align-items:stretch}
+.dev-left{display:flex;flex-direction:column;gap:22px}
+.keys{display:grid;grid-template-columns:repeat(3,96px);gap:14px}
+.device.flip .keys .key,.device.flip .rkey,.device.flip .knob{animation:flip .38s ease}
+@keyframes flip{0%{transform:perspective(500px) rotateY(0)}50%{transform:perspective(500px) rotateY(90deg);opacity:.2}100%{transform:perspective(500px) rotateY(0)}}
+.key{position:relative;width:96px;height:96px;padding:7px;border-radius:16px;border:1px solid #0A0B0D;background:#0F1114;box-shadow:inset 0 -3px 0 rgba(0,0,0,.6),0 3px 6px rgba(0,0,0,.35);transition:transform .12s ease,box-shadow .2s ease,opacity .2s}
+.key:hover,.rkey:hover{transform:translateY(1px)}
+.key:active,.rkey:active{transform:translateY(2px) scale(.97)}
+.screen{width:100%;height:100%;border-radius:11px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;overflow:hidden;filter:brightness(var(--dim));border:1px solid rgba(255,255,255,.05);font-size:11px;font-weight:600;letter-spacing:.02em}
+.screen .t{max-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.screen .big{font-family:'Geist Mono',monospace;font-size:28px;font-weight:500;line-height:1}
+.screen .small{font-size:10px;font-weight:500;opacity:.8}
+.screen.empty{background:#0E1014;color:#5B6370;border:1.5px dashed #2F353E}
+.rkeys{display:grid;grid-template-columns:repeat(3,96px);gap:14px;justify-items:center}
+.rkey-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+.rkey{position:relative;width:62px;height:62px;border-radius:50%;border:1px solid #0A0B0D;background:radial-gradient(circle at 50% 32%,#3E434C 0%,#1C1F24 62%,#121418 100%);box-shadow:0 0 0 7px var(--well),0 0 0 8px var(--wellline),0 6px 10px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#ECEEF1;transition:transform .12s ease,box-shadow .2s}
+.rkey.isempty{color:#6B7280}
+.rlabel{font-size:11px;font-weight:500;color:var(--lbl);max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rlabel.e{color:var(--lblEmpty)}
+.dev-right{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:6px}
+.knob-row{display:flex;gap:40px}
+.knob-wrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+.knob-btn{position:relative;padding:0;border:0;border-radius:50%;background:transparent;display:flex;align-items:center;justify-content:center;transition:box-shadow .2s}
+.knob-btn svg{position:absolute;inset:0;width:100%;height:100%}
+.knob-btn .trk,.knob-btn .val{fill:none;stroke-linecap:round}
+.knob-btn .trk{stroke:var(--trk)}
+.knob-btn .val{stroke:#35E0D0;transition:stroke-dasharray .15s ease}
+.knob{position:relative;border-radius:50%;background-color:#16181C;background-image:repeating-conic-gradient(rgba(255,255,255,.05) 0deg 3deg,transparent 3deg 6deg),conic-gradient(from 210deg,#101215,#3A3F47,#15171B,#2E333A,#101215);display:flex;justify-content:center;transition:transform .15s ease}
+.knob i{display:block;width:3px;border-radius:2px;background:#ECEEF1}
+.big .knob-btn{width:176px;height:176px}
+.big .knob{width:140px;height:140px;box-shadow:0 14px 28px rgba(0,0,0,.6),inset 0 0 0 6px #0C0D10,inset 0 1px 0 rgba(255,255,255,.15)}
+.big .knob i{margin-top:12px;height:20px}
+.big svg circle{stroke-width:3}
+.small .knob-btn{width:92px;height:92px}
+.small .knob{width:66px;height:66px;box-shadow:0 8px 14px rgba(0,0,0,.6),inset 0 0 0 4px #0C0D10,inset 0 1px 0 rgba(255,255,255,.15)}
+.small .knob i{margin-top:7px;height:12px}
+.small svg circle{stroke-width:5}
+.knob-wrap.isempty .knob i{background:#4B5260}
+.klabel{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--lbl);white-space:nowrap}
+.klabel.e{color:var(--lblEmpty)}
+.ksub{font-family:'Geist Mono',monospace;font-size:11px;color:var(--sub);height:14px;white-space:nowrap}
+.engrave{display:flex;justify-content:space-between;align-items:center;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.18em;color:var(--eng)}
+.led{width:6px;height:6px;border-radius:50%;background:#4ADE80;box-shadow:0 0 8px #4ADE80}
+.device.offline .led{background:#F5B841;box-shadow:0 0 8px #F5B841}
+/* Slot-Zustände */
+.key::after,.rkey::after,.knob-btn::after{content:"";position:absolute;pointer-events:none;border-radius:inherit;border:2px solid transparent;transition:border-color .15s,background .15s,box-shadow .2s}
+.key::after{inset:-6px;border-radius:20px}
+.rkey::after{inset:-12px}
+.knob-btn::after{inset:-4px}
+.sel::after{border-color:#35E0D0}
+.target::after{border-color:rgba(53,224,208,.75);border-style:dashed}
+.replace::after{border-color:rgba(53,224,208,.3);border-style:dashed}
+.over::after{border-color:#35E0D0;background:rgba(53,224,208,.14);box-shadow:0 0 32px rgba(53,224,208,.5)}
+.disabled{opacity:.28}
+.press{box-shadow:0 0 0 2px #35E0D0,0 0 30px rgba(53,224,208,.55)!important}
+.device-outline{width:700px;height:404px;border-radius:30px;border:2px dashed var(--line);padding:34px 36px;display:flex;gap:56px;flex:none}
+.device-outline span{border:2px dashed var(--line);display:block}
+@media (max-width:1460px){.stage .device,.stage .device-outline{zoom:.86}}
+@media (max-width:1300px){.stage .device,.stage .device-outline{zoom:.74}}
+@media (max-width:760px){.device,.device-outline{zoom:.48}}
+
+/* ============ Seiten ============ */
+.page{flex:1;display:flex;flex-wrap:wrap;align-items:stretch}
+.page-main{flex:999 1 560px;min-width:0;padding:32px;display:flex;flex-direction:column;gap:24px}
+.page h1{margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.pcard{display:flex;flex-direction:column;gap:16px;padding:18px;border-radius:16px;border:1px solid var(--line2);background:var(--panel);text-align:left;transition:border-color .15s,transform .15s}
+.pcard:hover{transform:translateY(-1px);border-color:var(--line)}
+.pcard[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--panel))}
+.state{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:13px}
+.state.on{background:color-mix(in srgb,var(--ok) 13%,transparent);color:var(--ok)}
+.state.off{background:color-mix(in srgb,var(--faint) 15%,transparent);color:var(--muted)}
+.detail{flex:1 1 380px;min-width:0;background:var(--panel);border-left:1px solid var(--line2);padding:28px;display:flex;flex-direction:column;gap:22px}
+.detail dl{margin:0;display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px 12px;font-size:13px}
+.detail dt{color:var(--faint)} .detail dd{margin:0;overflow-wrap:anywhere}
+.arow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--panel2);border:1px solid var(--line2)}
+.settings{flex:1;width:100%;max-width:1120px;margin:0 auto;padding:32px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:32px}
+.snav{flex:1 1 200px;display:flex;flex-direction:column;gap:4px;position:sticky;top:16px}
+.snav a{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:14px;font-weight:500}
+.snav a:hover{background:var(--raised);color:var(--text)}
+.sbody{flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:20px}
+.scard{border-radius:16px;border:1px solid var(--line2);background:var(--panel);scroll-margin-top:16px}
+.scard h2{margin:0;padding:18px 20px;font-size:16px;font-weight:600;border-bottom:1px solid var(--line2)}
+.srow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line2)}
+.srow:last-child{border-bottom:0}
+.srow .t{display:flex;flex-direction:column;gap:3px}
+.srow .t b{font-size:14px;font-weight:500}
+.srow .t span{font-size:13px;color:var(--muted)}
+.blank{flex:1;display:flex;align-items:center;justify-content:center;padding:48px 24px;background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:22px 22px}
+
+/* Onboarding */
+.ob{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 16px;background-image:radial-gradient(var(--dot) 1px,transparent 1px);background-size:22px 22px}
+.ob-card{width:100%;max-width:1180px;border-radius:24px;border:1px solid var(--line2);background:var(--panel);box-shadow:var(--shadow);overflow:hidden}
+.steps{margin:0;list-style:none;display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:20px 28px;border-bottom:1px solid var(--line2)}
+.steps li{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:500;color:var(--faint)}
+.steps li.on,.steps li.done{color:var(--text)}
+.steps .num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:13px;border:1px solid var(--line)}
+.steps li.on .num{background:var(--accent-soft);color:var(--accent-text);border-color:var(--accent)}
+.steps li.done .num{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.steps .ln{width:48px;height:1px;background:var(--line)}
+.ob-body{display:flex;flex-wrap:wrap;align-items:center;gap:40px;padding:44px 40px}
+.ob-body .txt{flex:1 1 340px;display:flex;flex-direction:column;gap:18px}
+.ob-body h1{margin:0;font-size:36px;line-height:1.12;font-weight:600;letter-spacing:-.025em}
+.ob-body p{margin:0;font-size:16px;line-height:1.6;color:var(--muted)}
+.ob-body .dev{flex:0 1 auto;margin:0 auto}
+.ob-body .dev .device{zoom:.82}
+@media (max-width:760px){.ob-body .dev .device{zoom:.48}}
+
+/* Toast, Menüs, Dialog */
+#toasts{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:100;pointer-events:none}
+.toast{display:flex;align-items:center;gap:10px;padding:10px 16px 10px 12px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);box-shadow:var(--shadow);font-size:14px;white-space:nowrap;animation:rise .22s ease}
+.toast .ic{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--bg)}
+.ctx{position:fixed;min-width:200px;padding:6px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);box-shadow:var(--shadow);z-index:90;animation:rise .12s ease}
+.ctx button{width:100%;display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;border:0;border-radius:8px;background:transparent;font-size:14px;text-align:left}
+.ctx button:hover:not(:disabled){background:var(--hover)}
+.ctx button:disabled{color:var(--faint);cursor:default}
+.ctx button.red{color:var(--err-text)}
+.ctx hr{border:0;border-top:1px solid var(--line2);margin:4px 2px}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:95;padding:16px;animation:rise .15s ease}
+.dialog{width:100%;max-width:420px;border-radius:18px;border:1px solid var(--line);background:var(--panel);box-shadow:var(--shadow);padding:22px;display:flex;flex-direction:column;gap:16px}
+.dialog h2{margin:0;font-size:18px;font-weight:600}
+.err{font-size:13px;color:var(--err-text)}
+/* ============ Ergänzungen für die Live-Anbindung ============ */
+.screen.img{position:relative;padding:0;background:#000}
+.screen.img img{width:100%;height:100%;object-fit:cover;display:block}
+.screen.img .ov{position:absolute;left:0;right:0;bottom:0;padding:3px 4px 4px;background:linear-gradient(transparent,rgba(0,0,0,.72));color:#fff;font-size:11px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+textarea.field{height:auto;min-height:140px;padding:10px 12px;font-family:'Geist Mono',monospace;font-size:12.5px;line-height:1.6;resize:vertical}
+.linkbtn{border:0;background:transparent;padding:0;font-family:'Geist Mono',monospace;font-size:12px;color:var(--accent-text)}
+.soon{font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--raised);color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div id="toasts" role="status" aria-live="polite"></div>
+<div id="overlay"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   OpenDeckN3 – Weboberfläche
+   Design: Claude-Design-Prototyp (docs/UI_DESIGN_BRIEF.md).
+   Daten: ausschließlich über die UI-API (docs/UI_API.md) vom Dienst.
+   Der Dienst liefert diese Datei unter http://127.0.0.1:57132/ aus und
+   ersetzt dabei den API-Port-Platzhalter.
+   ===================================================================== */
+
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+const BUILTIN = 'opendeckn3.builtin';
+const CONFIG_DIR = '~/.config/opendeckn3';
+const PROFILE_ID = /^[A-Za-z0-9_\-][A-Za-z0-9_.\-]*$/;
+
+/* ---------- Lokale Einstellungen (nur Komfort, pro Browser) ---------- */
+const local = {
+  get(k, d) { try { const v = localStorage.getItem('odn3.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('odn3.' + k, JSON.stringify(v)); } catch { /* egal */ } }
+};
+const DEFAULT_API_PORT = Number('{{API_PORT}}') || 57131;
+
+/* ---------- Icons (Linien, 24er Raster) ---------- */
+const ICONS = {
+  camera: '<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/>',
+  screen: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+  rec: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/>',
+  counter: '<path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/>',
+  terminal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/>',
+  mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
+  profile: '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
+  volume: '<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>',
+  brightness: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  plug: '<path d="M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0V8zM12 17v5"/>',
+  trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  alert: '<path d="M12 6v7M12 17.5v.01"/>',
+  usb: '<path d="M12 3v14M12 3l-2.5 3h5L12 3zM7 10v2.5l5 3M17 9.5V12l-5 3"/><circle cx="12" cy="19" r="2"/><circle cx="7" cy="9" r="1.3"/><rect x="15.6" y="7" width="2.8" height="2.5"/>',
+  refresh: '<path d="M20 11a8 8 0 0 0-14.8-4M4 3v4h4M4 13a8 8 0 0 0 14.8 4M20 21v-4h-4"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+  chevron: '<path d="M6 9l6 6 6-6"/>',
+  chevronRight: '<path d="M9 6l6 6-6 6"/>',
+  grid: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>',
+  file: '<path d="M6 3h8l4 4v14H6V3z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+  play: '<path d="M7 5l12 7-12 7V5z"/>',
+  key: '<rect x="4" y="4" width="16" height="16" rx="3.5"/><rect x="8" y="8" width="8" height="8" rx="1.5"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/>',
+  external: '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+  arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>',
+  duplicate: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>',
+  grip: '<g fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></g>'
+};
+const ic = (n, s = 18, sw = 1.75) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ICONS.key}</svg>`;
+const LOGO = (s = 30) => `<svg width="${s}" height="${s}" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="8" fill="#171A1F" stroke="#2E333B"/><rect x="5" y="7" width="4.5" height="4.5" rx="1.2" fill="#35E0D0"/><rect x="11" y="7" width="4.5" height="4.5" rx="1.2" fill="#ECEEF1"/><rect x="17" y="7" width="4.5" height="4.5" rx="1.2" fill="#ECEEF1"/><rect x="5" y="13" width="4.5" height="4.5" rx="1.2" fill="#ECEEF1"/><rect x="11" y="13" width="4.5" height="4.5" rx="1.2" fill="#ECEEF1"/><rect x="17" y="13" width="4.5" height="4.5" rx="1.2" fill="#ECEEF1"/><circle cx="7.2" cy="22" r="1.6" fill="#5B6370"/><circle cx="13.2" cy="22" r="1.6" fill="#5B6370"/><circle cx="19.2" cy="22" r="1.6" fill="#5B6370"/><circle cx="24.5" cy="10" r="2.4" fill="none" stroke="#35E0D0" stroke-width="1.4"/><circle cx="24.5" cy="20.5" r="1.6" fill="none" stroke="#A0A7B2" stroke-width="1.2"/></svg>`;
+
+const KCOL = {
+  camera: ['#0F2236', '#8CCBFF'], screen: ['#191D3B', '#B3BCFF'], rec: ['#2A1416', '#E7A3A3'],
+  counter: ['#0D2927', '#5FF0E2'], terminal: ['#18230F', '#B4EA8A'], mic: ['#2A1832', '#E6B3FF'], profile: ['#22252B', '#D7DBE1'],
+  brightness: ['#2C240E', '#F7D886'], volume: ['#10202D', '#9DD6FF'], grid: ['#1C2A2A', '#5FF0E2'], key: ['#1C2230', '#C9D3E3']
+};
+
+/* ---------- Katalog-Hilfen ---------- */
+// Icon-Art aus Plugin-/Aktions-UUID ableiten (Plugins liefern oft kein Icon).
+function kindFor(pluginUuid, actionUuid) {
+  const a = (actionUuid || '').toLowerCase();
+  if (pluginUuid === BUILTIN) return a.endsWith('.brightness') ? 'brightness' : 'profile';
+  const rules = [['count', 'counter'], ['bright', 'brightness'], ['volume', 'volume'], ['audio', 'volume'], ['mute', 'mic'], ['mic', 'mic'],
+    ['record', 'rec'], ['scene', 'camera'], ['obs', 'camera'], ['shell', 'terminal'], ['command', 'terminal'], ['run', 'terminal'], ['profile', 'profile']];
+  const hit = rules.find(([k]) => a.includes(k) || (pluginUuid || '').toLowerCase().includes(k));
+  return hit ? hit[1] : 'key';
+}
+const actKey = (plugin, action) => plugin + '::' + action;
+function findAction(plugin, action) {
+  const p = S.catalog.find((x) => x.uuid === plugin);
+  const a = p && p.actions.find((x) => x.uuid === action);
+  return a ? { p, a } : null;
+}
+function actionByKey(key) {
+  const i = key.indexOf('::');
+  return findAction(key.slice(0, i), key.slice(i + 2));
+}
+const ctlOf = (a) => (a && a.controllers && a.controllers.length ? a.controllers : ['Keypad']);
+function tileHTML(plugin, action, iconUrl, size, iconSize, radius = 9) {
+  const kind = kindFor(plugin, action); const c = KCOL[kind];
+  const inner = iconUrl ? `<img src="${esc(iconUrl)}" alt="">` : ic(kind, iconSize);
+  return `<span class="tile" style="width:${size}px;height:${size}px;border-radius:${radius}px;background:${c[0]};color:${c[1]}">${inner}</span>`;
+}
+
+/* ---------- Zustand ---------- */
+const S = {
+  route: local.get('onboarded', false) ? 'editor' : 'onboarding',
+  conn: 'connecting',          // connecting | online | offline
+  devices: {},                 // id → DeviceSnapshot (verbunden)
+  lost: {},                    // id → letzter Snapshot getrennter Geräte
+  catalog: [],
+  devId: local.get('device', null),
+  theme: local.get('theme', 'dark'), finish: local.get('finish', 'dunkel'),
+  port: local.get('apiPort', DEFAULT_API_PORT),
+  sel: 'k0', test: true, pressed: null, flip: false,
+  drag: null, over: null, q: '', closed: {}, pluginSel: null, json: false,
+  ob: { step: 0, copied: false, placed: false },
+  menu: null, popover: null, modal: null
+};
+
+const cur = () => S.devices[S.devId] || S.lost[S.devId] || null;
+function devState() {
+  if (S.conn !== 'online') return S.conn === 'offline' ? 'offline' : 'connecting';
+  const d = cur();
+  if (!d) return 'none';
+  if (!S.devices[S.devId]) return 'disconnected';
+  return d.info.virtualDevice ? 'virtual' : 'connected';
+}
+const isLive = () => ['virtual', 'connected'].includes(devState());
+const parseId = (id) => ({ c: id[0] === 'k' ? 'keys' : 'encoders', p: +id.slice(1), ctl: id[0] === 'k' ? 'Keypad' : 'Encoder' });
+const slot = (id) => { const d = cur(); if (!d) return null; const { c, p } = parseId(id); return d.profile[c][p] || null; };
+const slotName = (id) => { const { p } = parseId(id); return id[0] === 'k' ? 'K' + p + (p < 6 ? ' · Display' : ' · Taste') : 'E' + p + (p === 1 ? ' · großer Regler' : ' · Drehregler'); };
+function defaultTitle(inst) {
+  if (inst.plugin === BUILTIN && inst.action.endsWith('.profile')) return '→ ' + (inst.settings.profile || '?');
+  const f = findAction(inst.plugin, inst.action);
+  return f ? f.a.name : inst.action.split('.').pop();
+}
+function pickDevice() {
+  if (S.devId && (S.devices[S.devId] || S.lost[S.devId])) return;
+  const ids = Object.keys(S.devices).sort((a, b) => S.devices[a].info.virtualDevice - S.devices[b].info.virtualDevice);
+  S.devId = ids[0] || null;
+}
+
+/* =====================================================================
+   API-Client (ws://127.0.0.1:<port>, siehe docs/UI_API.md)
+   ===================================================================== */
+const api = {
+  ws: null, nextId: 1, pending: new Map(), retry: null,
+  connect() {
+    clearTimeout(this.retry);
+    if (this.ws) { this.ws.onclose = null; this.ws.close(); }
+    let ws;
+    try { ws = new WebSocket(`ws://127.0.0.1:${S.port}`); } catch { this.lost(); return; }
+    this.ws = ws;
+    ws.onopen = () => { S.conn = 'online'; refresh(); };
+    ws.onclose = () => this.lost();
+    ws.onmessage = (m) => {
+      let msg; try { msg = JSON.parse(m.data); } catch { return; }
+      if (msg.id != null && this.pending.has(msg.id)) {
+        const { resolve, reject } = this.pending.get(msg.id); this.pending.delete(msg.id);
+        msg.ok ? resolve(msg.result) : reject(new Error(msg.error));
+      } else if (msg.event) onEvent(msg);
+    };
+  },
+  lost() {
+    this.ws = null;
+    for (const { reject } of this.pending.values()) reject(new Error('Verbindung zum Dienst verloren'));
+    this.pending.clear();
+    const was = S.conn; S.conn = 'offline';
+    for (const [id, d] of Object.entries(S.devices)) S.lost[id] = d;
+    S.devices = {};
+    if (was !== 'offline') render();
+    this.retry = setTimeout(() => this.connect(), 5000);
+  },
+  call(command, params = {}) {
+    return new Promise((resolve, reject) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) { reject(new Error('Dienst nicht verbunden')); return; }
+      const id = this.nextId++;
+      this.pending.set(id, { resolve, reject });
+      this.ws.send(JSON.stringify({ id, command, ...params }));
+    });
+  },
+  // Wie call, zeigt Fehler aber direkt als Toast an.
+  run(command, params) { return this.call(command, params).catch((e) => { toast('err', e.message); throw e; }); }
+};
+const slotParams = (id) => { const { p, ctl } = parseId(id); return { device: S.devId, controller: ctl, position: p }; };
+
+async function refresh() {
+  try {
+    const st = await api.call('getState');
+    S.devices = {};
+    for (const d of st.devices) { S.devices[d.info.id] = d; delete S.lost[d.info.id]; }
+    S.catalog = st.catalog;
+    if (!S.pluginSel || !S.catalog.some((p) => p.uuid === S.pluginSel)) S.pluginSel = S.catalog[0] && S.catalog[0].uuid;
+    pickDevice();
+    render();
+  } catch (e) { /* lost() rendert bereits */ }
+}
+const refreshSoon = debounce(refresh, 120);
+
+function onEvent(ev) {
+  const mine = ev.device === S.devId || (ev.device && ev.device.info && ev.device.info.id === S.devId);
+  switch (ev.event) {
+    case 'deviceConnected': {
+      const d = ev.device; S.devices[d.info.id] = d;
+      const back = !!S.lost[d.info.id]; delete S.lost[d.info.id];
+      const first = !S.devId; pickDevice();
+      if (first || back) toast('ok', `${d.info.name} verbunden`);
+      render(); break;
+    }
+    case 'deviceDisconnected': {
+      const d = S.devices[ev.device]; if (!d) break;
+      S.lost[ev.device] = d; delete S.devices[ev.device];
+      if (mine) toast('warn', 'Gerät getrennt');
+      render(); break;
+    }
+    case 'profileChanged': {
+      const d = ev.device; const old = S.devices[d.info.id];
+      S.devices[d.info.id] = d;
+      if (mine && old && old.activeProfile !== d.activeProfile) flipAnim(); else render();
+      break;
+    }
+    case 'slotChanged': refreshSoon(); break;
+    case 'keyImage': {
+      const d = S.devices[ev.device]; if (!d) break;
+      if (ev.image) d.previews[ev.key] = ev.image; else delete d.previews[ev.key];
+      if (mine) renderStage(); break;
+    }
+    case 'keyTitle': {
+      const d = S.devices[ev.device]; if (!d || ev.controller !== 'Keypad') break;
+      if (ev.title) d.titles[ev.position] = ev.title; else delete d.titles[ev.position];
+      if (mine) renderStage(); break;
+    }
+    case 'brightnessChanged': {
+      const d = S.devices[ev.device]; if (!d) break;
+      d.brightness = ev.value;
+      if (mine) syncBrightness(document.activeElement);
+      break;
+    }
+    case 'input': {
+      if (!mine) break;
+      const i = ev.input;
+      if (i.type === 'keyDown') flash('k' + i.key);
+      if (i.type === 'encoderDown' || i.type === 'encoderTwist') flash('e' + i.encoder);
+      break;
+    }
+    case 'feedback': if (mine) toast('ok', `Rückmeldung von ${slotName((ev.controller === 'Keypad' ? 'k' : 'e') + ev.position).split(' ')[0]}`); break;
+    case 'pluginStatus': {
+      const p = S.catalog.find((x) => x.uuid === ev.plugin);
+      if (p && p.connected !== ev.connected) { p.connected = ev.connected; if (S.route !== 'editor' || !S.drag) render(); }
+      break;
+    }
+    case 'lagged': refresh(); break;
+  }
+}
+
+/* ---------- Toasts ---------- */
+function toast(kind, text) {
+  const col = { ok: 'var(--ok)', err: 'var(--err)', warn: 'var(--warn)' }[kind];
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<span class="ic" style="background:${col}">${ic(kind === 'ok' ? 'check' : 'alert', 14, 2.25)}</span><span>${esc(text)}</span>`;
+  const box = $('#toasts'); box.appendChild(el);
+  while (box.children.length > 3) box.firstChild.remove();
+  setTimeout(() => el.remove(), 2800);
+}
+function copy(text, what) {
+  const ok = () => toast('ok', `${what} kopiert`);
+  if (navigator.clipboard) navigator.clipboard.writeText(text).then(ok, () => toast('warn', text)); else toast('warn', text);
+}
+
+/* =====================================================================
+   Gerät
+   ===================================================================== */
+function viewSlots(d) {
+  const P = d.profile;
+  const keys = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((p) => {
+    const s = P.keys[p]; const id = 'k' + p;
+    if (!s) return { id, pos: p, empty: true };
+    const f = findAction(s.plugin, s.action);
+    const runtime = d.titles[p];
+    return {
+      id, pos: p, kind: kindFor(s.plugin, s.action),
+      img: p < 6 ? d.previews[p] : null,
+      icon: f && f.a.icon,
+      overlay: s.title ?? runtime ?? null,
+      title: s.title ?? runtime ?? defaultTitle(s)
+    };
+  });
+  const encs = [0, 1, 2].map((p) => {
+    const s = P.encoders[p]; const id = 'e' + p;
+    if (!s) return { id, pos: p, empty: true, label: 'Frei', sub: '', value: null };
+    const bright = s.plugin === BUILTIN && s.action.endsWith('.brightness');
+    return {
+      id, pos: p, kind: kindFor(s.plugin, s.action), label: s.title ?? defaultTitle(s),
+      sub: bright ? d.brightness + ' %' : '', value: bright ? d.brightness : null
+    };
+  });
+  return { keys, encs };
+}
+const emptySlots = () => ({
+  keys: [0, 1, 2, 3, 4, 5, 6, 7, 8].map((p) => ({ id: 'k' + p, pos: p, empty: true })),
+  encs: [0, 1, 2].map((p) => ({ id: 'e' + p, pos: p, empty: true, label: 'Frei', sub: '', value: null }))
+});
+
+function deviceHTML(v, o = {}) {
+  const cls = ['device'];
+  if (S.finish === 'weiss') cls.push('white');
+  if (o.offline) cls.push('offline');
+  if (o.flip) cls.push('flip');
+  const st = (x) => {
+    const c = [];
+    if (o.sel === x.id && !o.dragCtl) c.push('sel');
+    if (o.pressed === x.id) c.push('press');
+    if (o.dragCtl) {
+      const ok = o.dragCtl.includes(x.id[0] === 'k' ? 'Keypad' : 'Encoder');
+      if (!ok) c.push('disabled'); else if (o.over === x.id) c.push('over'); else c.push(x.empty ? 'target' : 'replace');
+    }
+    return c.join(' ');
+  };
+  const at = (x) => o.interactive ? `data-slot="${x.id}" aria-pressed="${o.sel === x.id}"` : 'tabindex="-1"';
+  const aria = (x, what) => `${what} ${x.id.toUpperCase()}${x.empty ? ', frei' : ', ' + (x.title || x.label)}`;
+
+  const dk = (x) => {
+    let inner;
+    if (x.empty) inner = `<span class="screen empty">${ic('plus', 22)}</span>`;
+    else if (x.img) inner = `<span class="screen img"><img src="${esc(x.img)}" alt="">${x.overlay ? `<span class="ov">${esc(x.overlay)}</span>` : ''}</span>`;
+    else {
+      const c = KCOL[x.kind] || KCOL.key;
+      const glyph = x.icon ? `<img src="${esc(x.icon)}" alt="" style="width:30px;height:30px">` : ic(x.kind, 26);
+      inner = `<span class="screen" style="background:${c[0]};color:${c[1]}">${glyph}<span class="t">${esc(x.title)}</span></span>`;
+    }
+    return `<button type="button" class="key ${st(x)}" ${at(x)} aria-label="${esc(aria(x, 'Display-Taste'))}">${inner}</button>`;
+  };
+  const rk = (x) => `<div class="rkey-wrap"><button type="button" class="rkey ${x.empty ? 'isempty' : ''} ${st(x)}" ${at(x)} aria-label="${esc(aria(x, 'Taste'))}">${x.empty ? ic('plus', 16) : ic(x.kind, 18)}</button><span class="rlabel ${x.empty ? 'e' : ''}">${esc(x.empty ? x.id.toUpperCase() : x.title)}</span></div>`;
+  const kn = (x, size) => {
+    const val = x.value;
+    const dash = val == null ? '0 400' : (235.6 * val / 100).toFixed(1) + ' 400';
+    const rot = val == null ? 0 : -135 + 270 * val / 100;
+    return `<div class="knob-wrap ${size} ${x.empty ? 'isempty' : ''}">
+      <button type="button" class="knob-btn ${st(x)}" ${at(x)} ${o.interactive ? `data-enc="${x.pos}"` : ''} aria-label="${esc(aria(x, 'Drehregler'))}">
+        <svg viewBox="0 0 108 108" aria-hidden="true"><circle class="trk" cx="54" cy="54" r="50" stroke-dasharray="235.6 400" transform="rotate(135 54 54)"/><circle class="val" cx="54" cy="54" r="50" stroke-dasharray="${dash}" transform="rotate(135 54 54)"/></svg>
+        <span class="knob" style="transform:rotate(${rot}deg)"><i></i></span>
+      </button>
+      <div class="klabel ${x.empty ? 'e' : ''}">${x.empty ? '' : ic(x.kind, 13)}${esc(x.label)}</div>
+      <div class="ksub">${esc(x.sub)}</div>
+    </div>`;
+  };
+  const k = v.keys, e = v.encs;
+  const bri = o.brightness ?? 100;
+  return `<div class="${cls.join(' ')}" style="--dim:${(0.4 + 0.6 * bri / 100).toFixed(2)}" role="group" aria-label="TreasLin N3">
+    <div class="dev-row">
+      <div class="dev-left">
+        <div class="keys">${k.slice(0, 6).map(dk).join('')}</div>
+        <div class="rkeys">${k.slice(6).map(rk).join('')}</div>
+      </div>
+      <div class="dev-right">${kn(e[1], 'big')}<div class="knob-row">${kn(e[0], 'small')}${kn(e[2], 'small')}</div></div>
+    </div>
+    <div class="engrave"><span>TREASLIN · N3</span><span class="led"></span></div>
+  </div>`;
+}
+
+const outlineHTML = () => `<div class="device-outline pulse" aria-hidden="true">
+  <div style="display:flex;flex-direction:column;gap:30px">
+    <div style="display:grid;grid-template-columns:repeat(3,96px);gap:14px">${'<span style="height:96px;border-radius:16px"></span>'.repeat(6)}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,96px);gap:14px;justify-items:center">${'<span style="width:64px;height:64px;border-radius:50%"></span>'.repeat(3)}</div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:space-between">
+    <span style="width:168px;height:168px;border-radius:50%"></span>
+    <div style="display:flex;gap:48px"><span style="width:84px;height:84px;border-radius:50%"></span><span style="width:84px;height:84px;border-radius:50%"></span></div>
+  </div></div>`;
+
+/* =====================================================================
+   Titelleiste
+   ===================================================================== */
+function barHTML() {
+  const dev = devState(); const d = cur();
+  const dot = { virtual: 'var(--ok)', connected: 'var(--ok)', disconnected: 'var(--warn)', none: 'var(--faint)', offline: 'var(--err)', connecting: 'var(--faint)' }[dev];
+  const name = d ? d.info.name : { none: 'Kein Gerät', offline: 'Dienst offline', connecting: 'Verbinde …' }[dev];
+  const off = !d || dev === 'offline';
+  const nav = (r, icon, label) => `<button type="button" data-act="nav" data-arg="${r}" aria-current="${S.route === r ? 'page' : 'false'}">${ic(icon, 15)}${label}</button>`;
+  const devItem = (x, lost) => `<button type="button" role="menuitem" data-act="device" data-arg="${esc(x.info.id)}"><span class="dot" style="background:${lost ? 'var(--warn)' : 'var(--ok)'}"></span><span>${esc(x.info.name)}<small>${esc(x.info.id)}${x.info.firmware ? ' · FW ' + esc(x.info.firmware) : ''}${lost ? ' · getrennt' : ''}</small></span></button>`;
+  const hasVirtual = Object.values(S.devices).some((x) => x.info.virtualDevice);
+  const bri = d ? d.brightness : 0;
+  const profiles = d ? d.profiles : [];
+  return `<header class="bar">
+    <div class="brand">${LOGO()}<span>OpenDeck<b>N3</b></span></div>
+    <nav class="nav" aria-label="Bereiche">${nav('editor', 'grid', 'Editor')}${nav('plugins', 'plug', 'Plugins')}</nav>
+    <div class="grow"></div>
+    <div style="position:relative">
+      <button type="button" class="devsel" data-act="popover" data-arg="dev" aria-haspopup="menu" aria-expanded="${S.popover === 'dev'}" ${S.conn !== 'online' ? 'disabled' : ''}>
+        <span class="dot ${dev === 'none' || dev === 'connecting' ? 'pulse' : ''}" style="background:${dot};box-shadow:0 0 10px ${dot}"></span>
+        <span style="font-weight:500">${esc(name)}</span>
+        ${dev === 'virtual' ? '<span class="badge virt">Virtuell</span>' : ''}
+        ${dev === 'disconnected' ? '<span class="badge warn">Getrennt</span>' : ''}
+        <span style="color:var(--faint);display:flex">${ic('chevron', 16)}</span>
+      </button>
+      ${S.popover === 'dev' ? `<div class="popover" role="menu">
+        ${Object.values(S.devices).map((x) => devItem(x, false)).join('')}
+        ${Object.values(S.lost).map((x) => devItem(x, true)).join('')}
+        ${hasVirtual ? '' : `<button type="button" role="menuitem" data-act="startVirtual">${ic('play', 16)}<span>Virtuelles Gerät starten<small>virtual-n3 · ohne Hardware testen</small></span></button>`}
+      </div>` : ''}
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;${off ? 'opacity:.4' : ''}">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">Profil
+        <select class="field" data-in="profile" ${off ? 'disabled' : ''} style="min-width:150px;font-weight:500;background:var(--panel2)">
+          ${profiles.map((id) => `<option value="${esc(id)}" ${d && id === d.activeProfile ? 'selected' : ''}>${esc(id)}</option>`).join('')}
+        </select>
+      </label>
+      <button type="button" class="btn icon" data-act="newProfile" aria-label="Neues Profil" title="Neues Profil" ${off ? 'disabled' : ''} style="background:var(--panel2)">${ic('plus', 18)}</button>
+      <button type="button" class="btn icon" data-act="deleteProfile" aria-label="Profil löschen" title="Aktives Profil löschen" ${off || profiles.length < 2 ? 'disabled style="background:var(--panel2);opacity:.45"' : 'style="background:var(--panel2)"'}>${ic('trash', 17)}</button>
+    </div>
+    <label class="bright" style="${off ? 'opacity:.4' : ''}">${ic('brightness', 17)}<span class="sr">Helligkeit</span>
+      <input type="range" min="0" max="100" value="${bri}" data-in="brightness" ${off ? 'disabled' : ''}>
+      <output>${bri} %</output>
+    </label>
+    <button type="button" class="btn icon" data-act="nav" data-arg="settings" aria-label="Einstellungen" aria-current="${S.route === 'settings' ? 'page' : 'false'}" style="background:var(--panel2);${S.route === 'settings' ? 'color:var(--accent-text)' : ''}">${ic('gear', 18)}</button>
+  </header>`;
+}
+
+/* =====================================================================
+   Editor
+   ===================================================================== */
+function libListHTML() {
+  const q = S.q.trim().toLowerCase();
+  let hits = 0;
+  const html = S.catalog.map((p) => {
+    const items = p.actions.filter((a) => !q || a.name.toLowerCase().includes(q) || (a.tooltip || '').toLowerCase().includes(q));
+    if (!items.length) return '';
+    hits += items.length;
+    const open = !S.closed[p.uuid] || !!q;
+    return `<div>
+      <button type="button" class="grp" data-act="group" data-arg="${esc(p.uuid)}" aria-expanded="${open}">${ic('chevronRight', 14)}<span>${esc(p.name)}</span><span class="n">${items.length}</span></button>
+      ${open ? items.map((a) => {
+        const key = actKey(p.uuid, a.uuid);
+        return `<div class="item ${S.drag === key ? 'dragging' : ''}" draggable="true" data-pick="${esc(key)}" role="button" tabindex="0" title="${esc(p.connected ? (a.tooltip || a.name) : 'Plugin läuft nicht')}">
+          <span class="grip">${ic('grip', 14)}</span>
+          ${tileHTML(p.uuid, a.uuid, a.icon, 34, 18)}
+          <span style="flex:1;min-width:0"><span class="nm">${esc(a.name)}</span>
+            <span class="meta">${ctlOf(a).map((c) => `<span class="chip">${c === 'Keypad' ? 'Taste' : 'Drehregler'}</span>`).join('')}</span></span>
+          ${p.connected ? '' : '<span class="dot" style="background:var(--faint)" aria-label="Plugin läuft nicht"></span>'}
+        </div>`;
+      }).join('') : ''}
+    </div>`;
+  }).join('');
+  return html + (hits ? '' : `<div style="padding:16px 8px;font-size:13px;color:var(--faint)">${S.catalog.length ? 'Keine Aktion gefunden.' : 'Noch keine Aktionen geladen.'}</div>`);
+}
+
+function libraryHTML() {
+  return `<aside class="lib" aria-label="Aktionsbibliothek">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:0 6px">
+      <span class="label">Aktionen</span>
+      <span style="font-size:12px;color:var(--muted)">Ziel <span class="mono" style="color:var(--accent-text)">${S.sel.toUpperCase()}</span></span>
+    </div>
+    <label class="search">${ic('search', 16)}<input type="search" placeholder="Aktion suchen" aria-label="Aktion suchen" value="${esc(S.q)}" data-in="q"></label>
+    <div id="liblist" style="flex:1;display:flex;flex-direction:column;gap:6px">${libListHTML()}</div>
+    <button type="button" class="btn" data-act="nav" data-arg="plugins" style="border-style:dashed;background:transparent;color:var(--muted)">${ic('plug', 16)}Plugins verwalten</button>
+  </aside>`;
+}
+
+function stageInner() {
+  const d = cur(); if (!d) return '';
+  const P = d.profile;
+  const emptyProfile = !Object.keys(P.keys).length && !Object.keys(P.encoders).length;
+  const dragAct = S.drag && actionByKey(S.drag);
+  let top = '';
+  if (dragAct) {
+    const c = ctlOf(dragAct.a);
+    top = `<div class="pill">${ic('info', 15)}<span><b style="color:var(--text);font-weight:500">${esc(dragAct.a.name)}</b> passt auf ${c.length === 2 ? 'Tasten und Drehregler' : c[0] === 'Keypad' ? 'Tasten – Drehregler sind gesperrt' : 'Drehregler – Tasten sind gesperrt'}</span></div>`;
+  } else if (emptyProfile && isLive()) {
+    top = `<div class="hint rise"><span class="tile">${ic('grip', 20)}</span><span style="display:flex;flex-direction:column;gap:3px"><b style="font-size:15px;font-weight:600">Ziehe eine Aktion auf eine Taste</b><span style="font-size:13px;color:var(--muted);line-height:1.45">Oder wähle einen Slot und klicke links auf eine Aktion.</span></span></div>`;
+  }
+  return top + deviceHTML(viewSlots(d), {
+    interactive: true, sel: S.sel, pressed: S.pressed, dragCtl: dragAct ? ctlOf(dragAct.a) : null, over: S.over,
+    offline: devState() === 'disconnected', flip: S.flip, brightness: d.brightness
+  });
+}
+
+function settingsEditorHTML(s) {
+  const d = cur();
+  if (s.plugin === BUILTIN && s.action.endsWith('.profile')) {
+    const list = d.profiles.includes(s.settings.profile) || !s.settings.profile ? d.profiles : [s.settings.profile, ...d.profiles];
+    return `<label>Wechseln zu Profil<select class="field" data-in="profileTarget"><option value="" ${s.settings.profile ? '' : 'selected'} disabled>Profil wählen …</option>${list.map((id) => `<option ${id === s.settings.profile ? 'selected' : ''}>${esc(id)}</option>`).join('')}</select></label>`;
+  }
+  if (S.json) {
+    return `<textarea class="field" data-in="json" spellcheck="false" aria-label="Einstellungen als JSON">${esc(JSON.stringify(s.settings, null, 2))}</textarea><div class="err" id="jsonErr"></div>`;
+  }
+  const keys = Object.keys(s.settings);
+  const simple = (v) => v === null || ['string', 'number', 'boolean'].includes(typeof v);
+  if (!keys.length) return '<div style="font-size:13px;color:var(--faint)">Diese Aktion hat (noch) keine Einstellungen. Über „{ } JSON“ lassen sich Werte setzen.</div>';
+  return keys.map((k) => simple(s.settings[k])
+    ? `<label class="row"><span class="mono" style="font-size:12px">${esc(k)}</span><input class="field" data-in="setting" data-key="${esc(k)}" value="${esc(s.settings[k])}"></label>`
+    : `<div class="row" style="font-size:13px"><span class="mono" style="font-size:12px;color:var(--muted)">${esc(k)}</span><span style="color:var(--faint)">Objekt – im JSON-Modus bearbeiten</span></div>`).join('');
+}
+
+function inspectorHTML() {
+  const s = slot(S.sel);
+  const head = `<div class="label" style="display:flex;justify-content:space-between"><span>Inspektor</span><span class="mono" style="letter-spacing:0;text-transform:none">${slotName(S.sel)}</span></div>`;
+  if (!s) {
+    return `<aside class="insp" id="insp" aria-label="Inspektor">${head}
+      <div class="empty-card">
+        <span class="tile" style="width:44px;height:44px;border-radius:12px;background:var(--raised);color:var(--accent-text)">${ic('plus', 22)}</span>
+        <b style="font-weight:600">Slot ist frei</b>
+        <span style="font-size:14px;color:var(--muted);line-height:1.5">Ziehe eine Aktion hierher oder klicke links auf eine Aktion.</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--faint)"><span class="mono" style="padding:2px 6px;border-radius:6px;border:1px solid var(--line)">← ↑ → ↓</span>Slots wechseln · <span class="mono" style="padding:2px 6px;border-radius:6px;border:1px solid var(--line)">Entf</span>Belegung entfernen</div>
+    </aside>`;
+  }
+  const f = findAction(s.plugin, s.action);
+  const p = f && f.p;
+  const name = f ? f.a.name : 'Unbekannte Aktion';
+  const d = cur();
+  const pos = +S.sel.slice(1);
+  const isDisplay = S.sel[0] === 'k' && pos < 6;
+  const preview = isDisplay && d.previews[pos];
+  const warn = !p ? 'Plugin ist nicht installiert – die Belegung bleibt erhalten.'
+    : !p.connected ? 'Plugin läuft nicht – die Belegung bleibt erhalten.' : '';
+  const isProfile = s.plugin === BUILTIN && s.action.endsWith('.profile');
+  return `<aside class="insp" id="insp" aria-label="Inspektor">${head}
+    <div style="display:flex;gap:14px;align-items:center">
+      ${tileHTML(s.plugin, s.action, f && f.a.icon, 52, 26, 14)}
+      <div style="min-width:0;display:flex;flex-direction:column;gap:3px">
+        <b style="font-size:18px;font-weight:600">${esc(name)}</b>
+        <span style="font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px"><span class="dot" style="width:7px;height:7px;background:${p && p.connected ? 'var(--ok)' : 'var(--faint)'}"></span>${esc(p ? p.name : s.plugin)}${p ? ' · v' + esc(p.version) : ''}</span>
+        <span class="mono" style="font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.action)}</span>
+      </div>
+    </div>
+    ${warn ? `<div style="display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--warn) 10%,transparent);color:var(--warn);font-size:13px">${ic('alert', 16, 2)}${warn}</div>` : ''}
+    <section><h3>Darstellung</h3>
+      <label>Titel<input class="field" data-in="title" value="${esc(s.title ?? '')}" placeholder="${esc(defaultTitle(s))}"></label>
+      ${isDisplay ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px">
+        ${preview ? `<span class="tile" style="width:56px;height:56px;border-radius:10px;overflow:hidden"><img src="${esc(preview)}" alt="Aktuelles Tastenbild"></span>` : tileHTML(s.plugin, s.action, f && f.a.icon, 56, 24, 10)}
+        <button type="button" class="btn" data-act="pickImage">${ic('image', 16)}Bild wählen</button>
+        <button type="button" class="btn ghost" data-act="resetImage" ${s.image ? '' : 'disabled'}>Zurücksetzen</button>
+      </div>` : ''}
+    </section>
+    <section><div style="display:flex;justify-content:space-between;align-items:baseline"><h3>Einstellungen</h3>${isProfile ? '' : `<button type="button" class="linkbtn" data-act="jsonMode" aria-pressed="${S.json}">${S.json ? 'Felder' : '{ } JSON'}</button>`}</div>${settingsEditorHTML(s)}</section>
+    <section class="danger"><h3>Gefahrbereich</h3><button type="button" class="btn danger" data-act="clear">${ic('trash', 16)}Belegung entfernen</button></section>
+  </aside>`;
+}
+
+function editorHTML() {
+  const d = cur();
+  const P = d.profile;
+  const nK = Object.keys(P.keys).length, nE = Object.keys(P.encoders).length;
+  const virt = devState() === 'virtual';
+  const disc = devState() === 'disconnected';
+  const statusCol = disc ? 'var(--warn)' : 'var(--ok)';
+  return `<div class="editor">
+    ${libraryHTML()}
+    <main class="center">
+      <div class="head">
+        <div><div class="label">Profil</div><h1>${esc(d.activeProfile)}</h1></div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:13px;color:var(--muted)">${nK} ${nK === 1 ? 'Taste' : 'Tasten'} · ${nE} Drehregler belegt</span>
+          ${virt ? `<button type="button" class="toggle" data-act="test" aria-pressed="${S.test}"><span class="switch"><span></span></span>Test-Modus</button>` : ''}
+        </div>
+      </div>
+      <div class="stage ${S.drag ? 'dragmode' : ''}" id="stage">${stageInner()}</div>
+      <div class="status">
+        <span style="display:flex;align-items:center;gap:8px"><span class="dot" style="background:${statusCol};box-shadow:0 0 10px ${statusCol}"></span><span style="color:var(--text)">${disc ? 'Getrennt – Änderungen erst nach dem Anstecken möglich' : 'Verbunden'}</span></span>
+        <span>${esc(d.info.name)}</span><span class="mono">${esc(d.info.id)}</span>${d.info.firmware ? `<span class="mono">FW ${esc(d.info.firmware)}</span>` : ''}
+        <span style="margin-left:auto">${virt && S.test ? 'Klick = drücken · Mausrad über Drehregler = drehen' : 'Klick wählt · Ziehen oder Klick in der Bibliothek weist zu · Rechtsklick für Menü'}</span>
+      </div>
+    </main>
+    ${inspectorHTML()}
+  </div>`;
+}
+
+/* =====================================================================
+   Weitere Bildschirme
+   ===================================================================== */
+const UDEV = 'sudo cp udev/40-opendeckn3.rules /etc/udev/rules.d/\nsudo udevadm control --reload-rules && sudo udevadm trigger';
+function udevBox() {
+  return `<div class="codebox" id="udev">
+    <div class="codebox-head"><span>Linux: Zugriffsrechte einrichten</span><button type="button" class="btn" data-act="copyUdev" style="height:30px;font-size:12px">${ic(S.ob.copied ? 'check' : 'copy', 14)}${S.ob.copied ? 'Kopiert' : 'Kopieren'}</button></div>
+    <pre class="code">${esc(UDEV)}</pre>
+    <div style="padding:0 14px 12px;font-size:12px;color:var(--faint)">Danach das Gerät einmal ab- und wieder anstecken.</div>
+  </div>`;
+}
+
+function noDeviceHTML() {
+  return `<main class="blank" style="gap:56px;flex-wrap:wrap">
+    ${outlineHTML()}
+    <div style="flex:0 1 460px;display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)"><span class="spin"></span>Suche nach Geräten …</div>
+      <h1 style="margin:0;font-size:36px;line-height:1.15;font-weight:600;letter-spacing:-.02em">Schließe deinen TreasLin&nbsp;N3 an</h1>
+      <p style="margin:0;font-size:16px;line-height:1.6;color:var(--muted)">Verbinde das Gerät per USB. Es erscheint hier automatisch – kein Neustart nötig.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        <button type="button" class="btn primary lg" data-act="startVirtual">${ic('play', 16)}Virtuelles Gerät verwenden</button>
+        <a class="btn lg" href="#udev">${ic('external', 16)}udev-Anleitung</a>
+      </div>
+      ${udevBox()}
+    </div>
+  </main>`;
+}
+
+function offlineHTML() {
+  const connecting = S.conn === 'connecting';
+  return `<main class="blank"><div role="alert" style="max-width:520px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center">
+    <span class="tile" style="width:72px;height:72px;border-radius:22px;background:color-mix(in srgb,var(--err) 12%,transparent);border:1px solid color-mix(in srgb,var(--err) 35%,transparent);color:var(--err)">${ic('plug', 32)}</span>
+    <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-.02em">${connecting ? 'Verbinde mit dem Dienst …' : 'Dienst läuft nicht'}</h1>
+    <p style="margin:0;font-size:16px;line-height:1.6;color:var(--muted)">Die Oberfläche erreicht den Hintergrunddienst unter <span class="mono" style="color:var(--text)">ws://127.0.0.1:${esc(S.port)}</span> nicht. Starte <span class="mono" style="color:var(--text)">opendeckn3d</span> oder prüfe den API-Port in den Einstellungen.</p>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px">
+      <button type="button" class="btn primary lg" data-act="retry">${ic('refresh', 16)}Erneut verbinden</button>
+      <button type="button" class="btn lg" data-act="copyStart">${ic('copy', 16)}Startbefehl kopieren</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)"><span class="spin" style="border-top-color:var(--warn)"></span>Automatischer Versuch alle 5 s</div>
+  </div></main>`;
+}
+
+function pluginsHTML() {
+  const total = S.catalog.reduce((n, p) => n + p.actions.length, 0);
+  const dp = S.catalog.find((p) => p.uuid === S.pluginSel);
+  const pkind = (p) => (p.actions[0] ? kindFor(p.uuid, p.actions[0].uuid) : 'plug');
+  const ptile = (p, size, isz, r) => { const k = pkind(p); const c = KCOL[k] || KCOL.key; return `<span class="tile" style="width:${size}px;height:${size}px;border-radius:${r}px;background:${c[0]};color:${c[1]}">${ic(k, isz)}</span>`; };
+  const stateEl = (p) => `<span class="state ${p.connected ? 'on' : 'off'}"><span class="dot" style="width:7px;height:7px;background:${p.connected ? 'var(--ok)' : 'var(--faint)'}"></span>${p.uuid === BUILTIN ? 'Eingebaut' : p.connected ? 'Läuft' : 'Gestoppt'}</span>`;
+  return `<div class="page">
+    <main class="page-main">
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px">
+        <div><h1>Plugins</h1><div style="font-size:14px;color:var(--muted);margin-top:6px">${S.catalog.length} installiert · ${S.catalog.filter((p) => p.connected).length} aktiv · ${total} Aktionen</div></div>
+        <button type="button" class="btn primary" data-act="install">${ic('plus', 16)}Plugin installieren …</button>
+      </div>
+      <div class="cards">${S.catalog.map((p) => {
+        const n = p.actions.length;
+        return `<button type="button" class="pcard" data-act="plugin" data-arg="${esc(p.uuid)}" aria-pressed="${p.uuid === S.pluginSel}">
+          <span style="display:flex;align-items:center;gap:12px;width:100%">
+            ${ptile(p, 44, 22, 12)}
+            <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="font-size:16px;font-weight:600">${esc(p.name)}</b><span style="font-size:13px;color:var(--muted)">${esc(p.author || '–')} · v${esc(p.version || '?')}</span></span>
+          </span>
+          <span style="display:flex;align-items:center;gap:8px;width:100%;font-size:13px">${stateEl(p)}<span style="color:var(--muted)">${n} ${n === 1 ? 'Aktion' : 'Aktionen'}</span><span class="chip" style="margin-left:auto;font-size:11px;padding:2px 8px">${esc(p.category)}</span></span>
+        </button>`;
+      }).join('')}</div>
+      <p style="margin:0;font-size:13px;color:var(--faint)">Plugins liegen in <span class="mono" style="color:var(--muted)">${CONFIG_DIR}/plugins/</span> und sprechen das OpenDeck-/Stream-Deck-Plugin-Protokoll (docs/PLUGIN_API.md).</p>
+    </main>
+    ${dp ? `<aside class="detail" aria-label="Plugin-Details">
+      <div style="display:flex;align-items:center;gap:14px">
+        ${ptile(dp, 56, 28, 16)}
+        <div><b style="font-size:20px;font-weight:600">${esc(dp.name)}</b><div style="margin-top:4px">${stateEl(dp)}</div></div>
+      </div>
+      <dl>
+        <dt>UUID</dt><dd class="mono" style="font-size:12px">${esc(dp.uuid)}</dd>
+        <dt>Autor</dt><dd>${esc(dp.author || '–')}</dd>
+        <dt>Version</dt><dd class="mono" style="font-size:12px">${esc(dp.version || '?')}</dd>
+        <dt>Kategorie</dt><dd>${esc(dp.category)}</dd>
+      </dl>
+      <div style="display:flex;flex-direction:column;gap:8px"><b style="font-size:13px;color:var(--muted)">Aktionen</b>
+        ${dp.actions.map((a) => `<div class="arow">
+          ${tileHTML(dp.uuid, a.uuid, a.icon, 32, 16)}
+          <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-weight:500">${esc(a.name)}</span><span class="mono" style="font-size:11px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.uuid)}</span></span>
+          <span class="chip">${ctlOf(a).map((c) => c === 'Keypad' ? 'Taste' : 'Drehregler').join(' · ')}</span>
+        </div>`).join('')}
+      </div>
+      <div style="margin-top:auto;display:flex;flex-wrap:wrap;gap:10px">
+        <button type="button" class="btn" data-act="copyPath" data-arg="${CONFIG_DIR}/plugins">${ic('folder', 16)}Pfad kopieren</button>
+      </div>
+    </aside>` : ''}
+  </div>`;
+}
+
+function settingsHTML() {
+  const d = cur();
+  const seg = (name, val, opts) => `<div class="seg" role="radiogroup">${opts.map(([v, l]) => `<button type="button" role="radio" aria-checked="${val === v}" data-act="${name}" data-arg="${v}">${l}</button>`).join('')}</div>`;
+  const nav = (id, icon, label) => `<a href="#${id}">${ic(icon, 16)}${label}</a>`;
+  const soon = '<span class="soon">folgt</span>';
+  return `<div class="settings">
+    <nav class="snav" aria-label="Einstellungsbereiche"><h1 style="margin:0 0 14px 10px">Einstellungen</h1>
+      ${nav('allgemein', 'gear', 'Allgemein')}${nav('geraete', 'usb', 'Geräte')}${nav('erweitert', 'terminal', 'Erweitert')}${nav('ueber', 'info', 'Über')}
+    </nav>
+    <div class="sbody">
+      <section class="scard" id="allgemein"><h2>Allgemein</h2>
+        <div class="srow"><div class="t"><b>Sprache</b><span>Englisch folgt mit i18n</span></div><select class="field" disabled style="min-width:180px"><option>Deutsch</option></select></div>
+        <div class="srow"><div class="t"><b>Theme</b><span>Dunkel ist Standard</span></div>${seg('theme', S.theme, [['dark', 'Dunkel'], ['light', 'Hell'], ['system', 'System']])}</div>
+        <div class="srow"><div class="t"><b>Beim Anmelden starten ${soon}</b><span>Kommt mit der Desktop-App (Meilenstein M1)</span></div>
+          <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Beim Anmelden starten" disabled style="opacity:.45"><span></span></button></div>
+        <div class="srow"><div class="t"><b>Einrichtung</b><span>Assistent für den ersten Start erneut öffnen</span></div><button type="button" class="btn" data-act="restartOnboarding">${ic('play', 16)}Starten</button></div>
+      </section>
+      <section class="scard" id="geraete"><h2>Geräte</h2>
+        <div class="srow"><label class="t" for="bri"><b>Helligkeit</b><span>${d ? esc(d.info.name) + ' · ' + esc(d.info.id) : 'Kein Gerät verbunden'}</span></label>
+          <div style="display:flex;align-items:center;gap:12px"><input id="bri" type="range" min="0" max="100" value="${d ? d.brightness : 0}" data-in="brightness" ${d ? '' : 'disabled'} style="width:200px;accent-color:var(--accent)"><output class="mono" style="font-size:13px;width:42px;text-align:right">${d ? d.brightness : 0} %</output></div></div>
+        <div class="srow"><div class="t"><b>Schlafmodus nach ${soon}</b><span>Displays aus, Tasten bleiben aktiv</span></div>
+          <select class="field" disabled style="min-width:180px"><option>Nie</option></select></div>
+        <div class="srow"><div class="t"><b>Gehäusefarbe in der Vorschau</b><span>Passend zu deinem Gerät</span></div>${seg('finish', S.finish, [['dunkel', 'Dunkel'], ['weiss', 'Weiß']])}</div>
+      </section>
+      <section class="scard" id="erweitert"><h2>Erweitert</h2>
+        <div class="srow"><label class="t" for="port"><b>UI-API-Port</b><span>Bindet nur an 127.0.0.1 · Standard ${DEFAULT_API_PORT}</span></label>
+          <input id="port" class="field mono" inputmode="numeric" value="${esc(S.port)}" data-in="port" style="width:120px"></div>
+        <div class="srow"><div class="t"><b>Konfigurationsordner</b><span class="mono" style="font-size:12px">${CONFIG_DIR}</span></div><button type="button" class="btn" data-act="copyPath" data-arg="${CONFIG_DIR}">${ic('copy', 16)}Pfad kopieren</button></div>
+        <div class="srow"><div class="t"><b>Protokoll</b><span>Ausführliches Log: <span class="mono">RUST_LOG=debug opendeckn3d</span></span></div><button type="button" class="btn" data-act="copyStart" data-arg="debug">${ic('copy', 16)}Befehl kopieren</button></div>
+      </section>
+      <section class="scard" id="ueber" style="padding:20px;display:flex;flex-wrap:wrap;gap:20px;align-items:center">
+        ${LOGO(56)}
+        <div style="flex:1 1 300px;display:flex;flex-direction:column;gap:6px">
+          <b style="font-size:16px;font-weight:600">OpenDeckN3 <span class="mono" style="font-size:13px;font-weight:400;color:var(--muted)">v0.1.0</span></b>
+          <span style="font-size:13px;color:var(--muted);line-height:1.6">Lizenz GPL-3.0-or-later. Mit Dank an <a href="https://github.com/nekename/OpenDeck" target="_blank" rel="noopener">OpenDeck</a> und <a href="https://github.com/4ndv/opendeck-akp03" target="_blank" rel="noopener">opendeck-akp03</a>; HID über <span class="mono">mirajazz</span> (MPL-2.0).</span>
+        </div>
+      </section>
+    </div>
+  </div>`;
+}
+
+function onboardingHTML() {
+  const o = S.ob;
+  const labels = ['Willkommen', 'Gerät anschließen', 'Erste Aktion'];
+  const steps = labels.map((l, i) => `<li class="${i < o.step ? 'done' : i === o.step ? 'on' : ''}" ${i === o.step ? 'aria-current="step"' : ''}><span class="num">${i < o.step ? ic('check', 14, 2.25) : i + 1}</span>${l}${i < 2 ? '<span class="ln"></span>' : ''}</li>`).join('');
+  const d = cur();
+  const found = !!(d && S.devices[S.devId]);
+  let body = '';
+  if (o.step === 0) {
+    const demo = d ? viewSlots(d) : emptySlots();
+    body = `<div class="ob-body rise"><div class="txt">
+      <span class="label" style="color:var(--accent-text)">Willkommen</span>
+      <h1>Neun Tasten. Drei Regler. Deine Regeln.</h1>
+      <p>OpenDeckN3 belegt deinen TreasLin N3 per Drag &amp; Drop mit Aktionen – Szenen, Lautstärke, Profile, Plugins. Alles wird live auf dem Gerät gespiegelt.</p>
+      <div><button type="button" class="btn primary lg" data-act="obNext">Los geht’s ${ic('arrow', 16)}</button></div>
+    </div><div class="dev">${deviceHTML(demo, { brightness: d ? d.brightness : 80 })}</div></div>`;
+  } else if (o.step === 1) {
+    const status = S.conn !== 'online'
+      ? `<span class="spin" style="width:18px;height:18px;border-top-color:var(--warn)"></span><span style="color:var(--muted)">Dienst nicht erreichbar (<span class="mono">ws://127.0.0.1:${esc(S.port)}</span>) – starte <span class="mono">opendeckn3d</span></span>`
+      : found ? `<span class="tile" style="width:24px;height:24px;border-radius:50%;background:var(--ok);color:#06210F">${ic('check', 14, 2.25)}</span><span><b style="font-weight:600">${esc(d.info.name)}</b> gefunden <span class="mono" style="font-size:12px;color:var(--muted)">${esc(d.info.id)}${d.info.firmware ? ' · FW ' + esc(d.info.firmware) : ''}</span></span>`
+        : `<span class="spin" style="width:18px;height:18px"></span><span style="color:var(--muted)">Warte auf Gerät …</span>`;
+    body = `<div class="ob-body rise" style="flex-direction:column;align-items:stretch;max-width:720px">
+      <h1>Gerät anschließen</h1>
+      <p>Stecke den TreasLin N3 per USB ein. Unter Linux braucht OpenDeckN3 einmalig Zugriff auf das Gerät:</p>
+      ${udevBox()}
+      <div role="status" style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;border:1px solid ${found ? 'color-mix(in srgb,var(--ok) 40%,transparent)' : 'var(--line2)'};background:${found ? 'color-mix(in srgb,var(--ok) 7%,transparent)' : 'var(--panel2)'}">${status}</div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+        <button type="button" class="btn lg" data-act="obBack" style="background:transparent">Zurück</button>
+        <button type="button" class="btn primary lg" data-act="obNext" ${found ? '' : 'disabled style="opacity:.55;cursor:default"'}>Weiter ${ic('arrow', 16)}</button>
+        ${S.conn === 'online' ? `<button type="button" class="btn ghost" data-act="obVirtual" style="color:var(--accent-text)">Ohne Hardware: virtuelles Gerät verwenden</button>` : ''}
+      </div>
+    </div>`;
+  } else {
+    const v = emptySlots();
+    if (o.placed) v.encs[1] = { id: 'e1', pos: 1, kind: 'brightness', label: 'Helligkeit', sub: (d ? d.brightness : 50) + ' %', value: d ? d.brightness : 50 };
+    body = `<div class="ob-body rise"><div class="txt">
+      <h1>Erste Aktion platzieren</h1>
+      <p>Ziehe <b style="color:var(--text)">Helligkeit</b> auf den großen Drehregler – oder klicke darauf. Danach regelst du das Display direkt am Gerät.</p>
+      <div class="item" data-act="obPlace" draggable="true" data-obdrag="1" role="button" tabindex="0" style="align-self:flex-start;max-width:280px;border:1.5px ${o.placed ? 'solid' : 'dashed'} var(--accent);background:var(--raised);opacity:${o.placed ? .5 : 1};padding:8px 16px 8px 10px">
+        <span class="tile" style="background:${KCOL.brightness[0]};color:${KCOL.brightness[1]}">${ic('brightness', 18)}</span>
+        <span><span class="nm">Helligkeit</span><span class="meta"><span class="chip">Taste</span><span class="chip">Drehregler</span></span></span>
+      </div>
+      ${o.placed ? `<div class="rise" style="display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:center;gap:10px;font-size:15px;color:var(--ok)">${ic('check', 18, 2.25)}Platziert auf E1 – dreh mal am Gerät.</div>
+          <div><button type="button" class="btn primary lg" data-act="obDone">Zum Editor ${ic('arrow', 16)}</button></div></div>`
+        : '<div><button type="button" class="btn" data-act="obBack" style="background:transparent">Zurück</button></div>'}
+    </div><div class="dev" id="obdev">${deviceHTML(v, { dragCtl: o.placed ? null : ['Encoder'], sel: o.placed ? 'e1' : null, brightness: d ? d.brightness : 80 })}</div></div>`;
+  }
+  return `<main class="ob"><div class="ob-card">
+    <ol class="steps" aria-label="Einrichtung">${steps}<li style="margin-left:auto"><button type="button" class="btn ghost" data-act="obDone" style="height:32px">Überspringen</button></li></ol>
+    ${body}
+  </div></main>`;
+}
+
+/* =====================================================================
+   Rendern
+   ===================================================================== */
+function render() {
+  const keepFocus = document.activeElement && document.activeElement.closest && document.activeElement.closest('.device');
+  const dev = devState();
+  let view;
+  if (S.route === 'onboarding') view = onboardingHTML();
+  else if ((dev === 'offline' || dev === 'connecting') && S.route !== 'settings') view = offlineHTML();
+  else if (S.route === 'plugins') view = pluginsHTML();
+  else if (S.route === 'settings') view = settingsHTML();
+  else if (dev === 'none') view = noDeviceHTML();
+  else view = editorHTML();
+  $('#app').innerHTML = (S.route === 'onboarding' ? '' : barHTML()) + view;
+  renderOverlay();
+  if (keepFocus) { const b = document.querySelector(`[data-slot="${S.sel}"]`); if (b) b.focus(); }
+}
+function renderStage() {
+  const st = $('#stage'); if (!st) return;
+  const keepFocus = document.activeElement && document.activeElement.closest && document.activeElement.closest('.device');
+  st.innerHTML = stageInner();
+  st.classList.toggle('dragmode', !!S.drag);
+  if (keepFocus) { const b = document.querySelector(`[data-slot="${S.sel}"]`); if (b) b.focus(); }
+}
+function renderOverlay() {
+  let html = '';
+  if (S.menu) {
+    const s = slot(S.menu.id);
+    html += `<div class="ctx" role="menu" style="left:${S.menu.x}px;top:${S.menu.y}px">
+      <div class="mono" style="font-size:11px;color:var(--faint);padding:6px 10px 4px">${slotName(S.menu.id)}</div>
+      <button type="button" role="menuitem" data-act="menuEdit" ${s ? '' : 'disabled'}>${ic('edit', 16)}Bearbeiten</button>
+      <button type="button" role="menuitem" disabled>${ic('duplicate', 16)}Duplizieren <span style="margin-left:auto;font-size:11px">später</span></button>
+      <hr><button type="button" role="menuitem" class="red" data-act="menuClear" ${s ? '' : 'disabled'}>${ic('trash', 16)}Entfernen</button>
+    </div>`;
+  }
+  if (S.modal && S.modal.kind === 'new') {
+    html += `<div class="scrim" data-act="closeModal"><form class="dialog" id="newProfileForm" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+      <h2 id="dlgT">Neues Profil</h2>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)">Name
+        <input class="field mono" id="newProfileName" value="${esc(S.modal.value)}" placeholder="z. B. gaming" autocomplete="off"></label>
+      <div class="err" id="dlgErr">${esc(S.modal.error || '')}</div>
+      <div style="font-size:12px;color:var(--faint)">Erlaubt: A–Z a–z 0–9 - _ . (nicht mit „.“ beginnen)</div>
+      <div style="display:flex;justify-content:flex-end;gap:10px"><button type="button" class="btn ghost" data-act="closeModal">Abbrechen</button><button type="submit" class="btn primary">Anlegen</button></div>
+    </form></div>`;
+  }
+  if (S.modal && S.modal.kind === 'delete') {
+    html += `<div class="scrim" data-act="closeModal"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlgT">
+      <h2 id="dlgT">Profil „${esc(S.modal.profile)}“ löschen?</h2>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:var(--muted)">Alle Belegungen dieses Profils gehen verloren. Danach ist <b style="color:var(--text)">${esc(S.modal.next)}</b> aktiv.</p>
+      <div style="display:flex;justify-content:flex-end;gap:10px"><button type="button" class="btn ghost" data-act="closeModal">Abbrechen</button><button type="button" class="btn danger" data-act="confirmDelete" id="confirmDelete">${ic('trash', 16)}Löschen</button></div>
+    </div></div>`;
+  }
+  $('#overlay').innerHTML = html;
+  if (S.modal && S.modal.kind === 'new') { const i = $('#newProfileName'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+  if (S.modal && S.modal.kind === 'delete') $('#confirmDelete').focus();
+  if (S.menu) { const m = $('.ctx'); const r = m.getBoundingClientRect(); if (r.right > innerWidth - 8) m.style.left = (innerWidth - r.width - 8) + 'px'; if (r.bottom > innerHeight - 8) m.style.top = (innerHeight - r.height - 8) + 'px'; }
+}
+
+/* =====================================================================
+   Verhalten
+   ===================================================================== */
+let pressTimer, flipTimer, copyTimer, twistAt = 0;
+function flash(id) { clearTimeout(pressTimer); S.pressed = id; renderStage(); pressTimer = setTimeout(() => { S.pressed = null; renderStage(); }, 240); }
+function flipAnim() { S.flip = true; render(); clearTimeout(flipTimer); flipTimer = setTimeout(() => { S.flip = false; renderStage(); }, 400); }
+
+function switchProfile(id) {
+  S.sel = 'k0';
+  return api.run('switchProfile', { device: S.devId, profile: id });
+}
+// Test-Modus: echte Eingaben am virtuellen Gerät simulieren.
+function fire(id) {
+  const { p, ctl } = parseId(id);
+  const [down, up, field] = ctl === 'Keypad' ? ['keyDown', 'keyUp', 'key'] : ['encoderDown', 'encoderUp', 'encoder'];
+  api.run('simulateInput', { device: S.devId, input: { type: down, [field]: p } })
+    .then(() => api.call('simulateInput', { device: S.devId, input: { type: up, [field]: p } }))
+    .catch(() => {});
+}
+function twist(pos, ticks) {
+  api.run('simulateInput', { device: S.devId, input: { type: 'encoderTwist', encoder: pos, ticks } }).catch(() => {});
+}
+function assign(key, id) {
+  const f = actionByKey(key); if (!f) return;
+  const { ctl } = parseId(id);
+  if (!ctlOf(f.a).includes(ctl)) { toast('err', `${f.a.name} unterstützt keine ${ctl === 'Encoder' ? 'Drehregler' : 'Tasten'}`); return; }
+  if (!isLive()) { toast('warn', 'Gerät ist nicht verbunden'); return; }
+  S.sel = id; S.json = false;
+  api.run('setAction', { ...slotParams(id), plugin: f.p.uuid, action: f.a.uuid })
+    .then(() => toast('ok', `${f.a.name} → ${id.toUpperCase()}`)).catch(() => {});
+  render();
+}
+function clearSlot(id) {
+  if (!slot(id)) return;
+  api.run('clearAction', slotParams(id)).then(() => toast('ok', 'Belegung entfernt')).catch(() => {});
+}
+// Änderungen sofort lokal zeigen, Senden gebündelt.
+const sendSettings = debounce((id, settings) => api.run('setActionSettings', { ...slotParams(id), settings }).catch(() => {}), 350);
+const sendAppearance = debounce((id, s) => api.run('setActionAppearance', { ...slotParams(id), title: s.title, image: s.image }).catch(() => {}), 350);
+const sendBrightness = debounce((value) => api.run('setBrightness', { device: S.devId, value }).catch(() => {}), 60);
+
+function syncBrightness(except) {
+  const d = cur(); if (!d) return;
+  document.querySelectorAll('[data-in="brightness"]').forEach((el) => { if (el !== except) el.value = d.brightness; });
+  document.querySelectorAll('.bright output, #bri + output').forEach((o) => { o.textContent = d.brightness + ' %'; });
+  renderStage();
+}
+function applyTheme() {
+  const t = S.theme === 'system' ? (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : S.theme;
+  document.documentElement.dataset.theme = t;
+}
+function moveSel(key) {
+  const grid = [['k0', 'k1', 'k2', 'e1'], ['k3', 'k4', 'k5', 'e1'], ['k6', 'k7', 'k8', 'e0', 'e2']];
+  let r = grid.findIndex((row) => row.includes(S.sel)); let c = grid[r].indexOf(S.sel);
+  if (S.sel === 'e1' && r === 0 && key === 'ArrowDown') { S.sel = 'e2'; return; }
+  if (key === 'ArrowRight') c = Math.min(grid[r].length - 1, c + 1);
+  if (key === 'ArrowLeft') c = Math.max(0, c - 1);
+  if (key === 'ArrowDown') { r = Math.min(2, r + 1); c = Math.min(c, grid[r].length - 1); }
+  if (key === 'ArrowUp') { r = Math.max(0, r - 1); c = Math.min(c, grid[r].length - 1); }
+  S.sel = grid[r][c];
+}
+// Bilddatei → quadratisches 144-px-PNG als Data-URL (Gerät skaliert auf 64 px).
+function imageToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const n = 144, c = document.createElement('canvas'); c.width = c.height = n;
+      const s = Math.min(img.width, img.height);
+      c.getContext('2d').drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, n, n);
+      URL.revokeObjectURL(img.src); resolve(c.toDataURL('image/png'));
+    };
+    img.onerror = () => reject(new Error('Bild konnte nicht gelesen werden'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+async function startVirtual() {
+  try {
+    const r = await api.run('startVirtualDevice');
+    S.devId = r.device; local.set('device', S.devId);
+    if (S.route !== 'onboarding') S.route = 'editor';
+    render();
+  } catch { /* Toast zeigt den Fehler */ }
+}
+function finishOnboarding() { local.set('onboarded', true); S.route = 'editor'; render(); }
+
+const ACTS = {
+  nav(arg) { S.route = arg; S.popover = null; render(); scrollTo(0, 0); },
+  popover(arg) { S.popover = S.popover === arg ? null : arg; render(); },
+  device(arg) { S.devId = arg; local.set('device', arg); S.popover = null; S.sel = 'k0'; render(); },
+  startVirtual() { S.popover = null; startVirtual(); },
+  test() { S.test = !S.test; render(); },
+  group(arg) { S.closed[arg] = !S.closed[arg]; $('#liblist').innerHTML = libListHTML(); },
+  clear() { clearSlot(S.sel); },
+  jsonMode() { S.json = !S.json; render(); },
+  pickImage() {
+    const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*';
+    i.onchange = async () => {
+      const file = i.files[0]; const s = slot(S.sel); if (!file || !s) return;
+      try {
+        s.image = await imageToDataUrl(file);
+        await api.run('setActionAppearance', { ...slotParams(S.sel), title: s.title, image: s.image });
+        toast('ok', `Bild „${file.name}“ übernommen`);
+      } catch (e) { toast('err', e.message); }
+    };
+    i.click();
+  },
+  resetImage() {
+    const s = slot(S.sel); if (!s) return; s.image = null;
+    api.run('setActionAppearance', { ...slotParams(S.sel), title: s.title, image: null }).then(() => toast('ok', 'Standardbild wiederhergestellt')).catch(() => {});
+  },
+  newProfile() { S.modal = { kind: 'new', value: '', error: '' }; renderOverlay(); },
+  deleteProfile() {
+    const d = cur(); if (!d || d.profiles.length < 2) return;
+    const next = d.profiles.includes('default') && d.activeProfile !== 'default' ? 'default' : d.profiles.find((p) => p !== d.activeProfile);
+    S.modal = { kind: 'delete', profile: d.activeProfile, next }; renderOverlay();
+  },
+  async confirmDelete() {
+    const { profile, next } = S.modal; S.modal = null; renderOverlay();
+    try { await switchProfile(next); await api.run('deleteProfile', { device: S.devId, profile }); toast('ok', `Profil „${profile}“ gelöscht`); } catch { /* Toast */ }
+  },
+  closeModal(arg, e) { if (e && e.target.closest('.dialog') && !e.target.closest('[data-act="closeModal"].btn')) return; S.modal = null; renderOverlay(); },
+  menuEdit() { S.menu = null; renderOverlay(); const i = $('[data-in="title"]'); if (i) i.focus(); },
+  menuClear() { const id = S.menu.id; S.menu = null; S.sel = id; renderOverlay(); clearSlot(id); },
+  plugin(arg) { S.pluginSel = arg; render(); },
+  install() { toast('warn', `Installation per Datei folgt in M1 – bis dahin Plugin nach ${CONFIG_DIR}/plugins kopieren und Dienst neu starten`); },
+  copyPath(arg) { copy(arg, 'Pfad'); },
+  copyStart(arg) { copy(arg === 'debug' ? 'RUST_LOG=debug opendeckn3d' : 'opendeckn3d', 'Befehl'); },
+  retry() { S.conn = 'connecting'; render(); api.connect(); },
+  theme(arg) { S.theme = arg; local.set('theme', arg); applyTheme(); render(); },
+  finish(arg) { S.finish = arg; local.set('finish', arg); render(); },
+  restartOnboarding() { S.ob = { step: 0, copied: false, placed: false }; S.route = 'onboarding'; render(); },
+  copyUdev() {
+    const done = () => { S.ob.copied = true; render(); clearTimeout(copyTimer); copyTimer = setTimeout(() => { S.ob.copied = false; render(); }, 1800); };
+    if (navigator.clipboard) navigator.clipboard.writeText(UDEV).then(done, done); else done();
+  },
+  obNext() { S.ob.step = Math.min(2, S.ob.step + 1); render(); },
+  obBack() { S.ob.step = Math.max(0, S.ob.step - 1); render(); },
+  async obVirtual() { await startVirtual(); if (cur()) { S.ob.step = 2; render(); } },
+  obPlace() {
+    if (S.ob.placed) return;
+    if (!isLive()) { toast('warn', 'Erst ein Gerät verbinden'); return; }
+    S.ob.placed = true; render();
+    api.run('setAction', { device: S.devId, controller: 'Encoder', position: 1, plugin: BUILTIN, action: BUILTIN + '.brightness' }).catch(() => {});
+  },
+  obDone() { if (S.ob.placed) S.sel = 'e1'; finishOnboarding(); }
+};
+
+/* ---------- Ereignisse ---------- */
+document.addEventListener('click', (e) => {
+  if (S.menu && !e.target.closest('.ctx')) { S.menu = null; renderOverlay(); }
+  if (S.popover && !e.target.closest('.popover') && !e.target.closest('[data-act="popover"]')) { S.popover = null; render(); }
+  const slotEl = e.target.closest('[data-slot]');
+  if (slotEl) {
+    const id = slotEl.dataset.slot;
+    if (id !== S.sel) S.json = false;
+    S.sel = id; render();
+    if (devState() === 'virtual' && S.test) fire(id);
+    return;
+  }
+  const pick = e.target.closest('[data-pick]');
+  if (pick) { assign(pick.dataset.pick, S.sel); return; }
+  const act = e.target.closest('[data-act]');
+  if (act && !act.disabled && ACTS[act.dataset.act]) ACTS[act.dataset.act](act.dataset.arg, e);
+});
+
+document.addEventListener('contextmenu', (e) => {
+  const slotEl = e.target.closest('[data-slot]');
+  if (!slotEl) return;
+  e.preventDefault();
+  S.sel = slotEl.dataset.slot; S.menu = { id: S.sel, x: e.clientX, y: e.clientY };
+  render();
+});
+
+document.addEventListener('input', (e) => {
+  const t = e.target; const k = t.dataset.in; if (!k) return;
+  const d = cur();
+  if (k === 'q') { S.q = t.value; $('#liblist').innerHTML = libListHTML(); }
+  else if (k === 'brightness' && d) { d.brightness = clamp(+t.value, 0, 100); syncBrightness(t); sendBrightness(d.brightness); }
+  else if (k === 'title') { const s = slot(S.sel); if (!s) return; s.title = t.value || null; renderStage(); sendAppearance(S.sel, s); }
+  else if (k === 'setting') {
+    const s = slot(S.sel); if (!s) return;
+    const old = s.settings[t.dataset.key];
+    let v = t.value;
+    if (typeof old === 'number' && v.trim() !== '' && !isNaN(+v)) v = +v;
+    if (typeof old === 'boolean' && (v === 'true' || v === 'false')) v = v === 'true';
+    s.settings[t.dataset.key] = v; renderStage(); sendSettings(S.sel, { ...s.settings });
+  }
+});
+document.addEventListener('change', (e) => {
+  const t = e.target; const k = t.dataset.in;
+  if (k === 'profile') switchProfile(t.value).catch(() => render());
+  if (k === 'profileTarget') { const s = slot(S.sel); if (!s) return; s.settings = { ...s.settings, profile: t.value }; renderStage(); sendSettings(S.sel, s.settings); }
+  if (k === 'json') {
+    const s = slot(S.sel); if (!s) return;
+    let v; try { v = JSON.parse(t.value); } catch (err) { $('#jsonErr').textContent = 'Ungültiges JSON: ' + err.message; return; }
+    if (!v || typeof v !== 'object' || Array.isArray(v)) { $('#jsonErr').textContent = 'Einstellungen müssen ein JSON-Objekt sein.'; return; }
+    $('#jsonErr').textContent = ''; s.settings = v; renderStage(); sendSettings(S.sel, v);
+  }
+  if (k === 'port') {
+    const p = Number(t.value);
+    if (!Number.isInteger(p) || p < 1 || p > 65535) { toast('err', 'Ungültiger Port'); t.value = S.port; return; }
+    S.port = p; local.set('apiPort', p); S.conn = 'connecting'; api.connect(); toast('ok', `Verbinde mit Port ${p}`);
+  }
+});
+
+document.addEventListener('submit', (e) => {
+  if (e.target.id !== 'newProfileForm') return;
+  e.preventDefault();
+  const v = $('#newProfileName').value.trim();
+  const d = cur();
+  let err = '';
+  if (!v) err = 'Bitte einen Namen eingeben.';
+  else if (!PROFILE_ID.test(v)) err = 'Nur A–Z a–z 0–9 - _ . erlaubt, nicht mit „.“ am Anfang.';
+  else if (d && d.profiles.includes(v)) err = 'Ein Profil mit diesem Namen gibt es schon.';
+  if (err) { S.modal = { kind: 'new', value: v, error: err }; renderOverlay(); return; }
+  S.modal = null; renderOverlay();
+  switchProfile(v).then(() => toast('ok', `Profil „${v}“ angelegt`)).catch(() => {});
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (S.modal) { S.modal = null; renderOverlay(); return; }
+    if (S.menu) { S.menu = null; renderOverlay(); return; }
+    if (S.popover) { S.popover = null; render(); return; }
+  }
+  const pick = e.target.closest && e.target.closest('[data-pick],[data-obdrag]');
+  if (pick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick.click(); return; }
+  if (!(e.target.closest && e.target.closest('.device [data-slot]'))) return;
+  if (e.key.startsWith('Arrow')) { e.preventDefault(); moveSel(e.key); S.json = false; render(); }
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); clearSlot(S.sel); }
+});
+
+document.addEventListener('wheel', (e) => {
+  const b = e.target.closest && e.target.closest('[data-enc]');
+  if (!b || devState() !== 'virtual' || !S.test) return;
+  e.preventDefault();
+  const now = Date.now(); if (now - twistAt < 60) return; twistAt = now;
+  S.sel = 'e' + b.dataset.enc;
+  twist(+b.dataset.enc, e.deltaY < 0 ? 1 : -1);
+}, { passive: false });
+
+/* Drag & Drop: Bibliothek → Slot */
+document.addEventListener('dragstart', (e) => {
+  const ob = e.target.closest && e.target.closest('[data-obdrag]');
+  if (ob) { e.dataTransfer.setData('text/plain', 'ob'); return; }
+  const it = e.target.closest && e.target.closest('[data-pick]'); if (!it) return;
+  S.drag = it.dataset.pick;
+  e.dataTransfer.effectAllowed = 'copy';
+  e.dataTransfer.setData('text/plain', S.drag);
+  it.classList.add('dragging');
+  requestAnimationFrame(renderStage);
+});
+document.addEventListener('dragover', (e) => {
+  if (S.route === 'onboarding') { if (e.target.closest('#obdev')) e.preventDefault(); return; }
+  if (!S.drag) return;
+  const f = actionByKey(S.drag);
+  const el = e.target.closest('[data-slot]');
+  let over = null;
+  if (el && f && ctlOf(f.a).includes(parseId(el.dataset.slot).ctl)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; over = el.dataset.slot; }
+  if (over !== S.over) { setOver(over); }
+});
+// Hover-Ziel nur per Klasse markieren – den DOM unter dem Zeiger nicht ersetzen.
+function setOver(id) {
+  const mark = (slotId, on) => {
+    const el = slotId && document.querySelector(`#stage [data-slot="${slotId}"]`); if (!el) return;
+    el.classList.remove('over', 'target', 'replace');
+    el.classList.add(on ? 'over' : slot(slotId) ? 'replace' : 'target');
+  };
+  mark(S.over, false); S.over = id; mark(id, true);
+}
+document.addEventListener('drop', (e) => {
+  if (S.route === 'onboarding') { if (e.target.closest('#obdev')) { e.preventDefault(); ACTS.obPlace(); } return; }
+  if (!S.drag) return;
+  e.preventDefault();
+  const el = e.target.closest('[data-slot]');
+  const key = S.drag; S.drag = null; S.over = null;
+  if (el) assign(key, el.dataset.slot); else render();
+});
+document.addEventListener('dragend', () => { if (S.drag) { S.drag = null; S.over = null; render(); } });
+
+matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (S.theme === 'system') applyTheme(); });
+
+applyTheme();
+render();
+api.connect();
+</script>
+</body>
+</html>

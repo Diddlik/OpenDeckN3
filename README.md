@@ -3,8 +3,8 @@
 Quelloffene Steuer-Software für Stream-Controller – zuerst für den **TreasLin N3** (USB `5548:1001`) –
 mit Plugin-System (Stream-Deck-SDK-kompatibel), Profilen und einer API für eine moderne Oberfläche.
 
-> **Status:** Grundgerüst (Meilenstein M0). Dienst, N3-Treiber, Plugin-Host, Profile und UI-API
-> funktionieren; die grafische Oberfläche wird als Nächstes mit Claude Design entworfen.
+> **Status:** Grundgerüst (Meilenstein M0) plus Weboberfläche nach dem Claude-Design-Entwurf.
+> Dienst, N3-Treiber, Plugin-Host, Profile, UI-API und Oberfläche funktionieren (getestet mit dem virtuellen Gerät).
 
 Inspiriert von und basierend auf Erkenntnissen aus
 [nekename/OpenDeck](https://github.com/nekename/OpenDeck) und
@@ -32,7 +32,7 @@ crates/
 plugins/examples/  Beispiel-Plugin „Zähler“ (Node, ohne Abhängigkeiten)
 tools/smoke-test.mjs  End-to-End-Test gegen den laufenden Dienst
 udev/          Linux-Regeln für Gerätezugriff
-ui/            Platz für die kommende Oberfläche
+ui/            Weboberfläche (vom Dienst ausgeliefert) + Claude-Design-Prototyp
 ```
 
 ## Schnellstart
@@ -54,11 +54,14 @@ cargo run -p n3-daemon
 # …oder ohne Hardware mit virtuellem N3 und Beispiel-Plugin
 cargo run -p n3-daemon -- --virtual --no-hardware --plugins-dir plugins/examples
 
+# Oberfläche im Browser öffnen
+#   http://127.0.0.1:57132/
+
 # In zweitem Terminal: End-to-End-Test über die UI-API
 node tools/smoke-test.mjs
 ```
 
-Optionen: `opendeckn3d --help` (`--config-dir`, `--plugins-dir`, `--plugin-port`, `--api-port`, `--virtual`, `--no-hardware`).
+Optionen: `opendeckn3d --help` (`--config-dir`, `--plugins-dir`, `--plugin-port`, `--api-port`, `--ui-port`, `--no-ui`, `--allow-origin`, `--virtual`, `--no-hardware`).
 Log-Level über `RUST_LOG`, z. B. `RUST_LOG=debug` oder `RUST_LOG=n3_driver=trace`.
 
 ## Lizenz

@@ -5,6 +5,7 @@ mod app;
 mod builtin;
 mod render;
 mod store;
+mod ui_server;
 
 use std::path::PathBuf;
 
@@ -35,6 +36,15 @@ struct Args {
     /// Port of the UI WebSocket API.
     #[arg(long, default_value_t = 57131)]
     api_port: u16,
+    /// Port of the bundled web UI (http://127.0.0.1:<port>/).
+    #[arg(long, default_value_t = 57132)]
+    ui_port: u16,
+    /// Do not serve the bundled web UI.
+    #[arg(long)]
+    no_ui: bool,
+    /// Additional browser origin allowed to use the UI API (e.g. a dev server).
+    #[arg(long = "allow-origin", value_name = "ORIGIN")]
+    allow_origins: Vec<String>,
     /// Add a virtual N3 for development without hardware.
     #[arg(long = "virtual")]
     virtual_device: bool,
@@ -76,9 +86,30 @@ async fn main() -> anyhow::Result<()> {
         store::Store::new(&config_dir),
         plugins.clone(),
         ui_tx.clone(),
+        device_tx.clone(),
+        token.clone(),
     );
 
-    tokio::spawn(api::serve(args.api_port, api_tx, ui_tx));
+    let mut origins = args.allow_origins.clone();
+    for host in ["127.0.0.1", "localhost"] {
+        origins.push(format!("http://{host}:{}", args.ui_port));
+    }
+    // Future desktop shell (Tauri).
+    origins.extend(["tauri://localhost".into(), "http://tauri.localhost".into()]);
+    tokio::spawn(api::serve(
+        args.api_port,
+        api::AllowedOrigins::new(origins),
+        api_tx,
+        ui_tx,
+    ));
+    if !args.no_ui {
+        let (ui_port, api_port) = (args.ui_port, args.api_port);
+        tokio::spawn(async move {
+            if let Err(err) = ui_server::serve(ui_port, api_port).await {
+                tracing::error!(%err, "UI server failed");
+            }
+        });
+    }
 
     if !args.no_hardware {
         let (tx, token) = (device_tx.clone(), token.clone());

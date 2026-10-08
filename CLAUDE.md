@@ -12,4 +12,6 @@
 - Der gesamte Fachzustand liegt in `crates/n3-daemon/src/app.rs` (`App`) und wird nur aus dem
   Haupt-Loop verändert – keine Locks einführen, sondern Kanäle nutzen.
 - Neue UI-Kommandos/Events immer auch in `docs/UI_API.md` dokumentieren, neue Plugin-Events in `docs/PLUGIN_API.md`.
+- Weboberfläche: `ui/index.html` (eine Datei, kein Build, wird per `include_str!` eingebettet → nach Änderungen
+  `cargo build`). Design-Referenz: `ui/design/prototyp-claude-design.html`. UI im Browser: `http://127.0.0.1:57132/`.
 - Doku auf Deutsch, Code/Kommentare auf Englisch.

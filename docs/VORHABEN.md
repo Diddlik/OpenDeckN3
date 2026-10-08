@@ -73,8 +73,13 @@ von Anfang an auf die N3-Familie (6 Display-Tasten, 3 Tasten, 3 Drehregler) zuge
 - UI-WebSocket-API inkl. Live-Ereignissen und Eingabe-Simulation.
 - Beispiel-Plugin „Zähler“ (Node, ohne Abhängigkeiten) und End-to-End-Smoke-Test.
 
+### M0+ – Weboberfläche ✅
+- Oberfläche nach dem Claude-Design-Entwurf (`ui/index.html`), vom Dienst unter `http://127.0.0.1:57132/` ausgeliefert:
+  Editor mit Drag & Drop, Inspektor, Profile, Helligkeit, Plugins, Einstellungen, Onboarding, Offline-/Leer-Zustände.
+- Origin-Prüfung der UI-API, `startVirtualDevice`.
+
 ### M1 – Benutzbar
-- Desktop-UI (Design aus Claude Design, Umsetzung z. B. Tauri + Svelte/React) auf Basis der UI-API.
+- Desktop-App (z. B. Tauri) als Hülle um die Weboberfläche: Tray-Icon, Fenster, Dateidialoge.
 - Titel-Rendering auf Tasten (Schrift, Größe, Position, Farbe).
 - Plugin-Installation aus `.zip`/`.streamDeckPlugin`, Plugin-Neustart bei Absturz.
 - Tray-Icon, Autostart, Bildschirmschoner/Sleep nach Inaktivität.
