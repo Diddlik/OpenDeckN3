@@ -79,3 +79,5 @@ jobs:
         with:
           files: target/installer/*
           generate_release_notes: true
+          # v0.1.0-alpha.1 etc. → als Vorabversion markieren
+          prerelease: ${{ contains(github.ref_name, '-') }}
