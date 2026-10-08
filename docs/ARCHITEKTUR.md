@@ -42,7 +42,8 @@ flowchart LR
 | `n3-core` | Domänenmodell ohne I/O | `DeviceInfo`, `DeviceLayout`, `InputEvent`, `DeviceCommand`, `DeviceEvent`, `DeviceHandle`, `Profile`, `ActionInstance`, `SlotContext` |
 | `n3-driver` | Hardware: Modelltabelle, N3-Protokoll (über `mirajazz`), Hot-Plug, virtuelles Gerät | `models::SUPPORTED_MODELS`, `n3::process_input`, `run_hid_watcher`, `virtual_deck::run_virtual_device` |
 | `n3-plugin` | Plugin-Manifest, Protokoll, WebSocket-Server, Prozessverwaltung | `PluginHost`, `PluginManifest`, `InboundEvent`, `protocol::SlotRef` |
-| `n3-daemon` | Binary `opendeckn3d`: verdrahtet alles, Router, Store, UI-API, eingebaute Aktionen, liefert die Weboberfläche aus | `App`, `Store`, `ApiCommand`, `ui_server` |
+| `n3-desktop` | Desktop-App (Tauri 2): Fenster mit `ui/index.html`, Tray, Autostart, Single-Instance; startet den Dienst im selben Prozess, Log nach `<config>/opendeckn3.log` | `main.rs` |
+| `n3-daemon` | Bibliothek (`run(Options, shutdown)`) + CLI `opendeckn3d`: verdrahtet alles, Router, Store, UI-API, eingebaute Aktionen, liefert die Weboberfläche aus | `App`, `Store`, `ApiCommand`, `ui_server` |
 
 ## Laufzeitmodell
 

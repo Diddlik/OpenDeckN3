@@ -28,31 +28,37 @@ crates/
   n3-core/     Domänenmodell (Geräte, Eingaben, Profile)
   n3-driver/   TreasLin-N3-Treiber (via mirajazz), Hot-Plug, virtuelles Gerät
   n3-plugin/   Plugin-Host (Manifest, Prozesse, WebSocket-Protokoll)
-  n3-daemon/   Dienst `opendeckn3d`: Router, Profile, eingebaute Aktionen, UI-API
+  n3-daemon/   Dienst (Bibliothek + CLI `opendeckn3d`): Router, Profile, eingebaute Aktionen, UI-API
+  n3-desktop/  Desktop-App „OpenDeckN3“ (Tauri): Fenster, Tray, Autostart, eingebetteter Dienst
 plugins/examples/  Beispiel-Plugin „Zähler“ (Node, ohne Abhängigkeiten)
 tools/smoke-test.mjs  End-to-End-Test gegen den laufenden Dienst
 udev/          Linux-Regeln für Gerätezugriff
-installer/     Windows-Installer (Inno Setup)
 assets/        App-Icon (erzeugt mit tools/make-icon.py)
-ui/            Weboberfläche (vom Dienst ausgeliefert) + Claude-Design-Prototyp
+ui/            Oberfläche (Desktop-App-Fenster bzw. Browser) + Claude-Design-Prototyp
 ```
 
-## Windows: Installer
+## Windows: Desktop-App
 
-Der Workflow [`windows.yml`](.github/workflows/windows.yml) baut bei jedem Push auf `main`/`claude/**` einen Installer:
+OpenDeckN3 ist unter Windows eine Desktop-App (Tauri): eigenes Fenster, Symbol im Infobereich (Tray), kein Browser,
+kein Konsolenfenster. Der Dienst läuft in der App mit.
 
-1. Auf GitHub unter **Actions → Windows-Installer** den neuesten Lauf öffnen.
-2. Unten bei **Artifacts** `OpenDeckN3-…-windows-x64` herunterladen und entpacken.
-3. `OpenDeckN3-…-setup.exe` ausführen (keine Admin-Rechte nötig; SmartScreen-Warnung, da unsigniert:
-   „Weitere Informationen“ → „Trotzdem ausführen“). Alternativ das portable ZIP nutzen.
-4. Startmenü → **OpenDeckN3** (mit Gerät) oder **OpenDeckN3 (ohne Hardware testen)** – der Browser öffnet die Oberfläche.
+1. Neueste Version unter [Releases](https://github.com/Diddlik/OpenDeckN3/releases) laden – oder den neuesten Lauf unter
+   **Actions → Windows-Installer** öffnen und bei **Artifacts** `OpenDeckN3-…-windows-x64` herunterladen.
+2. `OpenDeckN3-…-setup.exe` ausführen (keine Admin-Rechte nötig; SmartScreen-Warnung, da unsigniert:
+   „Weitere Informationen“ → „Trotzdem ausführen“). Alternativ das portable ZIP entpacken und `OpenDeckN3.exe` starten.
+3. **Fenster schließen** = App läuft im Tray weiter. **Beenden** über Rechtsklick aufs Tray-Symbol.
+   Autostart lässt sich in den Einstellungen einschalten (startet dann unsichtbar im Tray).
 
 **Release erstellen:** *Actions → Windows-Installer → Run workflow* mit `release_tag` (z. B. `v0.1.0-alpha.2`) starten –
 GitHub legt Tag und Release mit Installer und ZIP an. Tags mit Bindestrich (`-alpha`, `-beta`) werden als Pre-release markiert.
 Ein lokal gepushtes Tag `v*` funktioniert ebenso. Fertige Versionen: [Releases](https://github.com/Diddlik/OpenDeckN3/releases).
 
-Hinweise: Profile liegen in `%APPDATA%\opendeckn3`. Das Beispiel-Plugin braucht Node.js ≥ 22. Die Hersteller-Software
-des N3 sollte nicht gleichzeitig laufen. Ein zweiter Start öffnet nur die Oberfläche der laufenden Instanz.
+Hinweise: Profile und Log (`opendeckn3.log`) liegen in `%APPDATA%\opendeckn3`. Das Beispiel-Plugin braucht Node.js ≥ 22.
+Die Hersteller-Software des N3 sollte nicht gleichzeitig laufen. Ein zweiter Start holt nur das vorhandene Fenster nach vorn.
+Benötigt die WebView2-Laufzeit (in Windows 10/11 enthalten, der Installer lädt sie sonst nach).
+
+Desktop-App selbst bauen: `cd crates/n3-desktop && npx @tauri-apps/cli@2 build` (Installer) oder
+`cargo run -p n3-desktop` (Entwicklung; unter Linux werden `libwebkit2gtk-4.1-dev` und `libayatana-appindicator3-dev` benötigt).
 
 ## Schnellstart
 
@@ -70,7 +76,10 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 # Dienst mit echtem Gerät starten
 cargo run -p n3-daemon
 
-# …oder ohne Hardware mit virtuellem N3 und Beispiel-Plugin
+# Desktop-App starten (Fenster statt Browser)
+cargo run -p n3-desktop
+
+# …oder nur den Dienst, ohne Hardware mit virtuellem N3 und Beispiel-Plugin
 cargo run -p n3-daemon -- --virtual --no-hardware --plugins-dir plugins/examples
 
 # Oberfläche im Browser öffnen

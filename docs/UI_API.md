@@ -6,7 +6,8 @@ Dadurch kann die UI unabhängig gestaltet und ausgetauscht werden (Tauri-App, We
 - Adresse: `ws://127.0.0.1:57131` (änderbar mit `--api-port`)
 - Format: JSON-Textnachrichten
 - Zum Entwickeln ohne Hardware: `opendeckn3d --virtual --no-hardware`
-- Die mitgelieferte Weboberfläche liegt unter `http://127.0.0.1:57132/` (`--ui-port`, abschaltbar mit `--no-ui`).
+- Die Desktop-App zeigt die Oberfläche im eigenen Fenster; der CLI-Dienst liefert sie zusätzlich unter
+  `http://127.0.0.1:57132/` aus (`--ui-port`, abschaltbar mit `--no-ui`).
 
 ### Zugriffsschutz (Origin)
 
@@ -14,7 +15,7 @@ Browser senden beim Verbindungsaufbau immer einen `Origin`-Header. Der Dienst ak
 
 - Verbindungen **ohne** `Origin` (native Programme, Node-Skripte, Tauri-Backend),
 - die eigene Weboberfläche (`http://127.0.0.1:<ui-port>`, `http://localhost:<ui-port>`),
-- `tauri://localhost` / `http://tauri.localhost` (künftige Desktop-App),
+- `tauri://localhost` / `http(s)://tauri.localhost` (Desktop-App `crates/n3-desktop`),
 - zusätzliche Origins per `--allow-origin <origin>` (z. B. ein Vite-Dev-Server).
 
 Alle anderen Origins erhalten HTTP 403 – so kann keine fremde Webseite das Gerät fernsteuern.

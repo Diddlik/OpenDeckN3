@@ -7,8 +7,10 @@ Abhängigkeiten (Schriften kommen von Google Fonts, ohne Internet greift die Sys
   (mit Beispieldaten, zum Durchklicken im Browser). Grundlage war [`docs/UI_DESIGN_BRIEF.md`](../docs/UI_DESIGN_BRIEF.md).
 - **Daten:** ausschließlich über die UI-API ([`docs/UI_API.md`](../docs/UI_API.md)). Die Oberfläche hält nur
   UI-Zustand (Auswahl, Theme …); Quelle der Wahrheit ist der Dienst (`getState` + Live-Events).
-- **Auslieferung:** `opendeckn3d` bettet die Datei beim Kompilieren ein und liefert sie unter
-  `http://127.0.0.1:57132/` aus. Dabei wird `{{API_PORT}}` durch den API-Port ersetzt.
+- **Auslieferung:** Die Desktop-App (`crates/n3-desktop`) zeigt die Datei in ihrem Fenster. Zusätzlich bettet
+  `opendeckn3d` sie ein und liefert sie unter `http://127.0.0.1:57132/` aus (Linux/headless); dabei wird `{{API_PORT}}`
+  durch den API-Port ersetzt. Erkennt die Seite die Desktop-App (`window.__TAURI__`), nutzt sie echte Systemfunktionen:
+  Autostart, Ordner/Log öffnen, externe Links im Standardbrowser.
 
 ## Starten
 
@@ -29,4 +31,5 @@ Nach Änderungen an `index.html` den Dienst neu bauen (`cargo build`), da die Da
 | Test-Modus beim virtuellen Gerät: Klick drückt, Mausrad dreht (`simulateInput`) | ✅ |
 | Zustände: Dienst offline (Auto-Reconnect), kein Gerät, Gerät getrennt, Onboarding | ✅ |
 | Plugins-Seite (Katalog, Status) und Einstellungen (Theme, Gehäusefarbe, API-Port) | ✅ |
-| Plugin-Installation, Autostart, Schlafmodus, Property Inspector | folgt (M1/M2) |
+| Autostart, Ordner/Log öffnen (Desktop-App) | ✅ |
+| Plugin-Installation, Schlafmodus, Property Inspector | folgt (M1/M2) |

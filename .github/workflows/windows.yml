@@ -1,5 +1,7 @@
 name: Windows-Installer
 
+# Baut die Desktop-App (Tauri) mit NSIS-Installer und portablem ZIP.
+# Release: "Run workflow" mit release_tag (z. B. v0.1.0-alpha.2) oder Tag-Push v*.
 on:
   push:
     branches: [main, "claude/**"]
@@ -50,30 +52,35 @@ jobs:
       - name: Tests
         run: cargo test
 
-      - name: Release bauen
+      - name: Dienst (CLI) bauen
         run: cargo build --release -p n3-daemon
 
-      - name: Inno Setup installieren
-        run: choco install innosetup --no-progress -y
-
-      - name: Installer bauen
+      - name: Desktop-App + Installer bauen (Tauri)
         shell: pwsh
+        working-directory: crates/n3-desktop
         run: |
-          # target/ kommt teils aus dem Cache – keine alten Pakete mitveröffentlichen.
-          Remove-Item -Recurse -Force target\installer, target\portable -ErrorAction SilentlyContinue
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp "/DAppVersion=${{ steps.version.outputs.version }}" installer\windows\opendeckn3.iss
+          @{ version = "${{ steps.version.outputs.version }}" } | ConvertTo-Json | Set-Content "$env:RUNNER_TEMP\tauri-version.json"
+          npx --yes @tauri-apps/cli@2 build --ci --config "$env:RUNNER_TEMP\tauri-version.json"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Portable ZIP
+      - name: Pakete zusammenstellen
         shell: pwsh
         run: |
+          $v = "${{ steps.version.outputs.version }}"
+          # target/ kommt teils aus dem Cache – keine alten Pakete mitveröffentlichen.
+          Remove-Item -Recurse -Force target\installer, target\portable -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force target\installer | Out-Null
+          $setup = Get-ChildItem "target\release\bundle\nsis\OpenDeckN3_${v}_x64-setup.exe"
+          Copy-Item $setup "target\installer\OpenDeckN3-$v-windows-x64-setup.exe"
+
           $dir = "target\portable\OpenDeckN3"
           New-Item -ItemType Directory -Force "$dir\plugins" | Out-Null
-          Copy-Item target\release\opendeckn3d.exe, LICENSE, README.md, assets\icon.ico $dir
+          Copy-Item target\release\OpenDeckN3.exe, LICENSE, README.md $dir
           Copy-Item -Recurse plugins\examples\* "$dir\plugins"
-          Compress-Archive -Path $dir -DestinationPath "target\installer\OpenDeckN3-${{ steps.version.outputs.version }}-windows-x64-portable.zip" -Force
+          Compress-Archive -Path $dir -DestinationPath "target\installer\OpenDeckN3-$v-windows-x64-portable.zip" -Force
+          Get-ChildItem target\installer
 
-      - name: Smoke-Test der Release-Binary
+      - name: Smoke-Test des Dienstes
         shell: pwsh
         run: |
           $env:RUST_LOG = "debug"

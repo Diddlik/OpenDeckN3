@@ -2,3 +2,4 @@
 **/node_modules
 *.log
 .DS_Store
+/crates/n3-desktop/gen

@@ -290,7 +290,10 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 const BUILTIN = 'opendeckn3.builtin';
-const CONFIG_DIR = '~/.config/opendeckn3';
+let CONFIG_DIR = '~/.config/opendeckn3';   // in der Desktop-App: echter Pfad
+const pluginsDir = () => CONFIG_DIR + (CONFIG_DIR.includes('\\') ? '\\plugins' : '/plugins');
+// In der Desktop-App (Tauri) gibt es echte Systemfunktionen statt Kopier-Platzhaltern.
+const desktop = window.__TAURI__ ? (cmd, args) => window.__TAURI__.core.invoke(cmd, args) : null;
 const PROFILE_ID = /^[A-Za-z0-9_\-][A-Za-z0-9_.\-]*$/;
 
 /* ---------- Lokale Einstellungen (nur Komfort, pro Browser) ---------- */
@@ -386,7 +389,8 @@ const S = {
   sel: 'k0', test: true, pressed: null, flip: false,
   drag: null, over: null, q: '', closed: {}, pluginSel: null, json: false,
   ob: { step: 0, copied: false, placed: false },
-  menu: null, popover: null, modal: null
+  menu: null, popover: null, modal: null,
+  autostart: false
 };
 
 const cur = () => S.devices[S.devId] || S.lost[S.devId] || null;
@@ -871,10 +875,13 @@ function offlineHTML() {
   return `<main class="blank"><div role="alert" style="max-width:520px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center">
     <span class="tile" style="width:72px;height:72px;border-radius:22px;background:color-mix(in srgb,var(--err) 12%,transparent);border:1px solid color-mix(in srgb,var(--err) 35%,transparent);color:var(--err)">${ic('plug', 32)}</span>
     <h1 style="margin:0;font-size:32px;font-weight:600;letter-spacing:-.02em">${connecting ? 'Verbinde mit dem Dienst …' : 'Dienst läuft nicht'}</h1>
-    <p style="margin:0;font-size:16px;line-height:1.6;color:var(--muted)">Die Oberfläche erreicht den Hintergrunddienst unter <span class="mono" style="color:var(--text)">ws://127.0.0.1:${esc(S.port)}</span> nicht. Starte <span class="mono" style="color:var(--text)">opendeckn3d</span> oder prüfe den API-Port in den Einstellungen.</p>
+    <p style="margin:0;font-size:16px;line-height:1.6;color:var(--muted)">${desktop
+      ? `Der eingebaute Dienst ist unter <span class="mono" style="color:var(--text)">ws://127.0.0.1:${esc(S.port)}</span> nicht erreichbar. Ursache steht im Log – oft belegt ein anderes Programm den Port.`
+      : `Die Oberfläche erreicht den Hintergrunddienst unter <span class="mono" style="color:var(--text)">ws://127.0.0.1:${esc(S.port)}</span> nicht. Starte <span class="mono" style="color:var(--text)">opendeckn3d</span> oder prüfe den API-Port in den Einstellungen.`}</p>
     <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px">
       <button type="button" class="btn primary lg" data-act="retry">${ic('refresh', 16)}Erneut verbinden</button>
-      <button type="button" class="btn lg" data-act="copyStart">${ic('copy', 16)}Startbefehl kopieren</button>
+      ${desktop ? `<button type="button" class="btn lg" data-act="openLog">${ic('file', 16)}Log öffnen</button>`
+        : `<button type="button" class="btn lg" data-act="copyStart">${ic('copy', 16)}Startbefehl kopieren</button>`}
     </div>
     <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)"><span class="spin" style="border-top-color:var(--warn)"></span>Automatischer Versuch alle 5 s</div>
   </div></main>`;
@@ -902,7 +909,7 @@ function pluginsHTML() {
           <span style="display:flex;align-items:center;gap:8px;width:100%;font-size:13px">${stateEl(p)}<span style="color:var(--muted)">${n} ${n === 1 ? 'Aktion' : 'Aktionen'}</span><span class="chip" style="margin-left:auto;font-size:11px;padding:2px 8px">${esc(p.category)}</span></span>
         </button>`;
       }).join('')}</div>
-      <p style="margin:0;font-size:13px;color:var(--faint)">Plugins liegen in <span class="mono" style="color:var(--muted)">${CONFIG_DIR}/plugins/</span> und sprechen das OpenDeck-/Stream-Deck-Plugin-Protokoll (docs/PLUGIN_API.md).</p>
+      <p style="margin:0;font-size:13px;color:var(--faint)">Plugins liegen in <span class="mono" style="color:var(--muted)">${esc(pluginsDir())}</span> und sprechen das OpenDeck-/Stream-Deck-Plugin-Protokoll (docs/PLUGIN_API.md).</p>
     </main>
     ${dp ? `<aside class="detail" aria-label="Plugin-Details">
       <div style="display:flex;align-items:center;gap:14px">
@@ -923,7 +930,8 @@ function pluginsHTML() {
         </div>`).join('')}
       </div>
       <div style="margin-top:auto;display:flex;flex-wrap:wrap;gap:10px">
-        <button type="button" class="btn" data-act="copyPath" data-arg="${CONFIG_DIR}/plugins">${ic('folder', 16)}Pfad kopieren</button>
+        ${desktop ? `<button type="button" class="btn" data-act="openPluginsDir">${ic('folder', 16)}Ordner öffnen</button>`
+          : `<button type="button" class="btn" data-act="copyPath" data-arg="${esc(pluginsDir())}">${ic('folder', 16)}Pfad kopieren</button>`}
       </div>
     </aside>` : ''}
   </div>`;
@@ -942,8 +950,11 @@ function settingsHTML() {
       <section class="scard" id="allgemein"><h2>Allgemein</h2>
         <div class="srow"><div class="t"><b>Sprache</b><span>Englisch folgt mit i18n</span></div><select class="field" disabled style="min-width:180px"><option>Deutsch</option></select></div>
         <div class="srow"><div class="t"><b>Theme</b><span>Dunkel ist Standard</span></div>${seg('theme', S.theme, [['dark', 'Dunkel'], ['light', 'Hell'], ['system', 'System']])}</div>
-        <div class="srow"><div class="t"><b>Beim Anmelden starten ${soon}</b><span>Kommt mit der Desktop-App (Meilenstein M1)</span></div>
-          <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Beim Anmelden starten" disabled style="opacity:.45"><span></span></button></div>
+        ${desktop
+          ? `<div class="srow"><div class="t"><b>Beim Anmelden starten</b><span>Startet unsichtbar im Infobereich (Tray)</span></div>
+          <button type="button" class="switch" role="switch" aria-checked="${S.autostart}" aria-label="Beim Anmelden starten" data-act="autostart"><span></span></button></div>`
+          : `<div class="srow"><div class="t"><b>Beim Anmelden starten ${soon}</b><span>Nur in der Desktop-App verfügbar</span></div>
+          <button type="button" class="switch" role="switch" aria-checked="false" aria-label="Beim Anmelden starten" disabled style="opacity:.45"><span></span></button></div>`}
         <div class="srow"><div class="t"><b>Einrichtung</b><span>Assistent für den ersten Start erneut öffnen</span></div><button type="button" class="btn" data-act="restartOnboarding">${ic('play', 16)}Starten</button></div>
       </section>
       <section class="scard" id="geraete"><h2>Geräte</h2>
@@ -956,8 +967,12 @@ function settingsHTML() {
       <section class="scard" id="erweitert"><h2>Erweitert</h2>
         <div class="srow"><label class="t" for="port"><b>UI-API-Port</b><span>Bindet nur an 127.0.0.1 · Standard ${DEFAULT_API_PORT}</span></label>
           <input id="port" class="field mono" inputmode="numeric" value="${esc(S.port)}" data-in="port" style="width:120px"></div>
-        <div class="srow"><div class="t"><b>Konfigurationsordner</b><span class="mono" style="font-size:12px">${CONFIG_DIR}</span></div><button type="button" class="btn" data-act="copyPath" data-arg="${CONFIG_DIR}">${ic('copy', 16)}Pfad kopieren</button></div>
-        <div class="srow"><div class="t"><b>Protokoll</b><span>Ausführliches Log: <span class="mono">RUST_LOG=debug opendeckn3d</span></span></div><button type="button" class="btn" data-act="copyStart" data-arg="debug">${ic('copy', 16)}Befehl kopieren</button></div>
+        <div class="srow"><div class="t"><b>Konfigurationsordner</b><span class="mono" style="font-size:12px">${esc(CONFIG_DIR)}</span></div>${desktop
+          ? `<button type="button" class="btn" data-act="openConfigDir">${ic('folder', 16)}Öffnen</button>`
+          : `<button type="button" class="btn" data-act="copyPath" data-arg="${esc(CONFIG_DIR)}">${ic('copy', 16)}Pfad kopieren</button>`}</div>
+        ${desktop
+          ? `<div class="srow"><div class="t"><b>Protokoll</b><span>opendeckn3.log im Konfigurationsordner · Details mit Umgebungsvariable <span class="mono">RUST_LOG=debug</span></span></div><button type="button" class="btn" data-act="openLog">${ic('file', 16)}Log öffnen</button></div>`
+          : `<div class="srow"><div class="t"><b>Protokoll</b><span>Ausführliches Log: <span class="mono">RUST_LOG=debug opendeckn3d</span></span></div><button type="button" class="btn" data-act="copyStart" data-arg="debug">${ic('copy', 16)}Befehl kopieren</button></div>`}
       </section>
       <section class="scard" id="ueber" style="padding:20px;display:flex;flex-wrap:wrap;gap:20px;align-items:center">
         ${LOGO(56)}
@@ -1205,7 +1220,19 @@ const ACTS = {
   menuEdit() { S.menu = null; renderOverlay(); const i = $('[data-in="title"]'); if (i) i.focus(); },
   menuClear() { const id = S.menu.id; S.menu = null; S.sel = id; renderOverlay(); clearSlot(id); },
   plugin(arg) { S.pluginSel = arg; render(); },
-  install() { toast('warn', `Installation per Datei folgt in M1 – bis dahin Plugin nach ${CONFIG_DIR}/plugins kopieren und Dienst neu starten`); },
+  install() { toast('warn', `Installation per Datei folgt – bis dahin Plugin nach ${pluginsDir()} kopieren und OpenDeckN3 neu starten`); },
+  openConfigDir() { desktop('open_config_dir').catch((e) => toast('err', String(e))); },
+  openPluginsDir() { desktop('open_plugins_dir').catch((e) => toast('err', String(e))); },
+  openLog() { desktop('open_log').catch((e) => toast('err', String(e))); },
+  async autostart() {
+    const want = !S.autostart;
+    try {
+      await desktop(want ? 'plugin:autostart|enable' : 'plugin:autostart|disable');
+      S.autostart = await desktop('plugin:autostart|is_enabled');
+      toast('ok', S.autostart ? 'Startet ab jetzt beim Anmelden' : 'Autostart ausgeschaltet');
+    } catch (e) { toast('err', 'Autostart: ' + e); }
+    render();
+  },
   copyPath(arg) { copy(arg, 'Pfad'); },
   copyStart(arg) { copy(arg === 'debug' ? 'RUST_LOG=debug opendeckn3d' : 'opendeckn3d', 'Befehl'); },
   retry() { S.conn = 'connecting'; render(); api.connect(); },
@@ -1363,9 +1390,24 @@ document.addEventListener('dragend', () => { if (S.drag) { S.drag = null; S.over
 
 matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { if (S.theme === 'system') applyTheme(); });
 
+// Desktop-App: echte Pfade/Autostart laden, externe Links im Standardbrowser öffnen.
+async function initDesktop() {
+  if (!desktop) return;
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[target="_blank"]');
+    if (!a) return;
+    e.preventDefault();
+    desktop('plugin:opener|open_url', { url: a.href }).catch((err) => toast('err', String(err)));
+  }, true);
+  try { CONFIG_DIR = (await desktop('desktop_paths')).config; } catch { /* Standardpfad bleibt */ }
+  try { S.autostart = await desktop('plugin:autostart|is_enabled'); } catch { /* bleibt aus */ }
+  render();
+}
+
 applyTheme();
 render();
 api.connect();
+initDesktop();
 </script>
 </body>
 </html>
