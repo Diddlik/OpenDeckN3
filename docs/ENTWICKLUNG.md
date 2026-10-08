@@ -45,7 +45,8 @@ kein Konsolenfenster. Der Dienst läuft in der App mit.
 
 **Release erstellen:** *Actions → Windows-Installer → Run workflow* mit `release_tag` (z. B. `v0.1.0-alpha.2`) starten –
 GitHub legt Tag und Release mit Installer und ZIP an. Tags mit Bindestrich (`-alpha`, `-beta`) werden als Pre-release markiert.
-Ein lokal gepushtes Tag `v*` funktioniert ebenso. Fertige Versionen: [Releases](https://github.com/Diddlik/OpenDeckN3/releases).
+Ein lokal gepushtes Tag `v*` funktioniert ebenso. Jedes Release enthält `SHA256SUMS.txt` – daran prüft der Auto-Updater der App
+den Installer, bevor er ihn startet. Fertige Versionen: [Releases](https://github.com/Diddlik/OpenDeckN3/releases).
 
 Hinweise: Profile und Log (`opendeckn3.log`) liegen in `%APPDATA%\opendeckn3`. Das Beispiel-Plugin braucht Node.js ≥ 22.
 Die Hersteller-Software des N3 sollte nicht gleichzeitig laufen. Ein zweiter Start holt nur das vorhandene Fenster nach vorn.

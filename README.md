@@ -114,7 +114,7 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit Symbol und 
 
 ## 🗺️ Was als Nächstes kommt
 
-- [x] Desktop-App mit Tray, Autostart und Installer
+- [x] Desktop-App mit Tray, Autostart, Installer und automatischen Updates
 - [x] Profile, eigene Bilder, Plugins, virtuelles Testgerät
 - [x] Titel direkt auf den Tasten-Displays
 - [x] Eingebaut: Tastenkürzel, Lautstärke, Medien, Programme, Websites, Befehle, Text
@@ -146,6 +146,14 @@ Unter Linux braucht OpenDeckN3 einmalig Zugriffsrechte (die App zeigt dir den pa
 
 Ja, OpenDeckN3 funktioniert unter Linux – aktuell noch über den Quellcode. Fertige Pakete folgen.
 Wie das geht, steht in der <a href="docs/ENTWICKLUNG.md">Entwickler-Doku</a>.
+</details>
+
+<details>
+<summary><b>Wie bekomme ich Updates?</b></summary>
+
+Automatisch: OpenDeckN3 schaut beim Start und alle paar Stunden nach einer neuen Version und fragt dich, bevor etwas passiert.
+Ein Klick auf <i>„Jetzt aktualisieren“</i> lädt das Update, prüft es und startet die App neu – deine Profile bleiben erhalten.
+In den <i>Einstellungen → Updates</i> kannst du auch selbst suchen oder Vorabversionen ausschalten.
 </details>
 
 <details>

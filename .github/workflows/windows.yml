@@ -78,7 +78,14 @@ jobs:
           Copy-Item target\release\OpenDeckN3.exe, LICENSE, README.md $dir
           Copy-Item -Recurse plugins\examples\* "$dir\plugins"
           Compress-Archive -Path $dir -DestinationPath "target\installer\OpenDeckN3-$v-windows-x64-portable.zip" -Force
-          Get-ChildItem target\installer
+
+          # Prüfsummen – der Auto-Updater der App installiert nur verifizierte Installer.
+          Push-Location target\installer
+          Get-ChildItem -File | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content -Encoding ascii SHA256SUMS.txt
+          Get-Content SHA256SUMS.txt
+          Pop-Location
 
       - name: Smoke-Test des Dienstes
         shell: pwsh

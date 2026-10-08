@@ -270,6 +270,10 @@ textarea.field{height:auto;min-height:140px;padding:10px 12px;font-family:'Geist
 .help{font-size:12px;line-height:1.45;color:var(--faint)}
 .fieldrow{display:flex;gap:8px;align-items:center}.fieldrow .field{flex:1;min-width:0}
 [data-type="shortcut"]:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);outline:none}
+.notes{max-height:220px;overflow:auto;padding:12px 14px;border-radius:12px;background:var(--panel2);border:1px solid var(--line2);font-size:13px;line-height:1.55;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}
+.progress{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .2s ease}
+.updbtn{height:40px;padding:0 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);background:var(--accent-soft);color:var(--accent-text);display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
 .soon{font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--raised);color:var(--faint)}
 </style>
 </head>
@@ -418,7 +422,10 @@ const S = {
   drag: null, over: null, q: '', closed: {}, pluginSel: null, json: false,
   ob: { step: 0, copied: false, placed: false },
   menu: null, popover: null, modal: null,
-  autostart: false
+  autostart: false,
+  // Updates (nur Desktop-App)
+  appVersion: null, update: null, updCanInstall: false, upd: { busy: false, error: '' },
+  updAuto: local.get('updAuto', true), updPre: local.get('updPre', true), updLast: local.get('updLast', null)
 };
 
 const cur = () => S.devices[S.devId] || S.lost[S.devId] || null;
@@ -728,6 +735,7 @@ function barHTML() {
       <input type="range" min="0" max="100" value="${bri}" data-in="brightness" ${off ? 'disabled' : ''}>
       <output>${bri} %</output>
     </label>
+    ${S.update ? `<button type="button" class="updbtn" data-act="showUpdate" title="OpenDeckN3 ${esc(S.update.version)} ist verfügbar">${ic('arrow', 15)}Update</button>` : ''}
     <button type="button" class="btn icon" data-act="nav" data-arg="settings" aria-label="Einstellungen" aria-current="${S.route === 'settings' ? 'page' : 'false'}" style="background:var(--panel2);${S.route === 'settings' ? 'color:var(--accent-text)' : ''}">${ic('gear', 18)}</button>
   </header>`;
 }
@@ -1022,7 +1030,7 @@ function settingsHTML() {
   const soon = '<span class="soon">folgt</span>';
   return `<div class="settings">
     <nav class="snav" aria-label="Einstellungsbereiche"><h1 style="margin:0 0 14px 10px">Einstellungen</h1>
-      ${nav('allgemein', 'gear', 'Allgemein')}${nav('geraete', 'usb', 'Geräte')}${nav('erweitert', 'terminal', 'Erweitert')}${nav('ueber', 'info', 'Über')}
+      ${nav('allgemein', 'gear', 'Allgemein')}${nav('geraete', 'usb', 'Geräte')}${desktop ? nav('updates', 'refresh', 'Updates') : ''}${nav('erweitert', 'terminal', 'Erweitert')}${nav('ueber', 'info', 'Über')}
     </nav>
     <div class="sbody">
       <section class="scard" id="allgemein"><h2>Allgemein</h2>
@@ -1042,6 +1050,14 @@ function settingsHTML() {
           <select class="field" disabled style="min-width:180px"><option>Nie</option></select></div>
         <div class="srow"><div class="t"><b>Gehäusefarbe in der Vorschau</b><span>Passend zu deinem Gerät</span></div>${seg('finish', S.finish, [['dunkel', 'Dunkel'], ['weiss', 'Weiß']])}</div>
       </section>
+      ${desktop ? `<section class="scard" id="updates"><h2>Updates</h2>
+        <div class="srow"><div class="t"><b>Version ${esc(S.appVersion || '…')}</b><span>${S.update ? `Neu verfügbar: <b style="color:var(--accent-text)">${esc(S.update.version)}</b>` : S.updLast ? 'Zuletzt geprüft: ' + esc(new Date(S.updLast).toLocaleString('de-DE')) : 'Noch nicht geprüft'}</span></div>
+          ${S.update ? `<button type="button" class="btn primary" data-act="showUpdate">${ic('arrow', 16)}Update anzeigen</button>` : `<button type="button" class="btn" data-act="checkUpdates">${ic('refresh', 16)}Nach Updates suchen</button>`}</div>
+        <div class="srow"><div class="t"><b>Automatisch nach Updates suchen</b><span>Beim Start und alle 6 Stunden – du wirst immer gefragt</span></div>
+          <button type="button" class="switch" role="switch" aria-checked="${S.updAuto}" aria-label="Automatisch nach Updates suchen" data-act="toggleUpdAuto"><span></span></button></div>
+        <div class="srow"><div class="t"><b>Vorabversionen einbeziehen</b><span>Alpha- und Beta-Versionen mit den neuesten Funktionen</span></div>
+          <button type="button" class="switch" role="switch" aria-checked="${S.updPre}" aria-label="Vorabversionen einbeziehen" data-act="toggleUpdPre"><span></span></button></div>
+      </section>` : ''}
       <section class="scard" id="erweitert"><h2>Erweitert</h2>
         <div class="srow"><label class="t" for="port"><b>UI-API-Port</b><span>Bindet nur an 127.0.0.1 · Standard ${DEFAULT_API_PORT}</span></label>
           <input id="port" class="field mono" inputmode="numeric" value="${esc(S.port)}" data-in="port" style="width:120px"></div>
@@ -1055,7 +1071,7 @@ function settingsHTML() {
       <section class="scard" id="ueber" style="padding:20px;display:flex;flex-wrap:wrap;gap:20px;align-items:center">
         ${LOGO(56)}
         <div style="flex:1 1 300px;display:flex;flex-direction:column;gap:6px">
-          <b style="font-size:16px;font-weight:600">OpenDeckN3 <span class="mono" style="font-size:13px;font-weight:400;color:var(--muted)">v0.1.0</span></b>
+          <b style="font-size:16px;font-weight:600">OpenDeckN3 <span class="mono" style="font-size:13px;font-weight:400;color:var(--muted)">v${esc(S.appVersion || '0.1.0')}</span></b>
           <span style="font-size:13px;color:var(--muted);line-height:1.6">Lizenz GPL-3.0-or-later. Mit Dank an <a href="https://github.com/nekename/OpenDeck" target="_blank" rel="noopener">OpenDeck</a> und <a href="https://github.com/4ndv/opendeck-akp03" target="_blank" rel="noopener">opendeck-akp03</a>; HID über <span class="mono">mirajazz</span> (MPL-2.0).</span>
         </div>
       </section>
@@ -1168,7 +1184,30 @@ function renderOverlay() {
       <div style="display:flex;justify-content:flex-end;gap:10px"><button type="button" class="btn ghost" data-act="closeModal">Abbrechen</button><button type="button" class="btn danger" data-act="confirmDelete" id="confirmDelete">${ic('trash', 16)}Löschen</button></div>
     </div></div>`;
   }
+  if (S.modal && S.modal.kind === 'update' && S.update) {
+    const u = S.update, b = S.upd;
+    const notes = esc(u.notes || 'Keine Beschreibung.').replace(/^#+\s*(.+)$/gm, '<b>$1</b>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    const auto = S.updCanInstall && u.installerUrl;
+    let body;
+    if (b.done) body = `<div style="display:flex;align-items:center;gap:10px;color:var(--ok)">${ic('check', 18, 2.25)}Installer gestartet – OpenDeckN3 startet gleich neu.</div>`;
+    else if (b.busy) body = `<div style="display:flex;flex-direction:column;gap:8px"><div class="progress"><span id="updBar"></span></div>
+        <div id="updText" style="font-size:13px;color:var(--muted)">Lade herunter …</div></div>`;
+    else body = `<div style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px">
+        <button type="button" class="btn ghost" data-act="updateSkip">Überspringen</button>
+        <button type="button" class="btn ghost" data-act="closeModal">Später</button>
+        ${auto ? `<button type="button" class="btn primary" data-act="updateInstall" id="updGo">${ic('arrow', 16)}Jetzt aktualisieren</button>`
+          : `<button type="button" class="btn primary" data-act="updateOpenPage" id="updGo">${ic('external', 16)}Zur Download-Seite</button>`}</div>`;
+    html += `<div class="scrim" data-act="closeModal"><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgT" style="max-width:540px">
+      <div style="display:flex;align-items:center;gap:12px">${LOGO(40)}<div><h2 id="dlgT">Update verfügbar</h2>
+        <div style="font-size:13px;color:var(--muted);margin-top:2px">OpenDeckN3 <b style="color:var(--text)">${esc(u.version)}</b>${u.prerelease ? ' <span class="badge virt">Vorabversion</span>' : ''} · du nutzt ${esc(S.appVersion || '?')}</div></div></div>
+      <div class="notes">${notes}</div>
+      ${b.error ? `<div class="err">${esc(b.error)}</div>` : ''}
+      ${body}
+      ${!b.busy && !b.done && auto ? '<div style="font-size:12px;color:var(--faint)">Der Installer wird von GitHub geladen, per Prüfsumme verifiziert und startet OpenDeckN3 danach neu. Deine Profile bleiben erhalten.</div>' : ''}
+    </div></div>`;
+  }
   $('#overlay').innerHTML = html;
+  if (S.modal && S.modal.kind === 'update' && $('#updGo')) $('#updGo').focus();
   if (S.modal && S.modal.kind === 'new') { const i = $('#newProfileName'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
   if (S.modal && S.modal.kind === 'delete') $('#confirmDelete').focus();
   if (S.menu) { const m = $('.ctx'); const r = m.getBoundingClientRect(); if (r.right > innerWidth - 8) m.style.left = (innerWidth - r.width - 8) + 'px'; if (r.bottom > innerHeight - 8) m.style.top = (innerHeight - r.height - 8) + 'px'; }
@@ -1306,7 +1345,27 @@ const ACTS = {
     const { profile, next } = S.modal; S.modal = null; renderOverlay();
     try { await switchProfile(next); await api.run('deleteProfile', { device: S.devId, profile }); toast('ok', `Profil „${profile}“ gelöscht`); } catch { /* Toast */ }
   },
-  closeModal(arg, e) { if (e && e.target.closest('.dialog') && !e.target.closest('[data-act="closeModal"].btn')) return; S.modal = null; renderOverlay(); },
+  closeModal(arg, e) {
+    if (e && e.target.closest('.dialog') && !e.target.closest('[data-act="closeModal"].btn')) return;
+    if (S.upd.busy || S.upd.done) return; // Update läuft
+    S.modal = null; renderOverlay();
+  },
+  showUpdate() { S.upd = { busy: false, error: '' }; S.modal = { kind: 'update' }; renderOverlay(); },
+  checkUpdates() { checkUpdates(true); },
+  toggleUpdAuto() { S.updAuto = !S.updAuto; local.set('updAuto', S.updAuto); render(); },
+  toggleUpdPre() { S.updPre = !S.updPre; local.set('updPre', S.updPre); S.update = null; render(); },
+  updateSkip() { local.set('updSkip', S.update.version); S.update = null; S.modal = null; renderOverlay(); render(); },
+  updateOpenPage() { desktop('plugin:opener|open_url', { url: S.update.htmlUrl }).catch((e) => toast('err', String(e))); },
+  async updateInstall() {
+    S.upd = { busy: true, error: '' }; renderOverlay();
+    try {
+      await desktop('update_install', { update: S.update });
+      S.upd = { busy: false, done: true, error: '' };
+    } catch (e) {
+      S.upd = { busy: false, error: String(e) };
+    }
+    renderOverlay();
+  },
   menuEdit() { S.menu = null; renderOverlay(); const i = $('[data-in="title"]'); if (i) i.focus(); },
   menuClear() { const id = S.menu.id; S.menu = null; S.sel = id; renderOverlay(); clearSlot(id); },
   plugin(arg) { S.pluginSel = arg; render(); },
@@ -1458,7 +1517,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (e.key === 'Escape') {
-    if (S.modal) { S.modal = null; renderOverlay(); return; }
+    if (S.modal) { if (!S.upd.busy && !S.upd.done) { S.modal = null; renderOverlay(); } return; }
     if (S.menu) { S.menu = null; renderOverlay(); return; }
     if (S.popover) { S.popover = null; render(); return; }
   }
@@ -1528,9 +1587,41 @@ async function initDesktop() {
     e.preventDefault();
     desktop('plugin:opener|open_url', { url: a.href }).catch((err) => toast('err', String(err)));
   }, true);
-  try { CONFIG_DIR = (await desktop('desktop_paths')).config; } catch { /* Standardpfad bleibt */ }
+  try { const p = await desktop('desktop_paths'); CONFIG_DIR = p.config; S.appVersion = p.version; } catch { /* Standardpfad bleibt */ }
   try { S.autostart = await desktop('plugin:autostart|is_enabled'); } catch { /* bleibt aus */ }
+  window.__TAURI__.event.listen('update-progress', ({ payload }) => {
+    const bar = $('#updBar'), text = $('#updText'); if (!bar) return;
+    const mb = (n) => (n / 1048576).toFixed(1).replace('.', ',') + ' MB';
+    const pct = payload.total ? Math.floor(payload.downloaded * 100 / payload.total) : null;
+    bar.style.width = (pct ?? 50) + '%';
+    text.textContent = pct === null ? `Lade herunter … ${mb(payload.downloaded)}` : `Lade herunter … ${pct} % (${mb(payload.downloaded)} von ${mb(payload.total)})`;
+  });
   render();
+  // Beim Start (kurz verzögert) und alle 6 Stunden – gefragt wird immer.
+  setTimeout(() => { if (S.updAuto) checkUpdates(false); }, 8000);
+  setInterval(() => { if (S.updAuto) checkUpdates(false); }, 6 * 3600 * 1000);
+}
+
+// Fragt GitHub nach neuen Releases (über die Desktop-App, die den Download auch prüft).
+async function checkUpdates(manual) {
+  if (!desktop) return;
+  try {
+    const r = await desktop('update_check', { includePrerelease: S.updPre });
+    S.updLast = new Date().toISOString(); local.set('updLast', S.updLast);
+    S.updCanInstall = r.canInstall;
+    const u = r.update;
+    if (u && (manual || u.version !== local.get('updSkip', null))) {
+      const isNew = !S.update || S.update.version !== u.version;
+      S.update = u;
+      // Nicht mitten ins Onboarding oder einen anderen Dialog platzen.
+      if ((manual || isNew) && !S.modal && S.route !== 'onboarding') ACTS.showUpdate();
+    } else if (manual) {
+      toast('ok', `Du hast die neueste Version (${r.current})`);
+    }
+    render();
+  } catch (e) {
+    if (manual) toast('err', 'Update-Prüfung fehlgeschlagen: ' + e);
+  }
 }
 
 applyTheme();

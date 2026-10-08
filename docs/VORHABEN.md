@@ -80,6 +80,7 @@ von Anfang an auf die N3-Familie (6 Display-Tasten, 3 Tasten, 3 Drehregler) zuge
 
 ### M1 – Benutzbar
 - ✅ Desktop-App (Tauri) mit eingebettetem Dienst: Fenster, Tray, Autostart, Single-Instance, NSIS-Installer für Windows.
+- ✅ Auto-Update: prüft GitHub-Releases, fragt nach, lädt den Installer, verifiziert ihn per SHA-256 und startet neu.
 - ✅ Titel auf den Tasten-Displays (Geist-Schrift, automatisch verkleinert/gekürzt).
 - Plugin-Installation aus `.zip`/`.streamDeckPlugin`, Plugin-Neustart bei Absturz.
 - Tray-Icon, Autostart, Bildschirmschoner/Sleep nach Inaktivität.

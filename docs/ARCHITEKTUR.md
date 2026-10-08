@@ -90,6 +90,15 @@ neuen Instanzen → alle Display-Tasten mit Standardbild neu zeichnen → UI erh
   Geist (OFL, `assets/fonts/`). Icons der eingebauten Aktionen: `assets/builtin/`, erzeugt mit `tools/make-builtin-icons.cjs`
   aus den Icons der Oberfläche.
 
+## Updates (Desktop-App)
+
+`n3-desktop/src/updater.rs` fragt `api.github.com/repos/Diddlik/OpenDeckN3/releases` ab (beim Start nach 8 s und alle
+6 h, gesteuert von der Oberfläche; Vorabversionen optional). Ist ein Release neuer als die App-Version, zeigt die UI einen
+Dialog. „Jetzt aktualisieren“ lädt `…-windows-x64-setup.exe` (nur von `github.com/Diddlik/OpenDeckN3/releases/download/`),
+prüft ihn gegen `SHA256SUMS.txt` aus demselben Release und startet ihn mit `/P /UPDATE /R` (Fortschrittsfenster, keine neuen
+Verknüpfungen, Neustart danach) – dieselben Schalter wie Tauris eigener Updater. Die App beendet sich vorher selbst.
+`SHA256SUMS.txt` erzeugt der Release-Workflow; Releases ohne diese Datei werden nicht automatisch installiert.
+
 ## Persistenz
 
 Konfigurationsverzeichnis (Standard `~/.config/opendeckn3`, per `--config-dir` änderbar):

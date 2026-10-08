@@ -7,12 +7,22 @@
 // No console window on Windows in release builds.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{fs::File, path::PathBuf, sync::Mutex, time::Duration};
+mod updater;
+
+use std::{
+    fs::File,
+    path::PathBuf,
+    sync::{
+        Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
 
 use n3_daemon::Options;
 use serde_json::{Value, json};
 use tauri::{
-    AppHandle, Manager, WindowEvent,
+    AppHandle, Emitter, Manager, WindowEvent,
     async_runtime::JoinHandle,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -63,9 +73,78 @@ fn open_path(app: &AppHandle, path: PathBuf) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
+/// Guards against starting two update installations.
+#[derive(Default)]
+struct UpdateState {
+    installing: AtomicBool,
+}
+
+fn app_version(app: &AppHandle) -> semver::Version {
+    semver::Version::parse(&app.package_info().version.to_string())
+        .unwrap_or_else(|_| semver::Version::new(0, 0, 0))
+}
+
+/// Looks for a newer release on GitHub.
 #[tauri::command]
-fn desktop_paths(service: tauri::State<'_, Service>) -> Value {
+async fn update_check(app: AppHandle, include_prerelease: bool) -> Result<Value, String> {
+    let current = app_version(&app);
+    let update = updater::check(&current, include_prerelease)
+        .await
+        .map_err(|e| format!("{e:#}"))?;
+    tracing::info!(%current, available = ?update.as_ref().map(|u| &u.version), "update check");
+    Ok(json!({ "current": current.to_string(), "update": update, "canInstall": cfg!(windows) }))
+}
+
+/// Downloads + verifies the installer, starts it and quits (Windows only).
+#[tauri::command]
+async fn update_install(app: AppHandle, update: updater::UpdateInfo) -> Result<(), String> {
+    if !cfg!(windows) {
+        return Err(
+            "Automatisch installieren geht nur unter Windows – bitte das Release manuell laden."
+                .into(),
+        );
+    }
+    let state = app.state::<UpdateState>();
+    if state.installing.swap(true, Ordering::SeqCst) {
+        return Err("Das Update läuft bereits.".into());
+    }
+    let emitter = app.clone();
+    let mut last_percent = u64::MAX;
+    let downloaded = updater::download(&update, move |done, total| {
+        let percent = total.map_or(0, |t| done * 100 / t.max(1));
+        if percent != last_percent {
+            last_percent = percent;
+            emitter
+                .emit(
+                    "update-progress",
+                    json!({ "downloaded": done, "total": total }),
+                )
+                .ok();
+        }
+    })
+    .await;
+    let result = downloaded.and_then(|path| {
+        tracing::info!(path = %path.display(), version = %update.version, "starting installer");
+        updater::launch_installer(&path)
+    });
+    match result {
+        Ok(()) => {
+            // The installer replaces our files – get out of its way.
+            quit(&app);
+            Ok(())
+        }
+        Err(err) => {
+            state.installing.store(false, Ordering::SeqCst);
+            tracing::warn!("update failed: {err:#}");
+            Err(format!("{err:#}"))
+        }
+    }
+}
+
+#[tauri::command]
+fn desktop_paths(app: AppHandle, service: tauri::State<'_, Service>) -> Value {
     json!({
+        "version": app_version(&app).to_string(),
         "config": service.config_dir,
         "plugins": service.config_dir.join("plugins"),
         "log": service.config_dir.join(LOG_FILE),
@@ -183,11 +262,14 @@ fn main() {
             shutdown: CancellationToken::new(),
             task: Mutex::new(None),
         })
+        .manage(UpdateState::default())
         .invoke_handler(tauri::generate_handler![
             desktop_paths,
             open_config_dir,
             open_plugins_dir,
-            open_log
+            open_log,
+            update_check,
+            update_install
         ])
         .setup(move |app| {
             let task = start_service(app, config_dir.clone());
