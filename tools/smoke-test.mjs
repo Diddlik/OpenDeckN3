@@ -36,6 +36,20 @@ const assert = (cond, what) => {
   if (!cond) throw new Error(`FAILED: ${what}`);
   console.log(`ok - ${what}`);
 };
+// Polls getState until `check(device)` holds (plugins answer asynchronously).
+const waitForDevice = async (check, what, timeoutMs = 5000) => {
+  const until = Date.now() + timeoutMs;
+  let dev;
+  for (;;) {
+    const state = await call("getState");
+    dev = state.devices.find((d) => d.info.id === DEVICE);
+    if (dev && check(dev)) return assert(true, what);
+    if (Date.now() > until) break;
+    await sleep(100);
+  }
+  const k0 = dev?.profile.keys["0"];
+  throw new Error(`FAILED: ${what} (key 0: ${JSON.stringify({ settings: k0?.settings, title: dev?.titles["0"] })}, brightness: ${dev?.brightness})`);
+};
 
 ws.addEventListener("open", async () => {
   try {
@@ -55,14 +69,11 @@ ws.addEventListener("open", async () => {
       await call("simulateInput", { device: DEVICE, input: { type, key: 0 } });
     }
     await call("simulateInput", { device: DEVICE, input: { type: "encoderTwist", encoder: 1, ticks: -2 } });
-    await sleep(500);
 
-    state = await call("getState");
-    const dev = state.devices.find((d) => d.info.id === DEVICE);
-    assert(dev.profile.keys["0"].settings.count === 2, "plugin persisted count=2 via setSettings");
-    assert(dev.previews["0"]?.startsWith("data:image/png"), "key 0 has a preview image");
-    assert(dev.titles["0"] === "2", "plugin title is 2");
-    assert(dev.brightness === 40, "encoder twist lowered brightness to 40");
+    await waitForDevice((d) => d.profile.keys["0"]?.settings.count === 2, "plugin persisted count=2 via setSettings");
+    await waitForDevice((d) => d.previews["0"]?.startsWith("data:image/png"), "key 0 has a preview image");
+    await waitForDevice((d) => d.titles["0"] === "2", "plugin title is 2");
+    await waitForDevice((d) => d.brightness === 40, "encoder twist lowered brightness to 40");
     assert(events.some((e) => e.event === "keyImage"), "keyImage events were pushed");
 
     await call("switchProfile", { device: DEVICE, profile: "gaming" });

@@ -59,11 +59,13 @@ jobs:
       - name: Smoke-Test der Release-Binary
         shell: pwsh
         run: |
-          $p = Start-Process target\release\opendeckn3d.exe -ArgumentList "--virtual","--no-hardware","--plugins-dir","plugins\examples","--config-dir","$env:RUNNER_TEMP\n3cfg" -PassThru
+          $env:RUST_LOG = "debug"
+          $p = Start-Process target\release\opendeckn3d.exe -ArgumentList "--virtual","--no-hardware","--plugins-dir","plugins\examples","--config-dir","$env:RUNNER_TEMP\n3cfg" -PassThru -RedirectStandardOutput "$env:RUNNER_TEMP\daemon.out" -RedirectStandardError "$env:RUNNER_TEMP\daemon.err"
           Start-Sleep -Seconds 3
           node tools/smoke-test.mjs
           $code = $LASTEXITCODE
           Stop-Process -Id $p.Id -Force
+          if ($code -ne 0) { Get-Content "$env:RUNNER_TEMP\daemon.out", "$env:RUNNER_TEMP\daemon.err" -Tail 80 }
           exit $code
 
       - uses: actions/upload-artifact@v4
