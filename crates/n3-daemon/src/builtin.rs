@@ -65,7 +65,7 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
             BOTH,
             vec![
                 with(
-                    field("shortcut", "Tastenkürzel", "shortcut", BOTH),
+                    field("shortcut", "Tastenkürzel", "shortcut", KEYPAD),
                     json!({ "help": shortcut_help }),
                 ),
                 with(
@@ -81,7 +81,7 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
         action(
             VOLUME,
             "Lautstärke",
-            "Systemlautstärke: Regler drehen, drücken = stumm",
+            "Taste: lauter, leiser oder stumm · Drehregler: drehen = Lautstärke",
             BOTH,
             vec![
                 with(
@@ -95,7 +95,7 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
                     field("step", "Schritte", "number", BOTH),
                     json!({
                         "default": 1, "min": 1, "max": 10,
-                        "help": "Lautstärketasten pro Druck bzw. Raste (unter Windows je ca. 2 %)",
+                        "help": "Lautstärkestufen pro Druck bzw. Raste (unter Windows je ca. 2 %)",
                     }),
                 ),
             ],
@@ -103,14 +103,13 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
         action(
             MEDIA,
             "Medien",
-            "Wiedergabe steuern: Play/Pause, Titel vor/zurück",
+            "Taste: Play/Pause, vor, zurück, Stopp · Drehregler: drehen = Titel vor/zurück",
             BOTH,
             vec![with(
                 field("mode", "Funktion", "select", KEYPAD),
                 json!({
                     "default": "playpause",
                     "options": [["playpause", "Play/Pause"], ["next", "Nächster Titel"], ["previous", "Vorheriger Titel"], ["stop", "Stopp"]],
-                    "help": "Am Drehregler: drehen = Titel vor/zurück, drücken = Play/Pause",
                 }),
             )],
         ),
@@ -118,14 +117,14 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
             LAUNCH,
             "Programm öffnen",
             "Startet ein Programm oder öffnet eine Datei bzw. einen Ordner",
-            BOTH,
+            KEYPAD,
             vec![
                 with(
-                    field("path", "Programm / Datei", "file", BOTH),
+                    field("path", "Programm / Datei", "file", KEYPAD),
                     json!({ "placeholder": "z. B. C:\\Windows\\notepad.exe oder spotify" }),
                 ),
                 with(
-                    field("args", "Argumente", "text", BOTH),
+                    field("args", "Argumente", "text", KEYPAD),
                     json!({ "placeholder": "optional, nur bei Programmen" }),
                 ),
             ],
@@ -134,9 +133,9 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
             URL,
             "Website öffnen",
             "Öffnet eine Adresse im Standardbrowser",
-            BOTH,
+            KEYPAD,
             vec![with(
-                field("url", "Adresse", "text", BOTH),
+                field("url", "Adresse", "text", KEYPAD),
                 json!({ "placeholder": "https://…" }),
             )],
         ),
@@ -147,7 +146,7 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
             BOTH,
             vec![
                 with(
-                    field("command", "Befehl", "text", BOTH),
+                    field("command", "Befehl", "text", KEYPAD),
                     json!({ "placeholder": "z. B. shutdown /h", "help": "Windows: cmd /C … · Linux: sh -c …" }),
                 ),
                 with(
@@ -164,8 +163,8 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
             TEXT,
             "Text eingeben",
             "Tippt einen Text, z. B. eine Signatur oder E-Mail-Adresse",
-            BOTH,
-            vec![field("text", "Text", "textarea", BOTH)],
+            KEYPAD,
+            vec![field("text", "Text", "textarea", KEYPAD)],
         ),
         action(
             SWITCH_PROFILE,
@@ -325,7 +324,9 @@ enum Effect {
 
 fn effect(instance: &ActionInstance, input: &InputEvent, brightness: u8) -> anyhow::Result<Effect> {
     use InputEvent::*;
-    let pressed = matches!(input, KeyDown { .. } | EncoderDown { .. });
+    // Knob presses reach built-ins only as KeyDown of their button assignment;
+    // rotation assignments react to turning only.
+    let pressed = matches!(input, KeyDown { .. });
     let twist = match input {
         EncoderTwist { ticks, .. } => *ticks,
         _ => 0,
@@ -369,7 +370,6 @@ fn effect(instance: &ActionInstance, input: &InputEvent, brightness: u8) -> anyh
                     };
                     Effect::Input(InputJob::Tap(key, n * u32::from(ticks.unsigned_abs())))
                 }
-                EncoderDown { .. } => Effect::Input(InputJob::Tap(Key::VolumeMute, 1)),
                 KeyDown { .. } => match setting(instance, "mode") {
                     "up" => Effect::Input(InputJob::Tap(Key::VolumeUp, n)),
                     "down" => Effect::Input(InputJob::Tap(Key::VolumeDown, n)),
@@ -382,7 +382,6 @@ fn effect(instance: &ActionInstance, input: &InputEvent, brightness: u8) -> anyh
             let key = match input {
                 EncoderTwist { ticks, .. } if *ticks > 0 => Key::MediaNextTrack,
                 EncoderTwist { .. } => Key::MediaPrevTrack,
-                EncoderDown { .. } => Key::MediaPlayPause,
                 KeyDown { .. } => match setting(instance, "mode") {
                     "next" => Key::MediaNextTrack,
                     "previous" => Key::MediaPrevTrack,
@@ -573,6 +572,19 @@ mod tests {
             effect(&volume, &twist(3), 50).unwrap(),
             Effect::Input(InputJob::Tap(Key::VolumeUp, 6))
         ));
+
+        // Rotation assignments ignore knob presses (those belong to the button assignment).
+        let press = InputEvent::EncoderDown { encoder: 1 };
+        assert!(matches!(effect(&volume, &press, 50).unwrap(), Effect::None));
+        assert!(matches!(effect(&hotkey, &press, 50).unwrap(), Effect::None));
+        for action in [LAUNCH, URL, TEXT] {
+            let spec = ACTIONS.iter().find(|a| a["uuid"] == action).unwrap();
+            assert_eq!(
+                spec["controllers"],
+                json!(["Keypad"]),
+                "{action} has no rotation function"
+            );
+        }
 
         let cmd = instance(COMMAND, json!({ "clockwise": "vol +%d" }));
         assert!(

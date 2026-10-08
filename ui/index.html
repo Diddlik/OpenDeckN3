@@ -192,7 +192,8 @@ pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5
 .replace::after{border-color:rgba(53,224,208,.3);border-style:dashed}
 .over::after{border-color:#35E0D0;background:rgba(53,224,208,.14);box-shadow:0 0 32px rgba(53,224,208,.5)}
 .disabled{opacity:.28}
-.dim{opacity:.4;transition:opacity .15s}.dim:hover{opacity:.75}
+.dim{opacity:.4;transition:opacity .15s}.dim:hover{opacity:.55}
+.locked{cursor:not-allowed}
 .libmode{width:100%}.libmode button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px}
 .press{box-shadow:0 0 0 2px #35E0D0,0 0 30px rgba(53,224,208,.55)!important}
 .device-outline{width:700px;height:404px;border-radius:30px;border:2px dashed var(--line);padding:34px 36px;display:flex;gap:56px;flex:none}
@@ -451,7 +452,15 @@ function devState() {
 const isLive = () => ['virtual', 'connected'].includes(devState());
 const parseId = (id) => ({ c: id[0] === 'k' ? 'keys' : 'encoders', p: +id.slice(1), ctl: id[0] === 'k' ? 'Keypad' : 'Encoder' });
 const slot = (id) => { const d = cur(); if (!d) return null; const { c, p } = parseId(id); return d.profile[c][p] || null; };
-const slotName = (id) => { const { p } = parseId(id); return id[0] === 'k' ? 'K' + p + (p < 6 ? ' · Display' : ' · Taste') : 'E' + p + (p === 1 ? ' · großer Regler' : ' · Drehregler'); };
+// Drücken eines Reglers ist eine eigene Tasten-Belegung: Tasten-Position 9 + Regler (E0/E1/E2 → K9/K10/K11).
+const KNOB_KEY = 9;
+const isKnobKey = (id) => id[0] === 'k' && +id.slice(1) >= KNOB_KEY;
+const slotShort = (id) => isKnobKey(id) ? 'E' + (+id.slice(1) - KNOB_KEY) + '↓' : id.toUpperCase();
+const slotName = (id) => {
+  const { p } = parseId(id);
+  if (isKnobKey(id)) return 'E' + (p - KNOB_KEY) + ' · Drücken';
+  return id[0] === 'k' ? 'K' + p + (p < 6 ? ' · Display' : ' · Taste') : 'E' + p + (p === 1 ? ' · großer Regler' : ' · Drehen');
+};
 // Entspricht builtin::default_label im Dienst (Beschriftung auf dem Gerät).
 function builtinLabel(inst) {
   const v = (k) => String((inst.settings || {})[k] ?? '').trim();
@@ -620,16 +629,27 @@ function viewSlots(d) {
       title: s.title ?? runtime ?? defaultTitle(s)
     };
   });
+  const pressName = (p) => { const s = P.keys[KNOB_KEY + p]; return s ? s.title ?? defaultTitle(s) : null; };
+  const turnName = (p) => { const s = P.encoders[p]; return s ? s.title ?? defaultTitle(s) : null; };
+  // Modus „Drehregler“: Belegung fürs Drehen.
   const encs = [0, 1, 2].map((p) => {
     const s = P.encoders[p]; const id = 'e' + p;
-    if (!s) return { id, pos: p, empty: true, label: 'Frei', sub: '', value: null };
+    const press = pressName(p) ? 'Drücken: ' + pressName(p) : '';
+    if (!s) return { id, pos: p, empty: true, label: 'Frei', sub: press, value: null };
     const bright = s.plugin === BUILTIN && s.action.endsWith('.brightness');
     return {
       id, pos: p, kind: kindOf(s, 'Encoder'), label: s.title ?? defaultTitle(s),
-      sub: bright ? d.brightness + ' %' : '', value: bright ? d.brightness : null
+      sub: bright ? d.brightness + ' %' : press, value: bright ? d.brightness : null
     };
   });
-  return { keys, encs };
+  // Modus „Tasten“: der Regler als Taste (Drücken).
+  const knobKeys = [0, 1, 2].map((p) => {
+    const s = P.keys[KNOB_KEY + p]; const id = 'k' + (KNOB_KEY + p);
+    const turn = turnName(p) ? 'Drehen: ' + turnName(p) : 'Drücken';
+    if (!s) return { id, pos: p, empty: true, label: 'Frei', sub: turn, value: null };
+    return { id, pos: p, kind: kindOf(s), label: s.title ?? defaultTitle(s), title: s.title ?? defaultTitle(s), sub: turn, value: null };
+  });
+  return { keys, encs, knobKeys };
 }
 const emptySlots = () => ({
   keys: [0, 1, 2, 3, 4, 5, 6, 7, 8].map((p) => ({ id: 'k' + p, pos: p, empty: true })),
@@ -644,7 +664,8 @@ function deviceHTML(v, o = {}) {
   const st = (x) => {
     const c = [];
     if (o.sel === x.id && !o.dragCtl) c.push('sel');
-    if (o.mode && !o.dragCtl && (x.id[0] === 'k' ? 'Keypad' : 'Encoder') !== o.mode) c.push('dim');
+    // Modus „Drehregler“: Tasten sind gesperrt. Modus „Tasten“: alles belegbar (Regler = Taste).
+    if (o.mode === 'Encoder' && x.id[0] === 'k') c.push('dim', 'locked');
     if (o.pressed === x.id) c.push('press');
     if (o.dragCtl) {
       const ok = o.dragCtl.includes(x.id[0] === 'k' ? 'Keypad' : 'Encoder');
@@ -653,7 +674,7 @@ function deviceHTML(v, o = {}) {
     return c.join(' ');
   };
   const at = (x) => o.interactive ? `data-slot="${x.id}" aria-pressed="${o.sel === x.id}"` : 'tabindex="-1"';
-  const aria = (x, what) => `${what} ${x.id.toUpperCase()}${x.empty ? ', frei' : ', ' + (x.title || x.label)}`;
+  const aria = (x, what) => `${what} ${slotShort(x.id)}${x.empty ? ', frei' : ', ' + (x.title || x.label)}`;
 
   const dk = (x) => {
     let inner;
@@ -672,7 +693,7 @@ function deviceHTML(v, o = {}) {
     const dash = val == null ? '0 400' : (235.6 * val / 100).toFixed(1) + ' 400';
     const rot = val == null ? 0 : -135 + 270 * val / 100;
     return `<div class="knob-wrap ${size} ${x.empty ? 'isempty' : ''}">
-      <button type="button" class="knob-btn ${st(x)}" ${at(x)} ${o.interactive ? `data-enc="${x.pos}"` : ''} aria-label="${esc(aria(x, 'Drehregler'))}">
+      <button type="button" class="knob-btn ${st(x)}" ${at(x)} ${o.interactive ? `data-enc="${x.pos}"` : ''} aria-label="${esc(aria(x, isKnobKey(x.id) ? 'Drehregler drücken' : 'Drehregler drehen'))}">
         <svg viewBox="0 0 108 108" aria-hidden="true"><circle class="trk" cx="54" cy="54" r="50" stroke-dasharray="235.6 400" transform="rotate(135 54 54)"/><circle class="val" cx="54" cy="54" r="50" stroke-dasharray="${dash}" transform="rotate(135 54 54)"/></svg>
         <span class="knob" style="transform:rotate(${rot}deg)"><i></i></span>
       </button>
@@ -680,7 +701,7 @@ function deviceHTML(v, o = {}) {
       <div class="ksub">${esc(x.sub)}</div>
     </div>`;
   };
-  const k = v.keys, e = v.encs;
+  const k = v.keys, e = o.mode === 'Keypad' && v.knobKeys ? v.knobKeys : v.encs;
   const bri = o.brightness ?? 100;
   return `<div class="${cls.join(' ')}" style="--dim:${(0.4 + 0.6 * bri / 100).toFixed(2)}" role="group" aria-label="TreasLin N3">
     <div class="dev-row">
@@ -793,7 +814,7 @@ function libraryHTML() {
   return `<aside class="lib" aria-label="Aktionsbibliothek">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0 6px">
       <span class="label">Aktionen</span>
-      <span style="font-size:12px;color:var(--muted)">Ziel <span class="mono" style="color:var(--accent-text)">${S.sel.toUpperCase()}</span></span>
+      <span style="font-size:12px;color:var(--muted)">Ziel <span class="mono" style="color:var(--accent-text)">${esc(slotShort(S.sel))}</span></span>
     </div>
     <div class="seg libmode" role="radiogroup" aria-label="Aktionen anzeigen für">${modeBtn('Keypad', 'key', 'Tasten')}${modeBtn('Encoder', 'dial', 'Drehregler')}</div>
     <label class="search">${ic('search', 16)}<input type="search" placeholder="Aktion suchen" aria-label="Aktion suchen" value="${esc(S.q)}" data-in="q"></label>
@@ -935,7 +956,8 @@ function inspectorHTML() {
 function editorHTML() {
   const d = cur();
   const P = d.profile;
-  const nK = Object.keys(P.keys).length, nE = Object.keys(P.encoders).length;
+  const nK = Object.keys(P.keys).filter((k) => +k < KNOB_KEY).length;
+  const nE = [0, 1, 2].filter((p) => P.encoders[p] || P.keys[KNOB_KEY + p]).length;
   const virt = devState() === 'virtual';
   const disc = devState() === 'disconnected';
   const statusCol = disc ? 'var(--warn)' : 'var(--ok)';
@@ -1259,9 +1281,11 @@ function switchProfile(id) {
 // Test-Modus: echte Eingaben am virtuellen Gerät simulieren.
 function fire(id) {
   const { p, ctl } = parseId(id);
-  const [down, up, field] = ctl === 'Keypad' ? ['keyDown', 'keyUp', 'key'] : ['encoderDown', 'encoderUp', 'encoder'];
-  api.run('simulateInput', { device: S.devId, input: { type: down, [field]: p } })
-    .then(() => api.call('simulateInput', { device: S.devId, input: { type: up, [field]: p } }))
+  const knob = ctl === 'Encoder' || isKnobKey(id);
+  const [down, up, field] = knob ? ['encoderDown', 'encoderUp', 'encoder'] : ['keyDown', 'keyUp', 'key'];
+  const n = isKnobKey(id) ? p - KNOB_KEY : p;
+  api.run('simulateInput', { device: S.devId, input: { type: down, [field]: n } })
+    .then(() => api.call('simulateInput', { device: S.devId, input: { type: up, [field]: n } }))
     .catch(() => {});
 }
 function twist(pos, ticks) {
@@ -1275,7 +1299,7 @@ function assign(key, id) {
   S.sel = id; S.json = false; S.rec = null;
   api.run('setAction', { ...slotParams(id), plugin: f.p.uuid, action: f.a.uuid })
     .then(async () => {
-      toast('ok', `${f.a.name} → ${id.toUpperCase()}`);
+      toast('ok', `${f.a.name} → ${slotShort(id)}`);
       // Tastenkürzel: Aufnahme sofort starten – die nächste Tastenkombination wird übernommen.
       if (f.p.uuid === BUILTIN && f.a.uuid.endsWith('.hotkey')) {
         await refresh();
@@ -1304,12 +1328,14 @@ function applyTheme() {
   document.documentElement.dataset.theme = t;
 }
 function moveSel(key) {
-  const grid = [['k0', 'k1', 'k2', 'e1'], ['k3', 'k4', 'k5', 'e1'], ['k6', 'k7', 'k8', 'e0', 'e2']];
-  let r = grid.findIndex((row) => row.includes(S.sel)); let c = grid[r].indexOf(S.sel);
-  if (S.sel === 'e1' && r === 0 && key === 'ArrowDown') { S.sel = 'e2'; return; }
+  const grid = libMode() === 'Encoder'
+    ? [['e1', 'e1'], ['e0', 'e2']]
+    : [['k0', 'k1', 'k2', 'k10'], ['k3', 'k4', 'k5', 'k10'], ['k6', 'k7', 'k8', 'k9', 'k11']];
+  let r = grid.findIndex((row) => row.includes(S.sel)); if (r < 0) r = 0;
+  let c = Math.max(0, grid[r].indexOf(S.sel));
   if (key === 'ArrowRight') c = Math.min(grid[r].length - 1, c + 1);
   if (key === 'ArrowLeft') c = Math.max(0, c - 1);
-  if (key === 'ArrowDown') { r = Math.min(2, r + 1); c = Math.min(c, grid[r].length - 1); }
+  if (key === 'ArrowDown') { r = Math.min(grid.length - 1, r + 1); c = Math.min(c, grid[r].length - 1); }
   if (key === 'ArrowUp') { r = Math.max(0, r - 1); c = Math.min(c, grid[r].length - 1); }
   S.sel = grid[r][c];
 }
@@ -1464,6 +1490,10 @@ document.addEventListener('click', (e) => {
   if (S.menu && !e.target.closest('.ctx')) { S.menu = null; renderOverlay(); }
   if (S.popover && !e.target.closest('.popover') && !e.target.closest('[data-act="popover"]')) { S.popover = null; render(); }
   const slotEl = e.target.closest('[data-slot]');
+  if (slotEl && slotEl.classList.contains('locked')) {
+    toast('warn', 'Im Modus „Drehregler“ sind nur die Regler belegbar – oben auf „Tasten“ umschalten.');
+    return;
+  }
   if (slotEl) {
     const id = slotEl.dataset.slot;
     if (id !== S.sel) S.json = false;
@@ -1479,7 +1509,7 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('contextmenu', (e) => {
   const slotEl = e.target.closest('[data-slot]');
-  if (!slotEl) return;
+  if (!slotEl || slotEl.classList.contains('locked')) return;
   e.preventDefault();
   S.sel = slotEl.dataset.slot; S.menu = { id: S.sel, x: e.clientX, y: e.clientY };
   render();
@@ -1628,7 +1658,7 @@ document.addEventListener('dragover', (e) => {
   const f = actionByKey(S.drag);
   const el = e.target.closest('[data-slot]');
   let over = null;
-  if (el && f && ctlOf(f.a).includes(parseId(el.dataset.slot).ctl)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; over = el.dataset.slot; }
+  if (el && f && !el.classList.contains('locked') && ctlOf(f.a).includes(parseId(el.dataset.slot).ctl)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; over = el.dataset.slot; }
   if (over !== S.over) { setOver(over); }
 });
 // Hover-Ziel nur per Klasse markieren – den DOM unter dem Zeiger nicht ersetzen.

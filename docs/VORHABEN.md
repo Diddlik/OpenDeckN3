@@ -52,7 +52,8 @@ von Anfang an auf die N3-Familie (6 Display-Tasten, 3 Tasten, 3 Drehregler) zuge
 | Begriff | Bedeutung |
 | --- | --- |
 | **Gerät** | Ein angeschlossener Controller, Id `n3-<Seriennummer>` (virtuell: `virtual-n3`). |
-| **Slot** | Eine Taste (`Keypad`, Position 0–8) oder ein Drehregler (`Encoder`, Position 0–2). |
+| **Slot** | Eine Taste (`Keypad`, Position 0–8), das Drücken eines Drehreglers (`Keypad`, Position 9–11) oder das Drehen eines Drehreglers (`Encoder`, Position 0–2). |
+| **Modus** | Die Oberfläche belegt entweder **Drehregler** (nur Drehen, nur drehfähige Aktionen) oder **Tasten** (9 Tasten + 3 Regler als Taste, alle Tasten-Aktionen). |
 | **Aktion** | Funktion aus einem Plugin, z. B. „Lautstärke“, „Profil wechseln“. |
 | **Instanz** | Eine Aktion, die auf einem Slot liegt – mit eigenen Einstellungen (`settings`) und Zustand (`state`). |
 | **Profil** | Satz von Instanzen für ein Gerät. Genau ein Profil ist pro Gerät aktiv. |

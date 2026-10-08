@@ -23,9 +23,11 @@ ws.onopen = async () => {
       key(6, B, B + ".url", { settings: { url: "https://github.com/Diddlik/OpenDeckN3" } }),
       key(7, B, B + ".volume", { settings: { mode: "mute", step: 1 } }),
       key(8, C, C + ".count", { settings: { count: 0, hue: 120 } }),
-      enc(0, B, B + ".volume", { settings: { mode: "mute", step: 2 } }),
+      key(9, B, B + ".volume", { settings: { mode: "mute", step: 1 }, title: "Stumm" }),
+      key(11, B, B + ".media", { settings: { mode: "playpause" } }),
+      enc(0, B, B + ".volume", { settings: { step: 2 } }),
       enc(1, B, B + ".brightness"),
-      enc(2, B, B + ".media", { settings: { mode: "playpause" } }),
+      enc(2, B, B + ".media"),
     ];
     for (const s of slots) {
       const base = { device: D, controller: s.controller, position: s.position };
