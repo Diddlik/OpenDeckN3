@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "plugins": [
+    {
+      "uuid": "de.opendeckn3.counter",
+      "name": "Zähler (Beispiel)",
+      "description": "Beispiel-Plugin: zählt Tastendrücke und färbt die Taste ein, Drehregler ändern den Farbton.",
+      "author": "OpenDeckN3",
+      "repo": "Diddlik/OpenDeckN3",
+      "asset": "de.opendeckn3.counter.streamDeckPlugin",
+      "category": "Beispiele",
+      "homepage": "https://github.com/Diddlik/OpenDeckN3/tree/main/plugins/examples/de.opendeckn3.counter.sdPlugin"
+    }
+  ]
+}

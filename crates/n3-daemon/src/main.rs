@@ -46,6 +46,9 @@ struct Args {
     /// Do not look for USB/HID devices.
     #[arg(long)]
     no_hardware: bool,
+    /// Plugin catalog (`registry.json`, URL or file; repeatable). Default: the OpenDeckN3 catalog on GitHub.
+    #[arg(long = "plugin-registry", value_name = "URL|FILE")]
+    plugin_registries: Vec<String>,
 }
 
 #[tokio::main]
@@ -83,6 +86,11 @@ async fn main() -> anyhow::Result<()> {
         allow_origins: args.allow_origins,
         virtual_device: args.virtual_device,
         hardware: !args.no_hardware,
+        plugin_registries: if args.plugin_registries.is_empty() {
+            vec![n3_daemon::DEFAULT_REGISTRY.to_owned()]
+        } else {
+            args.plugin_registries
+        },
         ..Options::new(config_dir)
     };
 

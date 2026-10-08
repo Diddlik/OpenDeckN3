@@ -53,6 +53,8 @@ struct Inner {
     connections: RwLock<HashMap<String, mpsc::UnboundedSender<Message>>>,
     children: Mutex<HashMap<String, Child>>,
     inbound: mpsc::Sender<PluginMessage>,
+    /// Application info passed to plugins on launch (set by `launch_all`).
+    app_info: RwLock<Value>,
 }
 
 /// Cheaply clonable handle to the plugin host.
@@ -75,6 +77,7 @@ impl PluginHost {
                 connections: Default::default(),
                 children: Default::default(),
                 inbound,
+                app_info: RwLock::new(Value::Null),
             }),
         };
 
@@ -107,36 +110,63 @@ impl PluginHost {
         // Absolute paths, because plugins run with their own dir as cwd.
         // (`absolute` instead of `canonicalize`: no `\\?\` prefix on Windows.)
         let dir = std::path::absolute(dir)?;
-        let mut plugins = self.inner.plugins.write().await;
         for entry in std::fs::read_dir(&dir)? {
             let path = entry?.path();
             if !path.join("manifest.json").is_file() {
                 continue;
             }
-            match PluginManifest::read(&path) {
-                Ok(manifest) => {
-                    let uuid = manifest.uuid.clone().unwrap_or_else(|| {
-                        let name = path.file_name().unwrap_or_default().to_string_lossy();
-                        name.trim_end_matches(".sdPlugin").to_owned()
-                    });
-                    if uuid == crate::BUILTIN_PLUGIN {
-                        tracing::warn!(dir = %path.display(), "plugin uses a reserved UUID");
-                        continue;
-                    }
-                    tracing::info!(%uuid, name = %manifest.name, "plugin discovered");
-                    plugins.insert(
-                        uuid.clone(),
-                        InstalledPlugin {
-                            uuid,
-                            path,
-                            manifest,
-                        },
-                    );
-                }
-                Err(err) => tracing::warn!(dir = %path.display(), %err, "invalid plugin"),
+            if let Err(err) = self.add(&path).await {
+                tracing::warn!(dir = %path.display(), %err, "invalid plugin");
             }
         }
         Ok(())
+    }
+
+    /// Registers the plugin in `path` (a directory with `manifest.json`).
+    /// Replaces an already known plugin with the same UUID.
+    pub async fn add(&self, path: &Path) -> anyhow::Result<InstalledPlugin> {
+        let path = std::path::absolute(path)?;
+        let manifest = PluginManifest::read(&path)?;
+        let uuid = plugin_uuid(&manifest, &path);
+        anyhow::ensure!(uuid != crate::BUILTIN_PLUGIN, "plugin uses a reserved UUID");
+        tracing::info!(%uuid, name = %manifest.name, "plugin discovered");
+        let plugin = InstalledPlugin {
+            uuid: uuid.clone(),
+            path,
+            manifest,
+        };
+        self.inner
+            .plugins
+            .write()
+            .await
+            .insert(uuid, plugin.clone());
+        Ok(plugin)
+    }
+
+    /// Forgets a plugin (after `stop`). Returns what was registered.
+    pub async fn remove(&self, uuid: &str) -> Option<InstalledPlugin> {
+        self.inner.plugins.write().await.remove(uuid)
+    }
+
+    pub async fn get(&self, uuid: &str) -> Option<InstalledPlugin> {
+        self.inner.plugins.read().await.get(uuid).cloned()
+    }
+
+    /// Stops the plugin's process and closes its connection.
+    pub async fn stop(&self, uuid: &str) {
+        if let Some(mut child) = self.inner.children.lock().await.remove(uuid) {
+            tracing::info!(plugin = %uuid, "stopping plugin");
+            child.kill().await.ok();
+        }
+        // Dropping the sender ends the writer task, which closes the socket.
+        self.inner.connections.write().await.remove(uuid);
+    }
+
+    /// Starts the process of one registered plugin.
+    pub async fn start_plugin(&self, uuid: &str) -> anyhow::Result<()> {
+        let plugin = self.get(uuid).await.context("unknown plugin")?;
+        let info = self.inner.app_info.read().await.clone();
+        self.launch(&plugin, &info).await
     }
 
     pub async fn plugins(&self) -> Vec<InstalledPlugin> {
@@ -151,6 +181,7 @@ impl PluginHost {
 
     /// Starts the processes of all discovered plugins.
     pub async fn launch_all(&self, info: &Value) {
+        *self.inner.app_info.write().await = info.clone();
         for plugin in self.plugins().await {
             if let Err(err) = self.launch(&plugin, info).await {
                 tracing::error!(plugin = %plugin.uuid, %err, "failed to launch plugin");
@@ -261,6 +292,7 @@ impl PluginHost {
         tracing::info!(%uuid, "plugin registered");
 
         let (tx, mut rx) = mpsc::unbounded_channel::<Message>();
+        let own = tx.clone();
         self.inner
             .connections
             .write()
@@ -289,7 +321,13 @@ impl PluginHost {
             }
         }
 
-        self.inner.connections.write().await.remove(&uuid);
+        {
+            // A reinstalled plugin may already have registered a new connection.
+            let mut connections = self.inner.connections.write().await;
+            if connections.get(&uuid).is_some_and(|c| c.same_channel(&own)) {
+                connections.remove(&uuid);
+            }
+        }
         writer.abort();
         self.notify(&uuid, PluginEvent::Disconnected).await;
         tracing::info!(%uuid, "plugin disconnected");
@@ -302,4 +340,12 @@ impl PluginHost {
         };
         self.inner.inbound.send(msg).await.ok();
     }
+}
+
+/// UUID from the manifest, else the directory name without `.sdPlugin`.
+pub fn plugin_uuid(manifest: &PluginManifest, dir: &Path) -> String {
+    manifest.uuid.clone().unwrap_or_else(|| {
+        let name = dir.file_name().unwrap_or_default().to_string_lossy();
+        name.trim_end_matches(".sdPlugin").to_owned()
+    })
 }

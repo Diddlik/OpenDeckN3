@@ -9,7 +9,7 @@ pub mod host;
 pub mod manifest;
 pub mod protocol;
 
-pub use host::{InstalledPlugin, PluginEvent, PluginHost, PluginMessage};
+pub use host::{InstalledPlugin, PluginEvent, PluginHost, PluginMessage, plugin_uuid};
 pub use manifest::{ActionManifest, PluginManifest};
 pub use protocol::InboundEvent;
 

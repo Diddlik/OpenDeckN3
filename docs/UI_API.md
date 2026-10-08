@@ -129,6 +129,9 @@ type InputEvent =
 | `setBrightness` | `device`, `value` (0–100) | `null` |
 | `simulateInput` | `device`, `input: InputEvent` | `null` – wie echte Eingabe (ideal für das virtuelle Gerät) |
 | `startVirtualDevice` | – | `{ device: "virtual-n3" }` – startet das virtuelle N3, falls es noch nicht läuft |
+| `installPlugin` | genau eins von `path` (lokale Datei), `data` (Base64 oder Data-URL der Datei), `repo` (GitHub `besitzer/name` oder Link, optional `asset`) | `{ plugin, name, version, previousVersion, started, startError, source }` – entpackt `.streamDeckPlugin`/`.zip`, ersetzt eine ältere Version, startet das Plugin |
+| `uninstallPlugin` | `plugin` | `{ plugin }` – nur installierte, nicht mitgelieferte Plugins; Belegungen bleiben im Profil |
+| `pluginStore` | `refresh?` (Cache von 10 min umgehen) | `{ plugins: StoreEntry[], registries: string[], errors: string[] }` |
 
 Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.
 
@@ -146,8 +149,32 @@ Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.
 | `input` | `device`, `input: InputEvent` | Taste/Drehregler in der UI kurz aufleuchten lassen |
 | `feedback` | `device`, `controller`, `position` | Plugin meldet OK/Fehler (Animation) |
 | `pluginStatus` | `plugin`, `connected` | Plugin-Status im Katalog |
+| `pluginsChanged` | `plugin` | Plugin installiert/aktualisiert/entfernt → `getCatalog` neu laden |
 | `actionError` | `device`, `controller`, `position`, `message` | Eingebaute Aktion fehlgeschlagen (z. B. ungültiges Tastenkürzel, Programm nicht gefunden) → Fehlermeldung zeigen |
 | `lagged` | `missed` | Client war zu langsam → `getState` neu laden |
+
+## Plugins installieren
+
+`CatalogPlugin` enthält zusätzlich `description` und `removable` (`true` = im Plugin-Verzeichnis des Benutzers installiert,
+`false` = mitgeliefert, z. B. das Beispiel-Plugin der Desktop-App).
+
+```ts
+interface StoreEntry {          // ein Eintrag aus registry.json + GitHub-Abfrage
+  uuid: string; name: string; description: string; author: string; category: string;
+  repo: string;                 // "besitzer/name"
+  asset?: string;               // fester Dateiname im Release
+  homepage?: string;
+  installed: string | null;     // installierte Version
+  update: boolean;              // Release neuer als installierte Version (SemVer)
+  latest?: { version: string; page: string; published: string | null; asset: string; size: number };
+  error?: string;               // z. B. Repository nicht gefunden, kein passendes Release
+}
+```
+
+Archive: das oberste Verzeichnis mit `manifest.json` ist das Plugin (`<uuid>.sdPlugin/…` wie bei Stream Deck oder
+`manifest.json` direkt im Archiv – dann ist `UUID` im Manifest Pflicht). Es landet in `<config>/plugins/<uuid>.sdPlugin`.
+Downloads kommen nur von `https://github.com/<repo>/releases/download/…`; liefert GitHub eine SHA-256-Prüfsumme des Assets,
+wird sie geprüft. Grenzen: 200 MB Download, 512 MB entpackt. Details: [PLUGINS_VEROEFFENTLICHEN.md](PLUGINS_VEROEFFENTLICHEN.md).
 
 ## Drehregler: drehen und drücken
 

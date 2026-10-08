@@ -131,8 +131,8 @@ pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5
 .insp label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
 .insp .row{display:grid;grid-template-columns:96px minmax(0,1fr);align-items:center;gap:10px}
 .empty-card{border:1.5px dashed var(--line);border-radius:16px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
-.danger{margin-top:auto;padding-top:16px;border-top:1px solid var(--line2)}
-.danger h3{color:var(--err)!important}
+section.danger{margin-top:auto;padding-top:16px;border-top:1px solid var(--line2)}
+section.danger h3{color:var(--err)!important}
 
 /* ============ Gerät (Layout nach Produktfoto) ============ */
 .device{--dim:1;width:700px;padding:30px 32px 18px 36px;border-radius:30px;border:1px solid #2E333B;background:linear-gradient(180deg,#23272E 0%,#17191E 100%);box-shadow:0 40px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.07);display:flex;flex-direction:column;gap:10px;color:#ECEEF1;flex:none;transition:filter .3s,opacity .3s;--well:#191C21;--wellline:#2C3139;--trk:#2A2F37;--lbl:#D7DBE1;--lblEmpty:#8A929E;--sub:#8A929E;--eng:#6B7280}
@@ -206,6 +206,10 @@ pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5
 .page{flex:1;display:flex;flex-wrap:wrap;align-items:stretch}
 .page-main{flex:999 1 560px;min-width:0;padding:32px;display:flex;flex-direction:column;gap:24px}
 .page h1{margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em}
+.ghform{display:flex;gap:10px;flex-wrap:wrap}.ghform .field{flex:1 1 260px}
+.scard{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:16px;border:1px solid var(--line2);background:var(--panel)}
+.scard p{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
+.dropzone{outline:2px dashed var(--accent);outline-offset:-10px;border-radius:16px}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
 .pcard{display:flex;flex-direction:column;gap:16px;padding:18px;border-radius:16px;border:1px solid var(--line2);background:var(--panel);text-align:left;transition:border-color .15s,transform .15s}
 .pcard:hover{transform:translateY(-1px);border-color:var(--line)}
@@ -368,6 +372,8 @@ const ICONS = {
   stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
   app: '<path d="M13 15l-4-4c1.2-4.5 4.5-7.6 10.5-8.5C18.6 8.5 15.5 11.8 13 15z"/><path d="M9 11l-4.5.5 2.5-4h4M13 15l-.5 4.5 4-2.5v-4M5 19c.5-2 1.5-3 3-3.2"/><circle cx="15.5" cy="8.5" r="1.2"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9M12 3C9.5 5.6 8.2 8.6 8.2 12s1.3 6.4 3.8 9"/>',
+  download: '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+  github: '<path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/>',
   grip: '<g fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.3"/><circle cx="15" cy="6" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="18" r="1.3"/><circle cx="15" cy="18" r="1.3"/></g>'
 };
 const ic = (n, s = 18, sw = 1.75) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ICONS.key}</svg>`;
@@ -433,6 +439,7 @@ const S = {
   port: local.get('apiPort', DEFAULT_API_PORT),
   sel: 'k0', test: true, pressed: null, flip: false,
   drag: null, over: null, q: '', closed: {}, pluginSel: null, json: false,
+  pluginTab: 'installed', store: null, pbusy: null, gh: '',
   ob: { step: 0, copied: false, placed: false },
   menu: null, popover: null, modal: null,
   autostart: false,
@@ -593,6 +600,7 @@ function onEvent(ev) {
       if (p && p.connected !== ev.connected) { p.connected = ev.connected; if (S.route !== 'editor' || !S.drag) render(); }
       break;
     }
+    case 'pluginsChanged': refreshSoon(); break;
     case 'lagged': refresh(); break;
   }
 }
@@ -1027,40 +1035,90 @@ function offlineHTML() {
   </div></main>`;
 }
 
+const storeEntry = (uuid) => (S.store && S.store.plugins ? S.store.plugins.find((x) => x.uuid === uuid) : null);
+
 function pluginsHTML() {
   const total = S.catalog.reduce((n, p) => n + p.actions.length, 0);
   const dp = S.catalog.find((p) => p.uuid === S.pluginSel);
-  const pkind = (p) => (p.actions[0] ? kindFor(p.uuid, p.actions[0].uuid) : 'plug');
+  const pkind = (p) => (p.actions && p.actions[0] ? kindFor(p.uuid, p.actions[0].uuid) : 'plug');
   const ptile = (p, size, isz, r) => { const k = pkind(p); const c = KCOL[k] || KCOL.key; return `<span class="tile" style="width:${size}px;height:${size}px;border-radius:${r}px;background:${c[0]};color:${c[1]}">${ic(k, isz)}</span>`; };
   const stateEl = (p) => `<span class="state ${p.connected ? 'on' : 'off'}"><span class="dot" style="width:7px;height:7px;background:${p.connected ? 'var(--ok)' : 'var(--faint)'}"></span>${p.uuid === BUILTIN ? 'Eingebaut' : p.connected ? 'Läuft' : 'Gestoppt'}</span>`;
+  const updChip = (p) => { const e = storeEntry(p.uuid); return e && e.update ? `<span class="chip" style="font-size:11px;padding:2px 8px;color:var(--accent-text);border-color:var(--accent)">Update v${esc(e.latest.version)}</span>` : ''; };
+  const tab = S.pluginTab;
+  const nStore = S.store && S.store.plugins && !(S.store.errors || []).length ? S.store.plugins.length : null;
+  const busy = (key) => S.pbusy === key;
+
+  const installed = `<div class="cards">${S.catalog.map((p) => {
+      const n = p.actions.length;
+      return `<button type="button" class="pcard" data-act="plugin" data-arg="${esc(p.uuid)}" aria-pressed="${p.uuid === S.pluginSel}">
+        <span style="display:flex;align-items:center;gap:12px;width:100%">
+          ${ptile(p, 44, 22, 12)}
+          <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="font-size:16px;font-weight:600">${esc(p.name)}</b><span style="font-size:13px;color:var(--muted)">${esc(p.author || '–')} · v${esc(p.version || '?')}</span></span>
+        </span>
+        <span style="display:flex;align-items:center;gap:8px;width:100%;font-size:13px">${stateEl(p)}<span style="color:var(--muted)">${n} ${n === 1 ? 'Aktion' : 'Aktionen'}</span>${updChip(p)}<span class="chip" style="margin-left:auto;font-size:11px;padding:2px 8px">${esc(p.category)}</span></span>
+      </button>`;
+    }).join('')}</div>
+    <p style="margin:0;font-size:13px;color:var(--faint)">Plugin-Datei (<span class="mono">.streamDeckPlugin</span> oder <span class="mono">.zip</span>) hierher ziehen oder über „Aus Datei …“ wählen. Installierte Plugins liegen in <span class="mono" style="color:var(--muted)">${esc(pluginsDir())}</span>.</p>`;
+
+  let store;
+  if (!S.store || S.store.loading) store = `<div style="color:var(--muted);font-size:14px">Katalog wird von GitHub geladen …</div>`;
+  else if (S.store.error) store = `<div class="err">Katalog nicht erreichbar: ${esc(S.store.error)}</div>`;
+  else store = `<div class="cards">${S.store.plugins.map((e) => {
+      const have = S.catalog.find((p) => p.uuid === e.uuid);
+      let btn;
+      if (busy(e.uuid)) btn = `<button type="button" class="btn" disabled>${ic('refresh', 16)}Wird installiert …</button>`;
+      else if (e.error) btn = `<span style="font-size:12px;color:var(--danger, #e5484d)">${esc(e.error)}</span>`;
+      else if (e.update) btn = `<button type="button" class="btn primary" data-act="storeInstall" data-arg="${esc(e.uuid)}">${ic('download', 16)}Auf v${esc(e.latest.version)} aktualisieren</button>`;
+      else if (have) btn = `<span class="state on">${ic('check', 14, 2.25)}Installiert</span><button type="button" class="btn ghost" data-act="storeInstall" data-arg="${esc(e.uuid)}" title="Neu installieren">${ic('refresh', 16)}</button>`;
+      else btn = `<button type="button" class="btn primary" data-act="storeInstall" data-arg="${esc(e.uuid)}" ${S.pbusy ? 'disabled' : ''}>${ic('download', 16)}Installieren</button>`;
+      const pseudo = { uuid: e.uuid, actions: have ? have.actions : [] };
+      return `<div class="scard">
+        <span style="display:flex;align-items:center;gap:12px">${ptile(have || pseudo, 44, 22, 12)}
+          <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="font-size:16px;font-weight:600">${esc(e.name)}</b>
+          <span style="font-size:13px;color:var(--muted)">${esc(e.author || '–')}${e.latest ? ' · v' + esc(e.latest.version) : ''}${e.installed ? ' · installiert v' + esc(e.installed) : ''}</span></span></span>
+        ${e.description ? `<p>${esc(e.description)}</p>` : ''}
+        <span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:auto">${btn}
+          <a class="mono" style="margin-left:auto;font-size:12px;color:var(--faint)" href="${esc(e.homepage || 'https://github.com/' + e.repo)}" target="_blank" rel="noopener">${ic('github', 14)} ${esc(e.repo)}</a></span>
+      </div>`;
+    }).join('') || '<div style="color:var(--muted);font-size:14px">Der Katalog ist noch leer.</div>'}</div>
+    ${S.store.errors && S.store.errors.length ? `<div class="err">${S.store.errors.map(esc).join('<br>')}</div>` : ''}`;
+  const storeView = `
+    <form class="ghform" id="ghForm">
+      <input class="field mono" id="ghRepo" data-in="gh" value="${esc(S.gh)}" placeholder="besitzer/repository oder GitHub-Link" autocomplete="off" aria-label="GitHub-Repository">
+      <button type="submit" class="btn" ${S.pbusy ? 'disabled' : ''}>${busy('gh') ? ic('refresh', 16) + 'Wird installiert …' : ic('github', 16) + 'Von GitHub installieren'}</button>
+    </form>
+    ${store}
+    <p style="margin:0;font-size:13px;line-height:1.55;color:var(--faint)">Installiert wird die Plugin-Datei aus dem neuesten GitHub-Release. Plugins laufen als eigene Programme mit deinen Rechten – nur aus Quellen installieren, denen du vertraust. Eigene Plugins veröffentlichen: docs/PLUGINS_VEROEFFENTLICHEN.md.</p>`;
+
   return `<div class="page">
-    <main class="page-main">
+    <main class="page-main" id="pluginsMain">
       <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px">
         <div><h1>Plugins</h1><div style="font-size:14px;color:var(--muted);margin-top:6px">${S.catalog.length} installiert · ${S.catalog.filter((p) => p.connected).length} aktiv · ${total} Aktionen</div></div>
-        <button type="button" class="btn primary" data-act="install">${ic('plus', 16)}Plugin installieren …</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          ${tab === 'store' ? `<button type="button" class="btn ghost" data-act="storeRefresh" ${S.store && S.store.loading ? 'disabled' : ''}>${ic('refresh', 16)}Aktualisieren</button>` : ''}
+          <button type="button" class="btn primary" data-act="installFile" ${S.pbusy ? 'disabled' : ''}>${busy('file') ? ic('refresh', 16) + 'Wird installiert …' : ic('file', 16) + 'Aus Datei …'}</button>
+        </div>
       </div>
-      <div class="cards">${S.catalog.map((p) => {
-        const n = p.actions.length;
-        return `<button type="button" class="pcard" data-act="plugin" data-arg="${esc(p.uuid)}" aria-pressed="${p.uuid === S.pluginSel}">
-          <span style="display:flex;align-items:center;gap:12px;width:100%">
-            ${ptile(p, 44, 22, 12)}
-            <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="font-size:16px;font-weight:600">${esc(p.name)}</b><span style="font-size:13px;color:var(--muted)">${esc(p.author || '–')} · v${esc(p.version || '?')}</span></span>
-          </span>
-          <span style="display:flex;align-items:center;gap:8px;width:100%;font-size:13px">${stateEl(p)}<span style="color:var(--muted)">${n} ${n === 1 ? 'Aktion' : 'Aktionen'}</span><span class="chip" style="margin-left:auto;font-size:11px;padding:2px 8px">${esc(p.category)}</span></span>
-        </button>`;
-      }).join('')}</div>
-      <p style="margin:0;font-size:13px;color:var(--faint)">Plugins liegen in <span class="mono" style="color:var(--muted)">${esc(pluginsDir())}</span> und sprechen das OpenDeck-/Stream-Deck-Plugin-Protokoll (docs/PLUGIN_API.md).</p>
+      <div class="seg" role="radiogroup" aria-label="Ansicht" style="align-self:flex-start">
+        <button type="button" role="radio" aria-checked="${tab === 'installed'}" data-act="pluginTab" data-arg="installed">Installiert (${S.catalog.length})</button>
+        <button type="button" role="radio" aria-checked="${tab === 'store'}" data-act="pluginTab" data-arg="store">${ic('github', 14)} Katalog${nStore != null ? ` (${nStore})` : ''}</button>
+      </div>
+      ${tab === 'store' ? storeView : installed}
     </main>
-    ${dp ? `<aside class="detail" aria-label="Plugin-Details">
+    ${dp && tab === 'installed' ? (() => {
+      const e = storeEntry(dp.uuid);
+      return `<aside class="detail" aria-label="Plugin-Details">
       <div style="display:flex;align-items:center;gap:14px">
         ${ptile(dp, 56, 28, 16)}
         <div><b style="font-size:20px;font-weight:600">${esc(dp.name)}</b><div style="margin-top:4px">${stateEl(dp)}</div></div>
       </div>
+      ${dp.description ? `<p style="margin:0;font-size:14px;line-height:1.55;color:var(--muted)">${esc(dp.description)}</p>` : ''}
       <dl>
         <dt>UUID</dt><dd class="mono" style="font-size:12px">${esc(dp.uuid)}</dd>
         <dt>Autor</dt><dd>${esc(dp.author || '–')}</dd>
-        <dt>Version</dt><dd class="mono" style="font-size:12px">${esc(dp.version || '?')}</dd>
+        <dt>Version</dt><dd class="mono" style="font-size:12px">${esc(dp.version || '?')}${e && e.update ? ` → <span style="color:var(--accent-text)">${esc(e.latest.version)}</span>` : ''}</dd>
         <dt>Kategorie</dt><dd>${esc(dp.category)}</dd>
+        ${dp.uuid !== BUILTIN ? `<dt>Herkunft</dt><dd>${dp.removable ? 'Installiert' : 'Mitgeliefert'}</dd>` : ''}
       </dl>
       <div style="display:flex;flex-direction:column;gap:8px"><b style="font-size:13px;color:var(--muted)">Aktionen</b>
         ${dp.actions.map((a) => `<div class="arow">
@@ -1070,10 +1128,12 @@ function pluginsHTML() {
         </div>`).join('')}
       </div>
       <div style="margin-top:auto;display:flex;flex-wrap:wrap;gap:10px">
+        ${e && e.update ? `<button type="button" class="btn primary" data-act="storeInstall" data-arg="${esc(dp.uuid)}" ${S.pbusy ? 'disabled' : ''}>${busy(dp.uuid) ? ic('refresh', 16) + 'Wird aktualisiert …' : ic('download', 16) + 'Auf v' + esc(e.latest.version) + ' aktualisieren'}</button>` : ''}
         ${desktop ? `<button type="button" class="btn" data-act="openPluginsDir">${ic('folder', 16)}Ordner öffnen</button>`
           : `<button type="button" class="btn" data-act="copyPath" data-arg="${esc(pluginsDir())}">${ic('folder', 16)}Pfad kopieren</button>`}
+        ${dp.removable ? `<button type="button" class="btn danger" data-act="uninstallPlugin" data-arg="${esc(dp.uuid)}" ${S.pbusy ? 'disabled' : ''}>${ic('trash', 16)}Entfernen</button>` : ''}
       </div>
-    </aside>` : ''}
+    </aside>`; })() : ''}
   </div>`;
 }
 
@@ -1238,6 +1298,20 @@ function renderOverlay() {
       <div style="display:flex;justify-content:flex-end;gap:10px"><button type="button" class="btn ghost" data-act="closeModal">Abbrechen</button><button type="button" class="btn danger" data-act="confirmDelete" id="confirmDelete">${ic('trash', 16)}Löschen</button></div>
     </div></div>`;
   }
+  if (S.modal && S.modal.kind === 'github') {
+    html += `<div class="scrim" data-act="closeModal"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlgT">
+      <h2 id="dlgT">Plugin von GitHub installieren?</h2>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:var(--muted)">Das neueste Release von <b class="mono" style="color:var(--text)">${esc(S.modal.repo)}</b> wird geladen und gestartet. Plugins laufen als eigene Programme mit deinen Rechten – installiere nur Plugins aus Quellen, denen du vertraust.</p>
+      <div style="display:flex;justify-content:flex-end;gap:10px"><button type="button" class="btn ghost" data-act="closeModal">Abbrechen</button><button type="button" class="btn primary" data-act="confirmGithub" id="confirmGithub">${ic('download', 16)}Installieren</button></div>
+    </div></div>`;
+  }
+  if (S.modal && S.modal.kind === 'uninstall') {
+    html += `<div class="scrim" data-act="closeModal"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlgT">
+      <h2 id="dlgT">„${esc(S.modal.name)}“ entfernen?</h2>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:var(--muted)">Das Plugin wird beendet und gelöscht. Tasten mit seinen Aktionen bleiben belegt, funktionieren aber erst nach einer Neuinstallation wieder.</p>
+      <div style="display:flex;justify-content:flex-end;gap:10px"><button type="button" class="btn ghost" data-act="closeModal">Abbrechen</button><button type="button" class="btn danger" data-act="confirmUninstall" id="confirmUninstall">${ic('trash', 16)}Entfernen</button></div>
+    </div></div>`;
+  }
   if (S.modal && S.modal.kind === 'update' && S.update) {
     const u = S.update, b = S.upd;
     const notes = esc(u.notes || 'Keine Beschreibung.').replace(/^#+\s*(.+)$/gm, '<b>$1</b>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
@@ -1264,6 +1338,8 @@ function renderOverlay() {
   if (S.modal && S.modal.kind === 'update' && $('#updGo')) $('#updGo').focus();
   if (S.modal && S.modal.kind === 'new') { const i = $('#newProfileName'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
   if (S.modal && S.modal.kind === 'delete') $('#confirmDelete').focus();
+  if (S.modal && S.modal.kind === 'github') $('#confirmGithub').focus();
+  if (S.modal && S.modal.kind === 'uninstall') $('#confirmUninstall').focus();
   if (S.menu) { const m = $('.ctx'); const r = m.getBoundingClientRect(); if (r.right > innerWidth - 8) m.style.left = (innerWidth - r.width - 8) + 'px'; if (r.bottom > innerHeight - 8) m.style.top = (innerHeight - r.height - 8) + 'px'; }
 }
 
@@ -1363,8 +1439,38 @@ async function startVirtual() {
 }
 function finishOnboarding() { local.set('onboarded', true); S.route = 'editor'; render(); }
 
+/* ---------- Plugins installieren ---------- */
+async function loadStore(refresh) {
+  S.store = { ...(S.store || {}), loading: true, error: null }; if (S.route === 'plugins') render();
+  try { S.store = await api.call('pluginStore', { refresh }); }
+  catch (e) { S.store = { error: e.message }; }
+  if (S.route === 'plugins') render();
+}
+async function installPlugin(params, key) {
+  if (S.pbusy) return;
+  S.pbusy = key; render();
+  try {
+    const r = await api.call('installPlugin', params);
+    toast('ok', r.previousVersion != null ? `${r.name} aktualisiert (v${r.previousVersion || '?'} → v${r.version})` : `${r.name} v${r.version} installiert`);
+    if (!r.started) toast('warn', `${r.name} startet nicht: ${r.startError}`);
+    S.pluginSel = r.plugin;
+    if (key === 'file') S.pluginTab = 'installed';
+    if (key === 'gh') S.gh = '';
+    await refresh();
+    if (S.store && !S.store.error) loadStore(false);
+  } catch (e) { toast('err', `Installation fehlgeschlagen: ${e.message}`); }
+  finally { S.pbusy = null; render(); }
+}
+function installPluginFile(file) {
+  if (!/\.(streamdeckplugin|zip)$/i.test(file.name)) { toast('err', 'Bitte eine .streamDeckPlugin- oder .zip-Datei wählen'); return; }
+  const reader = new FileReader();
+  reader.onload = () => installPlugin({ data: reader.result }, 'file');
+  reader.onerror = () => toast('err', 'Datei nicht lesbar');
+  reader.readAsDataURL(file);
+}
+
 const ACTS = {
-  nav(arg) { S.route = arg; S.popover = null; render(); scrollTo(0, 0); },
+  nav(arg) { S.route = arg; S.popover = null; if (arg === 'plugins' && !S.store) loadStore(false); render(); scrollTo(0, 0); },
   popover(arg) { S.popover = S.popover === arg ? null : arg; render(); },
   device(arg) { S.devId = arg; local.set('device', arg); S.popover = null; S.sel = 'k0'; render(); },
   startVirtual() { S.popover = null; startVirtual(); },
@@ -1441,7 +1547,31 @@ const ACTS = {
   menuEdit() { S.menu = null; renderOverlay(); const i = $('[data-in="title"]'); if (i) i.focus(); },
   menuClear() { const id = S.menu.id; S.menu = null; S.sel = id; renderOverlay(); clearSlot(id); },
   plugin(arg) { S.pluginSel = arg; render(); },
-  install() { toast('warn', `Installation per Datei folgt – bis dahin Plugin nach ${pluginsDir()} kopieren und OpenDeckN3 neu starten`); },
+  pluginTab(arg) { S.pluginTab = arg; if (arg === 'store' && !S.store) loadStore(false); render(); },
+  storeRefresh() { loadStore(true); },
+  async installFile() {
+    if (S.pbusy) return;
+    if (desktop) {
+      let path;
+      try {
+        path = await desktop('plugin:dialog|open', { options: { title: 'Plugin-Datei wählen', multiple: false, directory: false,
+          filters: [{ name: 'Plugin (.streamDeckPlugin, .zip)', extensions: ['streamDeckPlugin', 'zip'] }] } });
+      } catch (e) { toast('err', String(e)); return; }
+      if (path) installPlugin({ path }, 'file');
+      return;
+    }
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.streamDeckPlugin,.zip';
+    input.onchange = () => { if (input.files[0]) installPluginFile(input.files[0]); };
+    input.click();
+  },
+  storeInstall(uuid) { const e = storeEntry(uuid); if (e) installPlugin({ repo: e.repo, asset: e.asset }, uuid); },
+  confirmGithub() { const repo = S.modal.repo; S.modal = null; renderOverlay(); installPlugin({ repo }, 'gh'); },
+  uninstallPlugin(uuid) { const p = S.catalog.find((x) => x.uuid === uuid); if (p) { S.modal = { kind: 'uninstall', uuid, name: p.name }; renderOverlay(); } },
+  async confirmUninstall() {
+    const { uuid, name } = S.modal; S.modal = null; renderOverlay();
+    try { await api.run('uninstallPlugin', { plugin: uuid }); toast('ok', `${name} entfernt`); await refresh(); } catch { /* Toast */ }
+  },
   openConfigDir() { desktop('open_config_dir').catch((e) => toast('err', String(e))); },
   openPluginsDir() { desktop('open_plugins_dir').catch((e) => toast('err', String(e))); },
   openLog() { desktop('open_log').catch((e) => toast('err', String(e))); },
@@ -1519,6 +1649,7 @@ document.addEventListener('input', (e) => {
   const t = e.target; const k = t.dataset.in; if (!k) return;
   const d = cur();
   if (k === 'q') { S.q = t.value; $('#liblist').innerHTML = libListHTML(); }
+  else if (k === 'gh') S.gh = t.value;
   else if (k === 'brightness' && d) { d.brightness = clamp(+t.value, 0, 100); syncBrightness(t); sendBrightness(d.brightness); }
   else if (k === 'title') { const s = slot(S.sel); if (!s) return; s.title = t.value || null; renderStage(); sendAppearance(S.sel, s); }
   else if (k === 'sfield' && t.dataset.type !== 'shortcut') {
@@ -1554,6 +1685,13 @@ document.addEventListener('change', (e) => {
 });
 
 document.addEventListener('submit', (e) => {
+  if (e.target.id === 'ghForm') {
+    e.preventDefault();
+    const repo = $('#ghRepo').value.trim(); S.gh = repo;
+    if (!repo) { toast('warn', 'GitHub-Repository angeben, z. B. besitzer/mein-plugin'); return; }
+    S.modal = { kind: 'github', repo }; renderOverlay();
+    return;
+  }
   if (e.target.id !== 'newProfileForm') return;
   e.preventDefault();
   const v = $('#newProfileName').value.trim();
@@ -1652,7 +1790,9 @@ document.addEventListener('dragstart', (e) => {
   it.classList.add('dragging');
   requestAnimationFrame(renderStage);
 });
+const isFileDrag = (e) => S.route === 'plugins' && !S.drag && e.dataTransfer && [...e.dataTransfer.types].includes('Files');
 document.addEventListener('dragover', (e) => {
+  if (isFileDrag(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; const m = $('#pluginsMain'); if (m) m.classList.add('dropzone'); return; }
   if (S.route === 'onboarding') { if (e.target.closest('#obdev')) e.preventDefault(); return; }
   if (!S.drag) return;
   const f = actionByKey(S.drag);
@@ -1670,7 +1810,16 @@ function setOver(id) {
   };
   mark(S.over, false); S.over = id; mark(id, true);
 }
+document.addEventListener('dragleave', (e) => {
+  if (!e.relatedTarget) { const m = $('#pluginsMain'); if (m) m.classList.remove('dropzone'); }
+});
 document.addEventListener('drop', (e) => {
+  if (isFileDrag(e)) {
+    e.preventDefault();
+    const m = $('#pluginsMain'); if (m) m.classList.remove('dropzone');
+    const file = e.dataTransfer.files[0]; if (file && !S.pbusy) installPluginFile(file);
+    return;
+  }
   if (S.route === 'onboarding') { if (e.target.closest('#obdev')) { e.preventDefault(); ACTS.obPlace(); } return; }
   if (!S.drag) return;
   e.preventDefault();

@@ -99,6 +99,16 @@ prüft ihn gegen `SHA256SUMS.txt` aus demselben Release und startet ihn mit `/P 
 Verknüpfungen, Neustart danach) – dieselben Schalter wie Tauris eigener Updater. Die App beendet sich vorher selbst.
 `SHA256SUMS.txt` erzeugt der Release-Workflow; Releases ohne diese Datei werden nicht automatisch installiert.
 
+## Plugins installieren
+
+`n3-daemon/src/plugin_install.rs` beantwortet `installPlugin` und `pluginStore` in eigenen Tasks (Netzwerk und Entpacken
+blockieren den Haupt-Loop nicht): Es lädt `registry.json` (Standard: `plugins/registry.json` auf `main`, per
+`--plugin-registry` änderbar) und je Eintrag die Releases über `api.github.com`, wählt das passende Asset
+(`.streamDeckPlugin`/`.zip`, Plattform-Token wie `windows`/`linux`/`mac` im Namen), lädt es und entpackt es nach
+`<config>/plugins/.staging/`. Das Aktivieren – alten Prozess stoppen, Ordner ersetzen, `PluginHost::add` +
+`start_plugin` – erledigt `App` über das interne Kommando `ActivatePlugin` im Haupt-Loop. Installierte Plugins
+(Benutzerverzeichnis, zuletzt gescannt) haben Vorrang vor mitgelieferten mit gleicher UUID.
+
 ## Persistenz
 
 Konfigurationsverzeichnis (Standard `~/.config/opendeckn3`, per `--config-dir` änderbar):

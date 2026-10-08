@@ -36,6 +36,42 @@ const assert = (cond, what) => {
   if (!cond) throw new Error(`FAILED: ${what}`);
   console.log(`ok - ${what}`);
 };
+// Minimal ZIP writer (stored entries) for the plugin installation test.
+const crcTable = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+const crc32 = (buf) => {
+  let c = 0xffffffff;
+  for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+};
+const makeZip = (files) => {
+  const parts = [], central = [];
+  let offset = 0;
+  for (const [name, content] of Object.entries(files)) {
+    const nameBuf = Buffer.from(name), data = Buffer.from(content);
+    const crc = crc32(data);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(20, 4);
+    local.writeUInt32LE(crc, 14); local.writeUInt32LE(data.length, 18); local.writeUInt32LE(data.length, 22);
+    local.writeUInt16LE(nameBuf.length, 26);
+    const dir = Buffer.alloc(46);
+    dir.writeUInt32LE(0x02014b50, 0); dir.writeUInt16LE(20, 4); dir.writeUInt16LE(20, 6);
+    dir.writeUInt32LE(crc, 16); dir.writeUInt32LE(data.length, 20); dir.writeUInt32LE(data.length, 24);
+    dir.writeUInt16LE(nameBuf.length, 28); dir.writeUInt32LE(offset, 42);
+    parts.push(local, nameBuf, data);
+    central.push(dir, nameBuf);
+    offset += 30 + nameBuf.length + data.length;
+  }
+  const size = central.reduce((n, b) => n + b.length, 0);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(central.length / 2, 8); end.writeUInt16LE(central.length / 2, 10);
+  end.writeUInt32LE(size, 12); end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...parts, ...central, end]);
+};
+
 // Polls getState until `check(device)` holds (plugins answer asynchronously).
 const waitForDevice = async (check, what, timeoutMs = 5000) => {
   const until = Date.now() + timeoutMs;
@@ -122,6 +158,38 @@ ws.addEventListener("open", async () => {
     for (let i = 0; i < 30 && !events.some((e) => e.event === "actionError"); i++) await sleep(100);
     assert(events.some((e) => e.event === "actionError" && e.position === 5), "invalid shortcut is reported as actionError");
     await waitForDevice((d) => d.previews["5"]?.startsWith("data:image/png"), "built-in key gets an icon with label");
+
+    // Plugin installation from an archive (as the UI sends it) and removal.
+    const { readFileSync: readFile } = await import("node:fs");
+    const counterDir = new URL("../plugins/examples/de.opendeckn3.counter.sdPlugin/", import.meta.url);
+    const manifest = JSON.parse(readFile(new URL("manifest.json", counterDir), "utf8"));
+    manifest.UUID = "de.opendeckn3.smoketest";
+    manifest.Name = "Smoke-Test";
+    manifest.Version = "1.2.3";
+    manifest.Actions[0].UUID = "de.opendeckn3.smoketest.count";
+    const archive = makeZip({
+      "de.opendeckn3.smoketest.sdPlugin/manifest.json": JSON.stringify(manifest),
+      "de.opendeckn3.smoketest.sdPlugin/plugin.js": readFile(new URL("plugin.js", counterDir)),
+    });
+    const installed = await call("installPlugin", { data: archive.toString("base64") });
+    assert(installed.plugin === "de.opendeckn3.smoketest" && installed.version === "1.2.3" && installed.started,
+      "installPlugin unpacks and starts a plugin archive");
+    for (let i = 0; i < 30 && !events.some((e) => e.event === "pluginsChanged"); i++) await sleep(100);
+    assert(events.some((e) => e.event === "pluginsChanged"), "pluginsChanged event is pushed");
+    for (let i = 0; i < 50; i++) {
+      const cat = await call("getCatalog");
+      if (cat.find((p) => p.uuid === "de.opendeckn3.smoketest")?.connected) break;
+      await sleep(100);
+    }
+    let catalog = await call("getCatalog");
+    const smoke = catalog.find((p) => p.uuid === "de.opendeckn3.smoketest");
+    assert(smoke?.connected && smoke.removable, "installed plugin connects and is removable");
+    assert(!catalog.find((p) => p.uuid === "de.opendeckn3.counter").removable, "bundled plugin is not removable");
+    const broken = await call("installPlugin", { data: makeZip({ "readme.txt": "no plugin" }).toString("base64") }).catch((e) => e);
+    assert(broken instanceof Error, "archive without manifest.json is rejected");
+    await call("uninstallPlugin", { plugin: "de.opendeckn3.smoketest" });
+    catalog = await call("getCatalog");
+    assert(!catalog.some((p) => p.uuid === "de.opendeckn3.smoketest"), "uninstallPlugin removes the plugin");
 
     const started = await call("startVirtualDevice");
     assert(started.device === DEVICE, "startVirtualDevice is idempotent");

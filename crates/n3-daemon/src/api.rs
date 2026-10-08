@@ -73,6 +73,31 @@ pub enum ApiCommand {
         input: InputEvent,
     },
     StartVirtualDevice,
+    /// Exactly one of `path` (local file), `data` (base64 / data URL) or
+    /// `repo` (GitHub `owner/name`, latest release).
+    InstallPlugin {
+        #[serde(default)]
+        path: Option<std::path::PathBuf>,
+        #[serde(default)]
+        data: Option<String>,
+        #[serde(default)]
+        repo: Option<String>,
+        #[serde(default)]
+        asset: Option<String>,
+    },
+    UninstallPlugin {
+        plugin: String,
+    },
+    /// Catalog from the registries with the latest GitHub release per plugin.
+    PluginStore {
+        #[serde(default)]
+        refresh: bool,
+    },
+    /// Internal: moves an unpacked plugin into place and starts it.
+    #[serde(skip_deserializing)]
+    ActivatePlugin {
+        staged: std::path::PathBuf,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -156,13 +181,20 @@ async fn handle_client(
             Err(denied)
         }
     };
-    let ws = match tokio_tungstenite::accept_hdr_async(stream, check_origin).await {
-        Ok(ws) => ws,
-        Err(err) => {
-            tracing::debug!(%addr, %err, "UI handshake failed");
-            return;
-        }
-    };
+    // Plugin uploads (`installPlugin` with `data`) can be large.
+    let config = tokio_tungstenite::tungstenite::protocol::WebSocketConfig::default()
+        .max_message_size(Some(300 << 20))
+        .max_frame_size(Some(300 << 20));
+    let ws =
+        match tokio_tungstenite::accept_hdr_async_with_config(stream, check_origin, Some(config))
+            .await
+        {
+            Ok(ws) => ws,
+            Err(err) => {
+                tracing::debug!(%addr, %err, "UI handshake failed");
+                return;
+            }
+        };
     tracing::info!(%addr, "UI client connected");
     let (mut sink, mut incoming) = ws.split();
 
