@@ -4,6 +4,7 @@ use std::{
     collections::HashMap,
     net::SocketAddr,
     path::{Path, PathBuf},
+    process::Stdio,
     sync::Arc,
 };
 
@@ -221,12 +222,25 @@ impl PluginHost {
             .args(["-pluginUUID", &plugin.uuid])
             .args(["-registerEvent", "registerPlugin"])
             .args(["-info", &info.to_string()])
+            // Plugin output goes to our log instead of a console window.
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
             .kill_on_drop(true);
+        // Console programs (most plugins) would otherwise open a terminal window.
+        #[cfg(windows)]
+        command.creation_flags(CREATE_NO_WINDOW);
 
-        let child = command
+        let mut child = command
             .spawn()
             .with_context(|| format!("spawning {}", full_path.display()))?;
         tracing::info!(plugin = %plugin.uuid, pid = child.id(), "plugin started");
+        if let Some(out) = child.stdout.take() {
+            tokio::spawn(log_lines(plugin.uuid.clone(), out));
+        }
+        if let Some(err) = child.stderr.take() {
+            tokio::spawn(log_lines(plugin.uuid.clone(), err));
+        }
         self.inner
             .children
             .lock()
@@ -339,6 +353,20 @@ impl PluginHost {
             event,
         };
         self.inner.inbound.send(msg).await.ok();
+    }
+}
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+/// Forwards a plugin's stdout/stderr line by line to the log.
+async fn log_lines(plugin: String, stream: impl tokio::io::AsyncRead + Unpin) {
+    use tokio::io::AsyncBufReadExt;
+    let mut lines = tokio::io::BufReader::new(stream).lines();
+    while let Ok(Some(line)) = lines.next_line().await {
+        if !line.trim().is_empty() {
+            tracing::info!(target: "plugin", %plugin, "{line}");
+        }
     }
 }
 

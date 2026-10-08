@@ -1,3 +1,4 @@
+#![cfg_attr(windows, windows_subsystem = "windows")]
 //! OpenDeckN3 Discord plugin.
 //!
 //! Talks to OpenDeckN3 over the Stream Deck SDK WebSocket protocol and to the
