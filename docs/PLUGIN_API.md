@@ -78,7 +78,8 @@ Gemeinsame Felder: `key`, `label`, `help`, `placeholder`, `default`, `controller
 `showIf` (`{ "authMode": "manual" }` – Feld nur zeigen, wenn andere Felder diese Werte haben). Knöpfe mit
 `"primary": true` werden hervorgehoben und erscheinen bei getrennter Verbindung auch im Inspektor.
 
-**Auswahllisten aus dem Plugin:** Ein `select` mit `source` statt `options` bekommt seine Einträge zur Laufzeit vom
+**Auswahllisten aus dem Plugin:** Ein `select` mit `source` statt `options` wird als Suchfeld mit
+Autovervollständigung angezeigt und bekommt seine Einträge zur Laufzeit vom
 Plugin, z. B. Discord-Server und -Kanäle. `dependsOn` nennt Felder, deren Werte mitgeschickt werden (Kanal hängt vom
 Server ab). Die App sendet dem Plugin
 

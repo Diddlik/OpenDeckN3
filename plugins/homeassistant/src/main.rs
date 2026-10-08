@@ -198,6 +198,7 @@ impl Plugin {
             }
         };
         if let Some(api) = self.api.clone() {
+            self.set_status("Verbinde mit Home Assistant …");
             let (tx, generation) = (self.tx.clone(), self.generation);
             tokio::spawn(async move {
                 let result = async {
