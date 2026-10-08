@@ -87,6 +87,15 @@ impl Api {
         Ok(serde_json::from_slice(&bytes).unwrap_or(Value::Null))
     }
 
+    /// Any HTTP answer counts: the server is up (401 just means no/invalid token).
+    async fn reachable(&self) -> bool {
+        self.http
+            .get(format!("{}/api/", self.base))
+            .send()
+            .await
+            .is_ok()
+    }
+
     async fn get(&self, path: &str) -> anyhow::Result<Value> {
         self.request(reqwest::Method::GET, path, None).await
     }
@@ -139,6 +148,7 @@ enum Msg {
     Host(Value),
     States(u64, anyhow::Result<Value>),
     Status(u64, anyhow::Result<String>),
+    Ping(u64, bool),
     Failed(String, String),
     Done(String),
 }
@@ -152,6 +162,11 @@ struct Plugin {
     generation: u64,
     states: HashMap<String, Value>,
     polling: bool,
+    /// Last known reachability (None = not checked yet); keys show "offline".
+    online: Option<bool>,
+    /// Status text of the last successful connection check.
+    ok_status: String,
+    ticks: u64,
 }
 
 impl Plugin {
@@ -165,6 +180,9 @@ impl Plugin {
             generation: 0,
             states: HashMap::new(),
             polling: false,
+            online: None,
+            ok_status: String::new(),
+            ticks: 0,
         }
     }
 
@@ -187,6 +205,7 @@ impl Plugin {
         }
         self.generation += 1;
         self.states.clear();
+        self.online = None;
         self.api = match Api::new(
             &global_str(&self.global, "url"),
             &global_str(&self.global, "token"),
@@ -255,11 +274,47 @@ impl Plugin {
                 self.refresh_all();
             }
             Ok(_) => {}
-            Err(err) => self.set_status(format!("Nicht verbunden: {err:#}")),
+            Err(err) => {
+                self.set_online(false);
+                self.set_status(format!("Nicht verbunden: {err:#}"));
+                return;
+            }
+        }
+        self.set_online(true);
+    }
+
+    fn set_online(&mut self, online: bool) {
+        let was = self.online.replace(online);
+        if was == Some(online) {
+            return;
+        }
+        if online && was == Some(false) && !self.ok_status.is_empty() {
+            let status = self.ok_status.clone();
+            self.set_status(status);
+        }
+        self.refresh_all();
+    }
+
+    /// Every 3 s: poll states for keys that show them, otherwise check every
+    /// 15 s whether Home Assistant is reachable (for the "offline" title).
+    fn on_tick(&mut self) {
+        self.ticks += 1;
+        if self.needs_states() {
+            self.poll();
+        } else if self.ticks.is_multiple_of(5)
+            && let Some(api) = self.api.clone()
+        {
+            let (tx, generation) = (self.tx.clone(), self.generation);
+            tokio::spawn(async move {
+                tx.send(Msg::Ping(generation, api.reachable().await)).ok();
+            });
         }
     }
 
     fn appearance(&self, inst: &Instance) -> (u16, String) {
+        if self.api.is_none() || self.online == Some(false) {
+            return (0, "offline".into());
+        }
         let entity = inst.text("entity");
         let Some(state) = self.states.get(&entity) else {
             return (0, String::new());
@@ -437,12 +492,30 @@ impl Plugin {
             Msg::Status(generation, result) => {
                 if generation == self.generation {
                     match result {
-                        Ok(status) => self.set_status(status),
-                        Err(err) => self.set_status(format!("Nicht verbunden: {err:#}")),
+                        Ok(status) => {
+                            self.ok_status = status.clone();
+                            self.set_status(status);
+                            self.set_online(true);
+                        }
+                        Err(err) => {
+                            self.set_status(format!("Nicht verbunden: {err:#}"));
+                            self.set_online(false);
+                        }
                     }
                 }
             }
+            Msg::Ping(generation, online) => {
+                if generation == self.generation {
+                    if !online {
+                        self.set_status("Home Assistant nicht erreichbar");
+                    }
+                    self.set_online(online);
+                }
+            }
             Msg::Failed(context, error) => {
+                if error.contains("nicht erreichbar") {
+                    self.set_online(false);
+                }
                 self.host.alert(&context);
                 self.host.log(error);
             }
@@ -703,7 +776,7 @@ async fn main() -> anyhow::Result<()> {
                 None => break,
             },
             Some(msg) = rx.recv() => plugin.handle(msg),
-            _ = tick.tick() => plugin.poll(),
+            _ = tick.tick() => plugin.on_tick(),
         }
     }
     Ok(())
