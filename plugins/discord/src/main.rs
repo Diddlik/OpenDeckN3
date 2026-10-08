@@ -505,7 +505,8 @@ impl Plugin {
         let on = |b: bool| u16::from(b);
         let connected = self.rpc.is_some() && !self.voice.is_null();
         if !connected {
-            return (0, String::new());
+            // Discord not running / not signed in: every key says so.
+            return (0, "offline".into());
         }
         match inst.act {
             Act::Mute => (

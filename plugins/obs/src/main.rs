@@ -433,14 +433,8 @@ impl Plugin {
         let on = u16::from;
         let connected = self.obs.is_some();
         if !connected {
-            return (
-                0,
-                if inst.kind() == "connection" {
-                    "offline".into()
-                } else {
-                    String::new()
-                },
-            );
+            // OBS not reachable: every key says so.
+            return (0, "offline".into());
         }
         match inst.kind() {
             "connection" => (1, String::new()),

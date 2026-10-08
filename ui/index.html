@@ -109,6 +109,9 @@ pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5
 
 /* Bühne */
 .center{padding:24px 28px;display:flex;flex-direction:column;gap:16px;min-width:0}
+/* Gerät bleibt oben im Bild: die Mitte ist so hoch wie das Fenster und scrollt nicht mit,
+   wenn die Bibliothek links (aufgeklappte Plugins) die Seite verlängert. */
+@media (min-width:1181px){.center{position:sticky;top:0;align-self:start;height:calc(100vh - 64px);min-height:620px}}
 .head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
 .head h1{margin:2px 0 0;font-size:22px;font-weight:600;letter-spacing:-.01em}
 .toggle{display:flex;align-items:center;gap:10px;height:36px;padding:0 12px 0 8px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);font-size:13px;font-weight:500}
