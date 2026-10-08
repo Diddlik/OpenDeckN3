@@ -1,0 +1,759 @@
+{
+  "UUID": "de.opendeckn3.obs",
+  "Name": "OBS Studio",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Steuert OBS Studio: Aufnahme mit Laufzeit, Stream, Szenen, Quellen, Filter, Audio (auch per Drehregler), Studio-Modus, Übergänge, Leistung, Wiederholungspuffer, virtuelle Kamera und Makros. Verbindet sich automatisch mit dem lokalen OBS.",
+  "Category": "OBS Studio",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-obs.exe",
+  "CodePathLin": "opendeckn3-obs",
+  "CodePathMac": "opendeckn3-obs",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    },
+    {
+      "Platform": "mac"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "button",
+      "key": "connect",
+      "label": "Verbinden",
+      "primary": true,
+      "help": "In OBS muss der WebSocket-Server an sein: Werkzeuge → WebSocket-Servereinstellungen → „WebSocket-Server aktivieren“."
+    },
+    {
+      "type": "select",
+      "key": "mode",
+      "label": "Verbindung",
+      "default": "auto",
+      "options": [
+        [
+          "auto",
+          "Automatisch (OBS auf diesem PC)"
+        ],
+        [
+          "manual",
+          "Manuell (Adresse, Port, Passwort)"
+        ]
+      ],
+      "help": "Automatisch liest Port und Passwort aus den Einstellungen von OBS – nichts einzutragen."
+    },
+    {
+      "type": "text",
+      "key": "host",
+      "label": "Adresse",
+      "default": "127.0.0.1",
+      "help": "IP-Adresse des PCs mit OBS (eigener PC: 127.0.0.1)",
+      "showIf": {
+        "mode": "manual"
+      }
+    },
+    {
+      "type": "text",
+      "key": "port",
+      "label": "Port",
+      "default": "4455",
+      "showIf": {
+        "mode": "manual"
+      }
+    },
+    {
+      "type": "password",
+      "key": "password",
+      "label": "Passwort",
+      "help": "In OBS: Werkzeuge → WebSocket-Servereinstellungen → „Verbindungsinformationen anzeigen“.",
+      "showIf": {
+        "mode": "manual"
+      }
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.obs.connection",
+      "Name": "Verbindung",
+      "Tooltip": "Zeigt die Verbindung zu OBS; Drücken verbindet neu",
+      "Icon": "imgs/link",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/link-off"
+        },
+        {
+          "Image": "imgs/link"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.obs.record",
+      "Name": "Aufnahme",
+      "Tooltip": "Aufnahme starten/stoppen, lang drücken = Pause; zeigt die Laufzeit",
+      "Icon": "imgs/rec",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/rec"
+        },
+        {
+          "Image": "imgs/rec-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Kurz drücken",
+          "options": [
+            [
+              "toggle",
+              "Starten/Stoppen"
+            ],
+            [
+              "start",
+              "Starten"
+            ],
+            [
+              "stop",
+              "Stoppen"
+            ],
+            [
+              "pause",
+              "Pause an/aus"
+            ]
+          ],
+          "default": "toggle"
+        },
+        {
+          "type": "select",
+          "key": "longPress",
+          "label": "Lang drücken",
+          "options": [
+            [
+              "pause",
+              "Pause an/aus"
+            ],
+            [
+              "stop",
+              "Stoppen"
+            ],
+            [
+              "none",
+              "Nichts"
+            ]
+          ],
+          "default": "pause"
+        },
+        {
+          "type": "number",
+          "key": "longPressMs",
+          "label": "Lang drücken ab (ms)",
+          "default": 650,
+          "min": 200,
+          "max": 3000
+        },
+        {
+          "type": "select",
+          "key": "timer",
+          "label": "Laufzeit anzeigen",
+          "options": [
+            [
+              "yes",
+              "Ja"
+            ],
+            [
+              "no",
+              "Nein"
+            ]
+          ],
+          "default": "yes"
+        },
+        {
+          "type": "select",
+          "key": "format",
+          "label": "Zeitformat",
+          "options": [
+            [
+              "hms",
+              "Stunden:Minuten:Sekunden"
+            ],
+            [
+              "ms",
+              "Minuten:Sekunden"
+            ]
+          ],
+          "default": "hms"
+        },
+        {
+          "type": "text",
+          "key": "label",
+          "label": "Beschriftung (gestoppt)",
+          "default": "REC"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.obs.stream",
+      "Name": "Stream",
+      "Tooltip": "Stream starten/stoppen; zeigt die Laufzeit",
+      "Icon": "imgs/live",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/live"
+        },
+        {
+          "Image": "imgs/live-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Kurz drücken",
+          "options": [
+            [
+              "toggle",
+              "Starten/Stoppen"
+            ],
+            [
+              "start",
+              "Starten"
+            ],
+            [
+              "stop",
+              "Stoppen"
+            ]
+          ],
+          "default": "toggle"
+        },
+        {
+          "type": "select",
+          "key": "longPress",
+          "label": "Lang drücken",
+          "options": [
+            [
+              "none",
+              "Nichts"
+            ],
+            [
+              "stop",
+              "Stoppen"
+            ]
+          ],
+          "default": "none",
+          "help": "Tipp: „Kurz = Starten“ + „Lang = Stoppen“ verhindert versehentliches Beenden."
+        },
+        {
+          "type": "number",
+          "key": "longPressMs",
+          "label": "Lang drücken ab (ms)",
+          "default": 650,
+          "min": 200,
+          "max": 3000
+        },
+        {
+          "type": "select",
+          "key": "timer",
+          "label": "Laufzeit anzeigen",
+          "options": [
+            [
+              "yes",
+              "Ja"
+            ],
+            [
+              "no",
+              "Nein"
+            ]
+          ],
+          "default": "yes"
+        },
+        {
+          "type": "select",
+          "key": "format",
+          "label": "Zeitformat",
+          "options": [
+            [
+              "hms",
+              "Stunden:Minuten:Sekunden"
+            ],
+            [
+              "ms",
+              "Minuten:Sekunden"
+            ]
+          ],
+          "default": "hms"
+        },
+        {
+          "type": "text",
+          "key": "label",
+          "label": "Beschriftung (gestoppt)",
+          "default": "LIVE"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.obs.scene",
+      "Name": "Szene",
+      "Tooltip": "Wechselt zur Szene; leuchtet, wenn sie aktiv ist",
+      "Icon": "imgs/scene",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/scene"
+        },
+        {
+          "Image": "imgs/scene-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "scene",
+          "label": "Szene",
+          "source": "scenes"
+        },
+        {
+          "type": "select",
+          "key": "target",
+          "label": "Ziel",
+          "options": [
+            [
+              "program",
+              "Programm (live)"
+            ],
+            [
+              "preview",
+              "Vorschau (Studio-Modus)"
+            ]
+          ],
+          "default": "program"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.obs.sourcevisibility",
+      "Name": "Quelle ein/aus",
+      "Tooltip": "Blendet eine Quelle in einer Szene ein oder aus",
+      "Icon": "imgs/source",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/source-off"
+        },
+        {
+          "Image": "imgs/source"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "scene",
+          "label": "Szene",
+          "source": "scenes"
+        },
+        {
+          "type": "select",
+          "key": "source",
+          "label": "Quelle",
+          "source": "sceneItems",
+          "dependsOn": [
+            "scene"
+          ]
+        },
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "toggle",
+              "Umschalten"
+            ],
+            [
+              "show",
+              "Einblenden"
+            ],
+            [
+              "hide",
+              "Ausblenden"
+            ]
+          ],
+          "default": "toggle"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.obs.filter",
+      "Name": "Filter",
+      "Tooltip": "Schaltet einen Filter einer Quelle ein oder aus",
+      "Icon": "imgs/filter",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/filter-off"
+        },
+        {
+          "Image": "imgs/filter"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "source",
+          "label": "Quelle",
+          "source": "sources"
+        },
+        {
+          "type": "select",
+          "key": "filter",
+          "label": "Filter",
+          "source": "filters",
+          "dependsOn": [
+            "source"
+          ]
+        },
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "toggle",
+              "Umschalten"
+            ],
+            [
+              "on",
+              "Ein"
+            ],
+            [
+              "off",
+              "Aus"
+            ]
+          ],
+          "default": "toggle"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.obs.audio",
+      "Name": "Audio",
+      "Tooltip": "Stummschalten oder Lautstärke · Drehregler: drehen = Lautstärke, drücken = stumm",
+      "Icon": "imgs/audio",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/audio"
+        },
+        {
+          "Image": "imgs/audio-off"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "input",
+          "label": "Audioquelle",
+          "source": "audioInputs"
+        },
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "mute",
+              "Stumm an/aus"
+            ],
+            [
+              "up",
+              "Lauter"
+            ],
+            [
+              "down",
+              "Leiser"
+            ]
+          ],
+          "default": "mute",
+          "controllers": [
+            "Keypad"
+          ]
+        },
+        {
+          "type": "number",
+          "key": "step",
+          "label": "Schritt (dB)",
+          "default": 2,
+          "min": 0.5,
+          "max": 10,
+          "help": "Pro Druck bzw. Raste"
+        },
+        {
+          "type": "select",
+          "key": "showVolume",
+          "label": "Lautstärke anzeigen",
+          "options": [
+            [
+              "yes",
+              "Ja"
+            ],
+            [
+              "no",
+              "Nein"
+            ]
+          ],
+          "default": "no",
+          "controllers": [
+            "Keypad"
+          ]
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.obs.studiomode",
+      "Name": "Studio-Modus",
+      "Tooltip": "Studio-Modus an/aus oder Übergang auslösen",
+      "Icon": "imgs/studio",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/studio"
+        },
+        {
+          "Image": "imgs/studio-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "toggle",
+              "Studio-Modus an/aus"
+            ],
+            [
+              "transition",
+              "Übergang auslösen (Vorschau → Programm)"
+            ]
+          ],
+          "default": "toggle"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.obs.transition",
+      "Name": "Übergang",
+      "Tooltip": "Wählt den Szenenübergang",
+      "Icon": "imgs/transition",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/transition"
+        },
+        {
+          "Image": "imgs/transition-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "transition",
+          "label": "Übergang",
+          "source": "transitions"
+        },
+        {
+          "type": "number",
+          "key": "duration",
+          "label": "Dauer (ms, 0 = unverändert)",
+          "default": 0,
+          "min": 0,
+          "max": 20000
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.obs.performance",
+      "Name": "Leistung",
+      "Tooltip": "Zeigt CPU, FPS, Speicher oder ausgelassene Frames",
+      "Icon": "imgs/cpu",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/cpu"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "metric",
+          "label": "Anzeige",
+          "options": [
+            [
+              "cpu",
+              "CPU-Last"
+            ],
+            [
+              "fps",
+              "Bilder pro Sekunde"
+            ],
+            [
+              "memory",
+              "Arbeitsspeicher"
+            ],
+            [
+              "render",
+              "Ausgelassene Frames (Rendern)"
+            ],
+            [
+              "output",
+              "Ausgelassene Frames (Ausgabe)"
+            ],
+            [
+              "disk",
+              "Freier Speicherplatz"
+            ]
+          ],
+          "default": "cpu"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.obs.replaybuffer",
+      "Name": "Wiederholungspuffer",
+      "Tooltip": "Wiederholungspuffer speichern oder starten/stoppen",
+      "Icon": "imgs/replay",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/replay"
+        },
+        {
+          "Image": "imgs/replay-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "save",
+              "Speichern"
+            ],
+            [
+              "toggle",
+              "Starten/Stoppen"
+            ],
+            [
+              "start",
+              "Starten"
+            ],
+            [
+              "stop",
+              "Stoppen"
+            ]
+          ],
+          "default": "save"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.obs.virtualcam",
+      "Name": "Virtuelle Kamera",
+      "Tooltip": "Virtuelle Kamera starten/stoppen",
+      "Icon": "imgs/vcam",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/vcam"
+        },
+        {
+          "Image": "imgs/vcam-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "toggle",
+              "Starten/Stoppen"
+            ],
+            [
+              "start",
+              "Starten"
+            ],
+            [
+              "stop",
+              "Stoppen"
+            ]
+          ],
+          "default": "toggle"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.obs.macro",
+      "Name": "Makro",
+      "Tooltip": "Mehrere OBS-Befehle nacheinander",
+      "Icon": "imgs/macro",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/macro"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "textarea",
+          "key": "steps",
+          "label": "Schritte",
+          "placeholder": "SetCurrentProgramScene {\"sceneName\": \"Intro\"}\nwait 2000\nStartRecord",
+          "help": "Eine Zeile pro Schritt: OBS-Befehl mit optionalen JSON-Daten oder „wait <ms>“. Befehle: obs-websocket-Protokoll (z. B. SetCurrentProgramScene, ToggleInputMute, StartStream)."
+        }
+      ]
+    }
+  ]
+}

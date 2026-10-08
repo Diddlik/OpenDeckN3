@@ -1110,6 +1110,8 @@ function globalSettingsHTML(p) {
         return `<button type="button" class="btn ${f.primary ? 'primary' : ''}" data-act="gbutton" data-arg="${esc(f.key)}">${ic(f.primary ? 'plug' : 'refresh', 16)}${esc(f.label)}</button>${help}`;
       case 'select':
         return `<label>${esc(f.label)}<select class="field" ${at}>${f.options.map(([val, l]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${help}</label>`;
+      case 'textarea':
+        return `<label>${esc(f.label)}<textarea class="field" ${at} rows="4" style="min-height:96px" spellcheck="false" ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''}>${esc(v)}</textarea>${help}</label>`;
       case 'password':
         return `<label>${esc(f.label)}<input class="field mono" type="password" ${at} value="${esc(v)}" autocomplete="off" spellcheck="false">${help}</label>`;
       default:

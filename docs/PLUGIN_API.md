@@ -92,7 +92,9 @@ und erwartet als Antwort `sendToPropertyInspector` mit derselben `requestId` und
 { "event": "sendToPropertyInspector", "context": "<plugin-uuid>", "payload": { "requestId": 7, "options": [["456", "🔊 Lounge"]] } }
 ```
 Ändert ein Plugin seine globalen Einstellungen selbst, aktualisiert die App das Formular (`globalSettingsChanged`).
-Ein vollständiges Beispiel ist das [Discord-Plugin](PLUGIN_DISCORD.md).
+Vollständige Beispiele: [Discord](PLUGIN_DISCORD.md), [OBS Studio](PLUGIN_OBS.md),
+[Home Assistant](PLUGIN_HOMEASSISTANT.md). Für Plugins in Rust nimmt [`plugins/sdk`](../plugins/sdk) die
+Verbindung zum Host, die Tasten-Verwaltung und die Antworten auf Auswahllisten ab.
 
 ## Start & Registrierung
 

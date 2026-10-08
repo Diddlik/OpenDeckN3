@@ -120,6 +120,8 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit Symbol und 
 - [x] Eingebaut: Tastenkürzel, Lautstärke, Medien, Programme, Websites, Befehle, Text
 - [x] Plugins per Klick installieren – aus Datei oder direkt aus GitHub-Releases
 - [x] Discord-Plugin: Mikro, Kopfhörer, Kanäle, Lautstärken, Soundboard, Kamera, Bildschirmfreigabe
+- [x] OBS-Studio-Plugin: Aufnahme mit Laufzeit, Stream, Szenen, Quellen, Filter, Audio, Makros
+- [x] Home-Assistant-Plugin: Webhooks, Dienste, Schalter, Dimmer, Zustände
 - [ ] Multi-Aktionen und Ordner
 - [ ] Automatischer Profilwechsel je nach aktivem Programm
 - [ ] Weitere Geräte

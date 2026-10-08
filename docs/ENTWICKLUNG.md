@@ -27,6 +27,9 @@ crates/
 plugins/examples/  Beispiel-Plugin „Zähler“ (Node, ohne Abhängigkeiten)
 plugins/registry.json  Plugin-Katalog (GitHub-Releases), siehe docs/PLUGINS_VEROEFFENTLICHEN.md
 plugins/discord/   Discord-Plugin (Rust, docs/PLUGIN_DISCORD.md); Tastenbilder: tools/make-discord-icons.cjs
+plugins/obs/       OBS-Studio-Plugin (docs/PLUGIN_OBS.md)
+plugins/homeassistant/  Home-Assistant-Plugin (docs/PLUGIN_HOMEASSISTANT.md); Tastenbilder beider: tools/make-plugin-icons.cjs
+plugins/sdk/       Hilfsbibliothek für Plugins in Rust (Host-Verbindung, Tastenzustand, Einstellungen)
 tools/smoke-test.mjs  End-to-End-Test gegen den laufenden Dienst
 udev/          Linux-Regeln für Gerätezugriff
 assets/        App-Icon (erzeugt mit tools/make-icon.py)
