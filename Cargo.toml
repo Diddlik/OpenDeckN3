@@ -1,0 +1,33 @@
+[workspace]
+resolver = "3"
+members = ["crates/n3-core", "crates/n3-driver", "crates/n3-plugin", "crates/n3-daemon"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/Diddlik/OpenDeckN3"
+rust-version = "1.87"
+
+[workspace.dependencies]
+n3-core = { path = "crates/n3-core" }
+n3-driver = { path = "crates/n3-driver" }
+n3-plugin = { path = "crates/n3-plugin" }
+
+anyhow = "1"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+tokio-tungstenite = "0.28"
+futures-util = "0.3"
+futures-lite = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+image = { version = "0.25", default-features = false, features = ["bmp", "jpeg", "png"] }
+mirajazz = "0.16.2"
+data-url = "0.3"
+base64 = "0.22"
+dirs = "6"
+clap = { version = "4", features = ["derive"] }

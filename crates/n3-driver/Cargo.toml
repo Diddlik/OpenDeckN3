@@ -1,0 +1,15 @@
+[package]
+name = "n3-driver"
+description = "Hardware-Treiber für OpenDeckN3 (TreasLin N3 via mirajazz) und virtuelles Testgerät"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+n3-core.workspace = true
+mirajazz.workspace = true
+image.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+futures-lite.workspace = true
+tracing.workspace = true

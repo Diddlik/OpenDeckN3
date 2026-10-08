@@ -1,0 +1,19 @@
+{
+  "UUID": "de.opendeckn3.counter",
+  "Name": "Zähler (Beispiel)",
+  "Description": "Beispiel-Plugin: zählt Tastendrücke und färbt die Taste ein, Drehregler ändern den Farbton.",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Category": "Beispiele",
+  "CodePath": "plugin.js",
+  "OS": [{ "Platform": "linux" }, { "Platform": "mac" }, { "Platform": "windows" }],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.counter.count",
+      "Name": "Zähler",
+      "Tooltip": "Zählt Tastendrücke; Drehregler ändert die Farbe",
+      "Controllers": ["Keypad", "Encoder"],
+      "States": [{}]
+    }
+  ]
+}
