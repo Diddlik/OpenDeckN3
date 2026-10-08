@@ -59,6 +59,8 @@ jobs:
       - name: Installer bauen
         shell: pwsh
         run: |
+          # target/ kommt teils aus dem Cache – keine alten Pakete mitveröffentlichen.
+          Remove-Item -Recurse -Force target\installer, target\portable -ErrorAction SilentlyContinue
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /Qp "/DAppVersion=${{ steps.version.outputs.version }}" installer\windows\opendeckn3.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
