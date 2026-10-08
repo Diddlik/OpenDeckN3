@@ -210,7 +210,19 @@ section.danger h3{color:var(--err)!important}
 .gset{display:flex;flex-direction:column;gap:12px}.gset h3{margin:0;font-size:13px;color:var(--muted);font-weight:600}
 .gset label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
 .gset .help{font-size:12px;color:var(--faint);line-height:1.45}
+.ginfo.ok{border-color:color-mix(in srgb,var(--ok) 45%,var(--line));background:color-mix(in srgb,var(--ok) 8%,var(--input))}
+.ginfo.err{border-color:color-mix(in srgb,var(--err) 45%,var(--line));background:color-mix(in srgb,var(--err) 7%,var(--input))}
+.ginfo.busy{border-color:color-mix(in srgb,var(--warn) 45%,var(--line))}
+.ginfo span{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cstate{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
+.cstate .dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.cstate.ok{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.cstate.err{color:var(--err-text);background:color-mix(in srgb,var(--err) 14%,transparent)}
+.cstate.busy{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.cstate.busy .dot{animation:pulse 1s ease-in-out infinite}
 .ginfo{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:var(--input);border:1px solid var(--line);font-size:12px;color:var(--muted)}.ginfo b{font-size:14px;color:var(--text);font-weight:500}
+.combo{position:relative;flex:1;min-width:0;display:flex}.combo>svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--faint);pointer-events:none}
+.combo .field{flex:1;padding-left:34px}
 .ghform{display:flex;gap:10px;flex-wrap:wrap}.ghform .field{flex:1 1 260px}
 .scard{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:16px;border:1px solid var(--line2);background:var(--panel)}
 .scard p{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
@@ -444,7 +456,7 @@ const S = {
   port: local.get('apiPort', DEFAULT_API_PORT),
   sel: 'k0', test: true, pressed: null, flip: false,
   drag: null, over: null, q: '', closed: {}, pluginSel: null, json: false,
-  pluginTab: 'installed', store: null, pbusy: null, gh: '', gset: null, popts: {},
+  pluginTab: 'installed', store: null, pbusy: null, gh: '', gset: null, popts: {}, pstatus: {},
   ob: { step: 0, copied: false, placed: false },
   menu: null, popover: null, modal: null,
   autostart: false,
@@ -616,6 +628,7 @@ function onEvent(ev) {
       for (const k of Object.keys(S.popts)) if (k.startsWith(ev.plugin + '|') && S.popts[k].error) delete S.popts[k];
       if (S.route === 'editor') { const s = slot(S.sel); if (s && s.plugin === ev.plugin) loadGlobalSettings(ev.plugin); }
       if (S.gset && S.gset.plugin === ev.plugin && !gpatch[ev.plugin] && S.route === 'plugins') loadGlobalSettings(ev.plugin);
+      else if (S.route === 'plugins') loadPluginStatuses();
       break;
     case 'lagged': refresh(); break;
   }
@@ -873,22 +886,31 @@ const shown = (f, schema, vals) => !f.showIf || Object.entries(f.showIf).every((
 });
 
 // Auswahlliste, deren Einträge das Plugin liefert (schema: source, dependsOn).
+// Suchfeld mit Autovervollständigung; die Einträge liefert das Plugin bzw. der Dienst.
+// Tippen filtert (auch mitten im Namen), Auswahl übernimmt den Wert des Eintrags.
+let comboSeq = 0;
 function sourceSelectHTML(plugin, f, vals, at, texts = {}) {
   const k = plugin + '|' + f.source + '|' + (f.dependsOn || []).map((d) => vals[d] ?? '').join('|');
   const st = S.popts[k];
   if (!st) loadOptions(plugin, f, vals, k);
   const v = vals[f.key] ?? '';
   const missingDep = (f.dependsOn || []).some((d) => !vals[d]);
-  let opts = st && st.options ? st.options : [];
-  const custom = v && !opts.some(([val]) => String(val) === String(v));
-  if (custom) opts = [[v, texts.custom || ((st && st.loading) || !st ? 'Lade …' : `${v} (nicht gefunden)`)], ...opts];
-  const placeholder = missingDep ? 'Erst oben auswählen …' : !st || st.loading ? 'Lade …' : opts.length ? (texts.choose || 'Bitte wählen …') : 'Keine Einträge';
-  const select = `<span class="fieldrow"><select class="field" ${at} ${missingDep && !v ? 'disabled' : ''}>
-      <option value="" ${v ? '' : 'selected'} disabled>${esc(placeholder)}</option>
-      ${opts.map(([val, l]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}
-    </select><button type="button" class="btn icon" data-act="reloadOptions" data-arg="${esc(k)}" aria-label="Liste neu laden" title="Liste neu laden">${ic('refresh', 16)}</button></span>`;
+  const opts = st && st.options ? st.options : [];
+  const hit = opts.find(([val]) => String(val) === String(v));
+  const shown = hit ? hit[1] : v && !texts.custom ? String(v) : '';
+  const placeholder = missingDep ? 'Erst oben auswählen …' : !st || st.loading ? 'Lade …'
+    : !opts.length ? 'Keine Einträge' : v && !hit && texts.custom ? texts.custom : (texts.choose || 'Tippen zum Suchen …');
+  const id = 'dl' + (++comboSeq);
+  const input = `<span class="fieldrow"><span class="combo">${ic('search', 16)}<input class="field" list="${id}" data-in="combo"
+      data-key="${esc(f.key)}" data-type="${esc(texts.type || 'select')}" data-src="${esc(k)}" value="${esc(shown)}"
+      placeholder="${esc(placeholder)}" autocomplete="off" spellcheck="false" ${missingDep && !v ? 'disabled' : ''}
+      title="${opts.length} Einträge – tippen zum Filtern"></span>
+    <datalist id="${id}">${opts.map(([, l]) => `<option value="${esc(l)}"></option>`).join('')}</datalist>
+    <button type="button" class="btn icon" data-act="reloadOptions" data-arg="${esc(k)}" aria-label="Liste neu laden" title="Liste neu laden">${ic('refresh', 16)}</button></span>`;
   const err = st && st.error ? `<span class="help" style="color:var(--err-text)">${esc(st.error)}</span>` : '';
-  return select + err;
+  const missing = v && st && st.options && !hit && !texts.custom && !st.loading
+    ? `<span class="help" style="color:var(--warn)">Aktueller Wert „${esc(v)}“ ist nicht (mehr) in der Liste.</span>` : '';
+  return input + err + missing;
 }
 async function loadOptions(plugin, f, vals, k) {
   if ((f.dependsOn || []).some((d) => !vals[d])) { S.popts[k] = { options: [] }; return; }
@@ -939,8 +961,8 @@ function schemaFormHTML(s, schema) {
       }
       case 'file':
         // Optional: Auswahlliste (z. B. installierte Programme) über dem Pfadfeld.
-        input = (f.source ? sourceSelectHTML(s.plugin, f, s.settings, `data-in="sfield" data-key="${esc(f.key)}" data-type="pick"`,
-          { choose: 'Installiertes Programm wählen …', custom: 'Eigener Pfad (siehe unten)' }) : '') + `<span class="fieldrow"><input class="field mono" ${at} value="${esc(v)}" ${ph} spellcheck="false">${desktop
+        input = (f.source ? sourceSelectHTML(s.plugin, f, s.settings, '',
+          { type: 'pick', choose: 'Installiertes Programm suchen …', custom: 'Eigener Pfad (siehe unten) – oder Programm suchen …' }) : '') + `<span class="fieldrow"><input class="field mono" ${at} value="${esc(v)}" ${ph} spellcheck="false">${desktop
           ? `<button type="button" class="btn" data-act="browseFile" data-arg="${esc(f.key)}">${ic('folder', 16)}Durchsuchen …</button>` : ''}</span>`;
         break;
       case 'textarea':
@@ -1111,8 +1133,11 @@ function globalSettingsHTML(p) {
     const at = `data-in="gfield" data-key="${esc(f.key)}"`;
     const help = f.help ? `<span class="help">${esc(f.help)}</span>` : '';
     switch (f.type) {
-      case 'info':
-        return v ? `<div class="ginfo"><span>${esc(f.label)}</span><b>${esc(v)}</b></div>` : '';
+      case 'info': {
+        if (!v) return '';
+        const k = statusKind(v);
+        return `<div class="ginfo ${k}"><span>${esc(f.label)}${f.key === 'status' ? statusBadge(v) : ''}</span><b>${esc(v)}</b></div>`;
+      }
       case 'link':
         return `<a class="btn ghost" href="${esc(f.url)}" target="_blank" rel="noopener">${ic('external', 16)}${esc(f.label)}</a>`;
       case 'button':
@@ -1130,17 +1155,36 @@ function globalSettingsHTML(p) {
   return `<section class="gset"><h3>Einstellungen</h3>${fields}</section>`;
 }
 async function loadGlobalSettings(plugin) {
-  if (S.gsetLoading === plugin) return;
+  // Läuft schon ein Abruf, danach noch einmal laden – sonst ginge eine neuere Änderung (z. B. „Verbunden“) verloren.
+  if (S.gsetLoading === plugin) { S.gsetAgain = plugin; return; }
   S.gsetLoading = plugin;
-  try { S.gset = { plugin, values: await api.call('getGlobalSettings', { plugin }) }; }
-  catch { S.gset = { plugin, values: {} }; }
+  try {
+    const values = await api.call('getGlobalSettings', { plugin });
+    S.gset = { plugin, values };
+    S.pstatus[plugin] = values.status || '';
+  } catch { S.gset = { plugin, values: {} }; }
   S.gsetLoading = null;
+  if (S.gsetAgain === plugin) { S.gsetAgain = null; return loadGlobalSettings(plugin); }
   renderKeepingFocus();
+}
+// Verbindungsstatus eines Plugins einordnen: ok / busy / err.
+const statusKind = (t) => /^verbunden/i.test(t || '') ? 'ok' : /^verbinde|…$/i.test(t || '') ? 'busy' : t ? 'err' : '';
+const statusBadge = (t) => {
+  const k = statusKind(t); if (!k) return '';
+  const label = k === 'ok' ? 'Verbunden' : k === 'busy' ? 'Verbinde …' : 'Nicht verbunden';
+  return `<span class="cstate ${k}"><span class="dot"></span>${label}</span>`;
+};
+// Status aller Plugins mit eigenen Einstellungen (für die Karten auf der Plugins-Seite).
+async function loadPluginStatuses() {
+  for (const p of S.catalog.filter((x) => x.globalSettingsSchema && x.connected)) {
+    try { S.pstatus[p.uuid] = (await api.call('getGlobalSettings', { plugin: p.uuid })).status || ''; } catch { /* egal */ }
+  }
+  if (S.route === 'plugins') renderKeepingFocus();
 }
 const gpatch = {};
 const sendGlobal = debounce((plugin) => {
   const settings = gpatch[plugin]; delete gpatch[plugin];
-  if (settings) api.run('setGlobalSettings', { plugin, settings }).catch(() => {});
+  if (settings) api.run('setGlobalSettings', { plugin, settings }).then(() => loadGlobalSettings(plugin)).catch(() => {});
 }, 500);
 function setGlobal(key, value) {
   const plugin = S.gset.plugin;
@@ -1180,7 +1224,7 @@ function pluginsHTML() {
           ${ptile(p, 44, 22, 12)}
           <span style="display:flex;flex-direction:column;gap:3px;min-width:0"><b style="font-size:16px;font-weight:600">${esc(p.name)}</b><span style="font-size:13px;color:var(--muted)">${esc(p.author || '–')} · v${esc(p.version || '?')}</span></span>
         </span>
-        <span style="display:flex;align-items:center;gap:8px;width:100%;font-size:13px">${stateEl(p)}<span style="color:var(--muted)">${n} ${n === 1 ? 'Aktion' : 'Aktionen'}</span>${updChip(p)}<span class="chip" style="margin-left:auto;font-size:11px;padding:2px 8px">${esc(p.category)}</span></span>
+        <span style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;font-size:13px">${stateEl(p)}${p.globalSettingsSchema && p.connected ? statusBadge(S.pstatus[p.uuid]) : ''}<span style="color:var(--muted);white-space:nowrap">${n} ${n === 1 ? 'Aktion' : 'Aktionen'}</span>${updChip(p)}<span class="chip" style="margin-left:auto;font-size:11px;padding:2px 8px">${esc(p.category)}</span></span>
       </button>`;
     }).join('')}</div>
     <p style="margin:0;font-size:13px;color:var(--faint)">Plugin-Datei (<span class="mono">.streamDeckPlugin</span> oder <span class="mono">.zip</span>) hierher ziehen oder über „Aus Datei …“ wählen. Installierte Plugins liegen in <span class="mono" style="color:var(--muted)">${esc(pluginsDir())}</span>.</p>`;
@@ -1596,7 +1640,7 @@ function installPluginFile(file) {
 }
 
 const ACTS = {
-  nav(arg) { S.route = arg; S.popover = null; if (arg === 'plugins' && !S.store) loadStore(false); render(); scrollTo(0, 0); },
+  nav(arg) { S.route = arg; S.popover = null; if (arg === 'plugins') { if (!S.store) loadStore(false); loadPluginStatuses(); } render(); scrollTo(0, 0); },
   popover(arg) { S.popover = S.popover === arg ? null : arg; render(); },
   device(arg) { S.devId = arg; local.set('device', arg); S.popover = null; S.sel = 'k0'; render(); },
   startVirtual() { S.popover = null; startVirtual(); },
@@ -1680,6 +1724,10 @@ const ACTS = {
   gbutton(key) {
     if (!S.gset) return;
     S.gset.values[key] = Date.now();
+    // Sofort sichtbar machen, dass etwas passiert; das Plugin meldet gleich das Ergebnis.
+    const p = S.catalog.find((x) => x.uuid === S.gset.plugin);
+    const f = p && (p.globalSettingsSchema || []).find((x) => x.key === key);
+    if (f && f.primary && 'status' in S.gset.values) { S.gset.values.status = 'Verbinde …'; S.pstatus[p.uuid] = 'Verbinde …'; renderKeepingFocus(); }
     api.run('setGlobalSettings', { plugin: S.gset.plugin, settings: { [key]: S.gset.values[key] } }).catch(() => {});
   },
   async installFile() {
@@ -1778,6 +1826,15 @@ document.addEventListener('contextmenu', (e) => {
   render();
 });
 
+// Einstellung der gewählten Belegung ändern; abhängige Felder bei Bedarf neu zeichnen.
+function setSlotSetting(key, v, type, always) {
+  const s = slot(S.sel); if (!s) return;
+  s.settings = { ...s.settings, [key]: v }; renderStage(); sendSettings(S.sel, s.settings);
+  const f = findAction(s.plugin, s.action);
+  const schema = (f && f.a.settingsSchema) || [];
+  if (always || type === 'pick' || schema.some((x) => (x.dependsOn || []).includes(key) || (x.showIf && key in x.showIf))) render();
+}
+
 document.addEventListener('input', (e) => {
   const t = e.target; const k = t.dataset.in; if (!k) return;
   const d = cur();
@@ -1787,13 +1844,17 @@ document.addEventListener('input', (e) => {
   else if (k === 'brightness' && d) { d.brightness = clamp(+t.value, 0, 100); syncBrightness(t); sendBrightness(d.brightness); }
   else if (k === 'title') { const s = slot(S.sel); if (!s) return; s.title = t.value || null; renderStage(); sendAppearance(S.sel, s); }
   else if (k === 'sfield' && t.dataset.type !== 'shortcut') {
-    const s = slot(S.sel); if (!s) return;
     let v = t.value;
     if (t.dataset.type === 'number') { if (v.trim() === '' || isNaN(+v)) return; v = +v; }
-    s.settings = { ...s.settings, [t.dataset.key]: v }; renderStage(); sendSettings(S.sel, s.settings);
-    const f = findAction(s.plugin, s.action);
-    const schema = (f && f.a.settingsSchema) || [];
-    if (t.dataset.type === 'pick' || schema.some((x) => (x.dependsOn || []).includes(t.dataset.key) || (x.showIf && t.dataset.key in x.showIf))) render();
+    setSlotSetting(t.dataset.key, v, t.dataset.type);
+  }
+  else if (k === 'combo') {
+    // Erst übernehmen, wenn der Text genau einem Eintrag entspricht (Auswahl aus der Liste).
+    const opts = (S.popts[t.dataset.src] || {}).options || [];
+    const typed = t.value.trim();
+    const hit = opts.find(([, l]) => l === typed) || opts.find(([val]) => String(val) === typed);
+    if (hit) setSlotSetting(t.dataset.key, hit[0], t.dataset.type, true);
+    else if (typed === '' && t.dataset.type !== 'pick') setSlotSetting(t.dataset.key, '', t.dataset.type);
   }
   else if (k === 'setting') {
     const s = slot(S.sel); if (!s) return;
@@ -1805,6 +1866,8 @@ document.addEventListener('input', (e) => {
   }
 });
 document.addEventListener('change', (e) => {
+  // Suchfeld verlassen, ohne einen Eintrag zu wählen: wieder den aktuellen Wert zeigen.
+  if (e.target.dataset && e.target.dataset.in === 'combo') { render(); return; }
   const t = e.target; const k = t.dataset.in;
   if (k === 'profile') switchProfile(t.value).catch(() => render());
   if (k === 'profileTarget') { const s = slot(S.sel); if (!s) return; s.settings = { ...s.settings, profile: t.value }; renderStage(); sendSettings(S.sel, s.settings); }

@@ -149,6 +149,10 @@ impl Plugin {
         {
             self.disconnect();
             self.start_connect();
+            // Explicit (re)connect: show that something happens.
+            if self.connecting {
+                self.set_status("Verbinde mit OBS …");
+            }
         }
     }
 
