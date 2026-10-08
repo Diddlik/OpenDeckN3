@@ -47,7 +47,9 @@ Der Workflow [`windows.yml`](.github/workflows/windows.yml) baut bei jedem Push 
    „Weitere Informationen“ → „Trotzdem ausführen“). Alternativ das portable ZIP nutzen.
 4. Startmenü → **OpenDeckN3** (mit Gerät) oder **OpenDeckN3 (ohne Hardware testen)** – der Browser öffnet die Oberfläche.
 
-Bei einem Tag `v*` (z. B. `git tag v0.1.0 && git push --tags`) wird zusätzlich ein GitHub-Release mit Installer und ZIP erstellt.
+**Release erstellen:** *Actions → Windows-Installer → Run workflow* mit `release_tag` (z. B. `v0.1.0-alpha.2`) starten –
+GitHub legt Tag und Release mit Installer und ZIP an. Tags mit Bindestrich (`-alpha`, `-beta`) werden als Pre-release markiert.
+Ein lokal gepushtes Tag `v*` funktioniert ebenso. Fertige Versionen: [Releases](https://github.com/Diddlik/OpenDeckN3/releases).
 
 Hinweise: Profile liegen in `%APPDATA%\opendeckn3`. Das Beispiel-Plugin braucht Node.js ≥ 22. Die Hersteller-Software
 des N3 sollte nicht gleichzeitig laufen. Ein zweiter Start öffnet nur die Oberfläche der laufenden Instanz.
