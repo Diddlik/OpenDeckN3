@@ -27,9 +27,9 @@ struct Args {
     /// Configuration directory (profiles, settings). Default: ~/.config/opendeckn3
     #[arg(long)]
     config_dir: Option<PathBuf>,
-    /// Directory with installed plugins. Default: <config-dir>/plugins
-    #[arg(long)]
-    plugins_dir: Option<PathBuf>,
+    /// Additional plugin directory (repeatable). `<config-dir>/plugins` is always scanned.
+    #[arg(long = "plugins-dir", value_name = "DIR")]
+    plugins_dirs: Vec<PathBuf>,
     /// Port of the plugin WebSocket (Stream Deck SDK protocol).
     #[arg(long, default_value_t = 57130)]
     plugin_port: u16,
@@ -45,6 +45,10 @@ struct Args {
     /// Additional browser origin allowed to use the UI API (e.g. a dev server).
     #[arg(long = "allow-origin", value_name = "ORIGIN")]
     allow_origins: Vec<String>,
+    /// Open the web UI in the default browser once the service is ready.
+    /// If the service is already running, only the browser is opened.
+    #[arg(long)]
+    open: bool,
     /// Add a virtual N3 for development without hardware.
     #[arg(long = "virtual")]
     virtual_device: bool,
@@ -68,11 +72,25 @@ async fn main() -> anyhow::Result<()> {
             .context("no config directory on this platform")?
             .join("opendeckn3"),
     };
-    let plugins_dir = args
-        .plugins_dir
-        .unwrap_or_else(|| config_dir.join("plugins"));
-    std::fs::create_dir_all(&plugins_dir)?;
-    tracing::info!(config = %config_dir.display(), plugins = %plugins_dir.display(), "starting");
+    let ui_url = format!("http://127.0.0.1:{}/", args.ui_port);
+
+    // Single instance: a second start (e.g. via the Start menu) just opens the UI.
+    if std::net::TcpListener::bind(("127.0.0.1", args.api_port)).is_err() {
+        if args.open {
+            tracing::info!("service already running, opening UI");
+            return app::open_url(&ui_url);
+        }
+        anyhow::bail!(
+            "port {} is in use – is opendeckn3d already running?",
+            args.api_port
+        );
+    }
+
+    let default_plugins_dir = config_dir.join("plugins");
+    std::fs::create_dir_all(&default_plugins_dir)?;
+    let mut plugins_dirs = vec![default_plugins_dir];
+    plugins_dirs.extend(args.plugins_dirs.iter().cloned());
+    tracing::info!(config = %config_dir.display(), ?plugins_dirs, "starting");
 
     let token = CancellationToken::new();
     let (device_tx, mut device_rx) = mpsc::channel(256);
@@ -81,7 +99,11 @@ async fn main() -> anyhow::Result<()> {
     let (ui_tx, _) = broadcast::channel(256);
 
     let plugins = PluginHost::start(args.plugin_port, plugin_tx).await?;
-    plugins.discover(&plugins_dir).await?;
+    for dir in &plugins_dirs {
+        if let Err(err) = plugins.discover(dir).await {
+            tracing::warn!(dir = %dir.display(), %err, "cannot read plugin directory");
+        }
+    }
     let mut app = app::App::new(
         store::Store::new(&config_dir),
         plugins.clone(),
@@ -126,6 +148,17 @@ async fn main() -> anyhow::Result<()> {
         ));
     }
     drop(device_tx);
+
+    if !args.no_ui {
+        println!(
+            "\n  OpenDeckN3 läuft – Oberfläche: {ui_url}\n  Beenden: Strg+C oder dieses Fenster schließen.\n"
+        );
+        if args.open
+            && let Err(err) = app::open_url(&ui_url)
+        {
+            tracing::warn!(%err, "cannot open browser");
+        }
+    }
 
     plugins
         .launch_all(&json!({

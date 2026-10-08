@@ -32,8 +32,25 @@ crates/
 plugins/examples/  Beispiel-Plugin „Zähler“ (Node, ohne Abhängigkeiten)
 tools/smoke-test.mjs  End-to-End-Test gegen den laufenden Dienst
 udev/          Linux-Regeln für Gerätezugriff
+installer/     Windows-Installer (Inno Setup)
+assets/        App-Icon (erzeugt mit tools/make-icon.py)
 ui/            Weboberfläche (vom Dienst ausgeliefert) + Claude-Design-Prototyp
 ```
+
+## Windows: Installer
+
+Der Workflow [`windows.yml`](.github/workflows/windows.yml) baut bei jedem Push auf `main`/`claude/**` einen Installer:
+
+1. Auf GitHub unter **Actions → Windows-Installer** den neuesten Lauf öffnen.
+2. Unten bei **Artifacts** `OpenDeckN3-…-windows-x64` herunterladen und entpacken.
+3. `OpenDeckN3-…-setup.exe` ausführen (keine Admin-Rechte nötig; SmartScreen-Warnung, da unsigniert:
+   „Weitere Informationen“ → „Trotzdem ausführen“). Alternativ das portable ZIP nutzen.
+4. Startmenü → **OpenDeckN3** (mit Gerät) oder **OpenDeckN3 (ohne Hardware testen)** – der Browser öffnet die Oberfläche.
+
+Bei einem Tag `v*` (z. B. `git tag v0.1.0 && git push --tags`) wird zusätzlich ein GitHub-Release mit Installer und ZIP erstellt.
+
+Hinweise: Profile liegen in `%APPDATA%\opendeckn3`. Das Beispiel-Plugin braucht Node.js ≥ 22. Die Hersteller-Software
+des N3 sollte nicht gleichzeitig laufen. Ein zweiter Start öffnet nur die Oberfläche der laufenden Instanz.
 
 ## Schnellstart
 
@@ -61,7 +78,7 @@ cargo run -p n3-daemon -- --virtual --no-hardware --plugins-dir plugins/examples
 node tools/smoke-test.mjs
 ```
 
-Optionen: `opendeckn3d --help` (`--config-dir`, `--plugins-dir`, `--plugin-port`, `--api-port`, `--ui-port`, `--no-ui`, `--allow-origin`, `--virtual`, `--no-hardware`).
+Optionen: `opendeckn3d --help` (`--config-dir`, `--plugins-dir` (zusätzlich zu `<config>/plugins`), `--open`, `--plugin-port`, `--api-port`, `--ui-port`, `--no-ui`, `--allow-origin`, `--virtual`, `--no-hardware`).
 Log-Level über `RUST_LOG`, z. B. `RUST_LOG=debug` oder `RUST_LOG=n3_driver=trace`.
 
 ## Lizenz

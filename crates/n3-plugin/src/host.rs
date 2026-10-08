@@ -105,7 +105,8 @@ impl PluginHost {
             return Ok(());
         }
         // Absolute paths, because plugins run with their own dir as cwd.
-        let dir = dir.canonicalize()?;
+        // (`absolute` instead of `canonicalize`: no `\\?\` prefix on Windows.)
+        let dir = std::path::absolute(dir)?;
         let mut plugins = self.inner.plugins.write().await;
         for entry in std::fs::read_dir(&dir)? {
             let path = entry?.path();

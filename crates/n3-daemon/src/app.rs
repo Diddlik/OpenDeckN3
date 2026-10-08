@@ -754,7 +754,7 @@ impl App {
 }
 
 /// Opens an http(s) URL with the platform's default handler.
-fn open_url(url: &str) -> anyhow::Result<()> {
+pub fn open_url(url: &str) -> anyhow::Result<()> {
     anyhow::ensure!(
         url.starts_with("https://") || url.starts_with("http://"),
         "refusing to open non-http url"
