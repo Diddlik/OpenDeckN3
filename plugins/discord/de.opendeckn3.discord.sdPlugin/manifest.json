@@ -1,0 +1,538 @@
+{
+  "UUID": "de.opendeckn3.discord",
+  "Name": "Discord",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Steuert die Discord-App: Mikro und Kopfhörer stumm, Kanäle, Lautstärken, Soundboard, Kamera, Bildschirmfreigabe. Verbinden mit einem Klick unter „Einstellungen“ – Server, Kanäle, Personen und Sounds zum Auswählen.",
+  "Category": "Discord",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-discord.exe",
+  "CodePathLin": "opendeckn3-discord",
+  "CodePathMac": "opendeckn3-discord",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    },
+    {
+      "Platform": "mac"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "button",
+      "key": "connect",
+      "label": "Mit Discord verbinden",
+      "primary": true,
+      "help": "Discord-Desktop-App muss laufen – dort einmal „Autorisieren“ klicken."
+    },
+    {
+      "type": "select",
+      "key": "authMode",
+      "label": "Anmeldung",
+      "default": "quick",
+      "options": [
+        [
+          "quick",
+          "Schnell (OpenDeckN3-Anwendung)"
+        ],
+        [
+          "manual",
+          "Eigene Discord-Anwendung"
+        ]
+      ],
+      "help": "Schnell: ein Klick, für eingetragene Tester der OpenDeckN3-Anwendung. Eigene Anwendung: funktioniert immer, einmalig ca. 3 Minuten Einrichtung."
+    },
+    {
+      "type": "link",
+      "label": "Discord Developer Portal öffnen",
+      "url": "https://discord.com/developers/applications",
+      "showIf": {
+        "authMode": "manual"
+      }
+    },
+    {
+      "type": "text",
+      "key": "clientId",
+      "label": "Client-ID",
+      "help": "Developer Portal → deine Anwendung → OAuth2 → Client ID.",
+      "showIf": {
+        "authMode": "manual"
+      }
+    },
+    {
+      "type": "password",
+      "key": "clientSecret",
+      "label": "Client-Secret (optional)",
+      "help": "Nicht nötig, wenn in der Anwendung „Public Client“ eingeschaltet ist. Wird nur lokal gespeichert.",
+      "showIf": {
+        "authMode": "manual"
+      }
+    },
+    {
+      "type": "text",
+      "key": "redirectUri",
+      "label": "Redirect-URI",
+      "default": "http://localhost",
+      "help": "Muss unter OAuth2 → Redirects eingetragen sein.",
+      "showIf": {
+        "authMode": "manual"
+      }
+    },
+    {
+      "type": "button",
+      "key": "signOut",
+      "label": "Abmelden"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.discord.mute",
+      "Name": "Mikrofon stummschalten",
+      "Tooltip": "Mikrofon in Discord stumm/an",
+      "Icon": "imgs/mic",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/mic"
+        },
+        {
+          "Image": "imgs/mic-off"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "toggle",
+              "Umschalten"
+            ],
+            [
+              "on",
+              "Ein"
+            ],
+            [
+              "off",
+              "Aus"
+            ]
+          ],
+          "default": "toggle"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.deafen",
+      "Name": "Kopfhörer stummschalten",
+      "Tooltip": "Ton in Discord aus/an (Kopfhörer)",
+      "Icon": "imgs/headphones",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/headphones"
+        },
+        {
+          "Image": "imgs/headphones-off"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "toggle",
+              "Umschalten"
+            ],
+            [
+              "on",
+              "Ein"
+            ],
+            [
+              "off",
+              "Aus"
+            ]
+          ],
+          "default": "toggle"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.voicechannel",
+      "Name": "Sprachkanal",
+      "Tooltip": "Sprachkanal betreten oder verlassen",
+      "Icon": "imgs/voice",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/voice"
+        },
+        {
+          "Image": "imgs/voice-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "guild",
+          "label": "Server",
+          "source": "guilds"
+        },
+        {
+          "type": "select",
+          "key": "channel",
+          "label": "Sprachkanal",
+          "source": "voiceChannels",
+          "dependsOn": [
+            "guild"
+          ]
+        },
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "toggle",
+              "Betreten/Verlassen"
+            ],
+            [
+              "join",
+              "Betreten"
+            ],
+            [
+              "leave",
+              "Verlassen"
+            ]
+          ],
+          "default": "toggle"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.textchannel",
+      "Name": "Textkanal",
+      "Tooltip": "Textkanal in Discord öffnen",
+      "Icon": "imgs/text",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/text"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "guild",
+          "label": "Server",
+          "source": "guilds"
+        },
+        {
+          "type": "select",
+          "key": "channel",
+          "label": "Textkanal",
+          "source": "textChannels",
+          "dependsOn": [
+            "guild"
+          ]
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.notifications",
+      "Name": "Benachrichtigung",
+      "Tooltip": "Zeigt neue Discord-Benachrichtigungen; Drücken setzt den Zähler zurück",
+      "Icon": "imgs/bell",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/bell"
+        },
+        {
+          "Image": "imgs/bell-dot"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.uservolume",
+      "Name": "Benutzer-Lautstärkeregelung",
+      "Tooltip": "Lautstärke einer Person im Sprachkanal · Drehregler: drehen = Lautstärke, drücken = stumm",
+      "Icon": "imgs/user-volume",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/user-volume"
+        },
+        {
+          "Image": "imgs/user-volume-off"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "user",
+          "label": "Person",
+          "source": "users",
+          "help": "Zeigt die Personen in deinem aktuellen Sprachkanal."
+        },
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "mute",
+              "Stumm an/aus"
+            ],
+            [
+              "up",
+              "Lauter"
+            ],
+            [
+              "down",
+              "Leiser"
+            ]
+          ],
+          "default": "mute",
+          "controllers": [
+            "Keypad"
+          ]
+        },
+        {
+          "type": "number",
+          "key": "step",
+          "label": "Schritt (%)",
+          "default": 10,
+          "min": 1,
+          "max": 50,
+          "help": "Pro Druck bzw. Raste"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.volume",
+      "Name": "Lautstärkeregelung",
+      "Tooltip": "Mikrofon- oder Ausgabelautstärke · Drehregler: drehen = Lautstärke, drücken = stumm",
+      "Icon": "imgs/volume",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/volume"
+        },
+        {
+          "Image": "imgs/volume-off"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "target",
+          "label": "Gerät",
+          "options": [
+            [
+              "output",
+              "Ausgabe (Lautsprecher/Kopfhörer)"
+            ],
+            [
+              "input",
+              "Eingabe (Mikrofon)"
+            ]
+          ],
+          "default": "output"
+        },
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "mute",
+              "Stumm an/aus"
+            ],
+            [
+              "up",
+              "Lauter"
+            ],
+            [
+              "down",
+              "Leiser"
+            ]
+          ],
+          "default": "mute",
+          "controllers": [
+            "Keypad"
+          ]
+        },
+        {
+          "type": "number",
+          "key": "step",
+          "label": "Schritt (%)",
+          "default": 5,
+          "min": 1,
+          "max": 50,
+          "help": "Pro Druck bzw. Raste"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.soundboard",
+      "Name": "Sprachboard",
+      "Tooltip": "Spielt einen Soundboard-Sound im Sprachkanal ab",
+      "Icon": "imgs/soundboard",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/soundboard"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "sound",
+          "label": "Sound",
+          "source": "sounds"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.audiodevice",
+      "Name": "Audiogerät einstellen",
+      "Tooltip": "Wechselt das Eingabe- oder Ausgabegerät in Discord",
+      "Icon": "imgs/audiodevice",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/audiodevice"
+        },
+        {
+          "Image": "imgs/audiodevice-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "target",
+          "label": "Art",
+          "options": [
+            [
+              "input",
+              "Eingabe (Mikrofon)"
+            ],
+            [
+              "output",
+              "Ausgabe (Lautsprecher/Kopfhörer)"
+            ]
+          ],
+          "default": "input"
+        },
+        {
+          "type": "select",
+          "key": "device",
+          "label": "Gerät",
+          "source": "devices",
+          "dependsOn": [
+            "target"
+          ]
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.camera",
+      "Name": "Kamera ein-/ausschalten",
+      "Tooltip": "Kamera im Sprachkanal ein/aus",
+      "Icon": "imgs/camera",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/camera-off"
+        },
+        {
+          "Image": "imgs/camera"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.screenshare",
+      "Name": "Bildschirmfreigabe ein-/ausschalten",
+      "Tooltip": "Bildschirmfreigabe starten/beenden",
+      "Icon": "imgs/screen",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/screen"
+        },
+        {
+          "Image": "imgs/screen-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.pushtotalk",
+      "Name": "Drücken zum Sprechen",
+      "Tooltip": "Solange gedrückt: Mikrofon an, danach wieder stumm",
+      "Icon": "imgs/ptt",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/ptt"
+        },
+        {
+          "Image": "imgs/ptt-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.voicemode",
+      "Name": "Sprachaktivierung umschalten",
+      "Tooltip": "Wechselt zwischen Sprachaktivierung und Push-to-Talk",
+      "Icon": "imgs/voicemode",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/voicemode"
+        },
+        {
+          "Image": "imgs/voicemode-ptt"
+        }
+      ]
+    }
+  ]
+}

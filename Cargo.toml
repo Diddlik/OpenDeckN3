@@ -6,6 +6,7 @@ members = [
     "crates/n3-plugin",
     "crates/n3-daemon",
     "crates/n3-desktop",
+    "plugins/discord",
 ]
 # The desktop app needs the platform webview (WebView2 / WebKitGTK) to build,
 # so plain `cargo build`/`cargo test` skip it. Build it with `-p n3-desktop`.
@@ -14,6 +15,7 @@ default-members = [
     "crates/n3-driver",
     "crates/n3-plugin",
     "crates/n3-daemon",
+    "plugins/discord",
 ]
 
 [workspace.package]

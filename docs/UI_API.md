@@ -132,6 +132,9 @@ type InputEvent =
 | `installPlugin` | genau eins von `path` (lokale Datei), `data` (Base64 oder Data-URL der Datei), `repo` (GitHub `besitzer/name` oder Link, optional `asset`) | `{ plugin, name, version, previousVersion, started, startError, source }` – entpackt `.streamDeckPlugin`/`.zip`, ersetzt eine ältere Version, startet das Plugin |
 | `uninstallPlugin` | `plugin` | `{ plugin }` – nur installierte, nicht mitgelieferte Plugins; Belegungen bleiben im Profil |
 | `pluginStore` | `refresh?` (Cache von 10 min umgehen) | `{ plugins: StoreEntry[], registries: string[], errors: string[] }` |
+| `getGlobalSettings` | `plugin` | globale Einstellungen des Plugins (Objekt) |
+| `pluginRequest` | `plugin`, `payload` (z. B. `{ request: "guilds" }`) | Antwort des Plugins (`sendToPropertyInspector`), z. B. `{ options: [[wert, text], …] }`; Fehler, wenn das Plugin `error` liefert oder nicht läuft |
+| `setGlobalSettings` | `plugin`, `settings` | zusammengeführte Einstellungen – `settings` wird in die vorhandenen gemischt (vom Plugin gespeicherte Werte wie Tokens bleiben); Plugin erhält `didReceiveGlobalSettings` |
 
 Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.
 
@@ -150,12 +153,14 @@ Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.
 | `feedback` | `device`, `controller`, `position` | Plugin meldet OK/Fehler (Animation) |
 | `pluginStatus` | `plugin`, `connected` | Plugin-Status im Katalog |
 | `pluginsChanged` | `plugin` | Plugin installiert/aktualisiert/entfernt → `getCatalog` neu laden |
+| `globalSettingsChanged` | `plugin` | globale Plugin-Einstellungen geändert (z. B. Verbindungsstatus) → `getGlobalSettings` |
 | `actionError` | `device`, `controller`, `position`, `message` | Eingebaute Aktion fehlgeschlagen (z. B. ungültiges Tastenkürzel, Programm nicht gefunden) → Fehlermeldung zeigen |
 | `lagged` | `missed` | Client war zu langsam → `getState` neu laden |
 
 ## Plugins installieren
 
-`CatalogPlugin` enthält zusätzlich `description` und `removable` (`true` = im Plugin-Verzeichnis des Benutzers installiert,
+`CatalogPlugin` enthält zusätzlich `description`, `globalSettingsSchema` (Formular für `setGlobalSettings`, siehe
+PLUGIN_API.md) und `removable` (`true` = im Plugin-Verzeichnis des Benutzers installiert,
 `false` = mitgeliefert, z. B. das Beispiel-Plugin der Desktop-App).
 
 ```ts

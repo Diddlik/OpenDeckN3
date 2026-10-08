@@ -174,6 +174,10 @@ pub async fn run(opts: Options, shutdown: CancellationToken) -> anyhow::Result<(
                     installer.spawn(command, reply);
                     continue;
                 }
+                if let api::ApiCommand::PluginRequest { plugin, payload } = command {
+                    app.plugin_request(plugin, payload, reply).await;
+                    continue;
+                }
                 let result = app.on_api_command(command).await.map_err(|e| format!("{e:#}"));
                 reply.send(result).ok();
             }

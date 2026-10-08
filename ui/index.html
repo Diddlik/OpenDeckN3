@@ -206,6 +206,11 @@ section.danger h3{color:var(--err)!important}
 .page{flex:1;display:flex;flex-wrap:wrap;align-items:stretch}
 .page-main{flex:999 1 560px;min-width:0;padding:32px;display:flex;flex-direction:column;gap:24px}
 .page h1{margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em}
+.pstatus{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--input);border:1px solid var(--line);font-size:13px;color:var(--muted)}
+.gset{display:flex;flex-direction:column;gap:12px}.gset h3{margin:0;font-size:13px;color:var(--muted);font-weight:600}
+.gset label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.gset .help{font-size:12px;color:var(--faint);line-height:1.45}
+.ginfo{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:var(--input);border:1px solid var(--line);font-size:12px;color:var(--muted)}.ginfo b{font-size:14px;color:var(--text);font-weight:500}
 .ghform{display:flex;gap:10px;flex-wrap:wrap}.ghform .field{flex:1 1 260px}
 .scard{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:16px;border:1px solid var(--line2);background:var(--panel)}
 .scard p{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
@@ -439,7 +444,7 @@ const S = {
   port: local.get('apiPort', DEFAULT_API_PORT),
   sel: 'k0', test: true, pressed: null, flip: false,
   drag: null, over: null, q: '', closed: {}, pluginSel: null, json: false,
-  pluginTab: 'installed', store: null, pbusy: null, gh: '',
+  pluginTab: 'installed', store: null, pbusy: null, gh: '', gset: null, popts: {},
   ob: { step: 0, copied: false, placed: false },
   menu: null, popover: null, modal: null,
   autostart: false,
@@ -601,6 +606,11 @@ function onEvent(ev) {
       break;
     }
     case 'pluginsChanged': refreshSoon(); break;
+    case 'globalSettingsChanged':
+      for (const k of Object.keys(S.popts)) if (k.startsWith(ev.plugin + '|') && S.popts[k].error) delete S.popts[k];
+      if (S.route === 'editor') { const s = slot(S.sel); if (s && s.plugin === ev.plugin) loadGlobalSettings(ev.plugin); }
+      if (S.gset && S.gset.plugin === ev.plugin && !gpatch[ev.plugin] && S.route === 'plugins') loadGlobalSettings(ev.plugin);
+      break;
     case 'lagged': refresh(); break;
   }
 }
@@ -850,10 +860,43 @@ function stageInner() {
 }
 
 // Formular aus dem settingsSchema einer Aktion (eingebaute Aktionen, künftig auch Plugins).
+// Feld nur zeigen, wenn alle Bedingungen in showIf erfüllt sind (Werte inkl. Standardwerten).
+const shown = (f, schema, vals) => !f.showIf || Object.entries(f.showIf).every(([k, want]) => {
+  const dflt = (schema.find((x) => x.key === k) || {}).default;
+  return String(vals[k] ?? dflt ?? '') === String(want);
+});
+
+// Auswahlliste, deren Einträge das Plugin liefert (schema: source, dependsOn).
+function sourceSelectHTML(plugin, f, vals, at) {
+  const k = plugin + '|' + f.source + '|' + (f.dependsOn || []).map((d) => vals[d] ?? '').join('|');
+  const st = S.popts[k];
+  if (!st) loadOptions(plugin, f, vals, k);
+  const v = vals[f.key] ?? '';
+  const missingDep = (f.dependsOn || []).some((d) => !vals[d]);
+  let opts = st && st.options ? st.options : [];
+  if (v && !opts.some(([val]) => String(val) === String(v))) opts = [[v, (st && st.loading) || !st ? 'Lade …' : `${v} (nicht gefunden)`], ...opts];
+  const placeholder = missingDep ? 'Erst oben auswählen …' : !st || st.loading ? 'Lade …' : opts.length ? 'Bitte wählen …' : 'Keine Einträge';
+  const select = `<span class="fieldrow"><select class="field" ${at} ${missingDep && !v ? 'disabled' : ''}>
+      <option value="" ${v ? '' : 'selected'} disabled>${esc(placeholder)}</option>
+      ${opts.map(([val, l]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}
+    </select><button type="button" class="btn icon" data-act="reloadOptions" data-arg="${esc(k)}" aria-label="Liste neu laden" title="Liste neu laden">${ic('refresh', 16)}</button></span>`;
+  const err = st && st.error ? `<span class="help" style="color:var(--err-text)">${esc(st.error)}</span>` : '';
+  return select + err;
+}
+async function loadOptions(plugin, f, vals, k) {
+  if ((f.dependsOn || []).some((d) => !vals[d])) { S.popts[k] = { options: [] }; return; }
+  S.popts[k] = { loading: true };
+  const payload = { request: f.source };
+  for (const d of f.dependsOn || []) payload[d] = vals[d];
+  try { const r = await api.call('pluginRequest', { plugin, payload }); S.popts[k] = { options: r.options || [] }; }
+  catch (e) { S.popts[k] = { error: e.message, options: [] }; }
+  render();
+}
+
 function schemaFormHTML(s, schema) {
   const d = cur();
   const ctl = parseId(S.sel).ctl;
-  const fields = schema.filter((f) => !f.controllers || f.controllers.includes(ctl));
+  const fields = schema.filter((f) => (!f.controllers || f.controllers.includes(ctl)) && shown(f, schema, s.settings));
   if (!fields.length) return '<div style="font-size:13px;color:var(--faint)">Keine Einstellungen nötig.</div>';
   return fields.map((f) => {
     const v = s.settings[f.key] ?? f.default ?? '';
@@ -862,6 +905,7 @@ function schemaFormHTML(s, schema) {
     let input;
     switch (f.type) {
       case 'select':
+        if (f.source) { input = sourceSelectHTML(s.plugin, f, s.settings, at); break; }
         input = `<select class="field" ${at}>${f.options.map(([val, l]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
         break;
       case 'profile': {
@@ -898,6 +942,19 @@ function schemaFormHTML(s, schema) {
     }
     return `<label>${esc(f.label)}${input}${f.help ? `<span class="help">${esc(f.help)}</span>` : ''}</label>`;
   }).join('');
+}
+
+// Verbindungsstatus eines Plugins mit eigenen Einstellungen (z. B. Discord) direkt im Inspektor.
+function pluginStatusHTML(p) {
+  if (!S.gset || S.gset.plugin !== p.uuid) { loadGlobalSettings(p.uuid); return ''; }
+  const status = S.gset.values.status;
+  if (!status) return '';
+  const ok = /^verbunden/i.test(status);
+  const connect = p.globalSettingsSchema.find((f) => f.type === 'button' && f.primary);
+  return `<div class="pstatus"><span class="dot" style="width:8px;height:8px;background:${ok ? 'var(--ok)' : 'var(--err)'}"></span>
+    <span style="flex:1;min-width:0">${esc(status)}</span>
+    ${!ok && connect ? `<button type="button" class="btn primary" data-act="gbutton" data-arg="${esc(connect.key)}">${esc(connect.label)}</button>` : ''}
+    <button type="button" class="btn icon" data-act="openPluginSettings" data-arg="${esc(p.uuid)}" aria-label="Plugin-Einstellungen" title="Plugin-Einstellungen">${ic('gear', 16)}</button></div>`;
 }
 
 function settingsEditorHTML(s) {
@@ -948,6 +1005,7 @@ function inspectorHTML() {
       </div>
     </div>
     ${warn ? `<div style="display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--warn) 10%,transparent);color:var(--warn);font-size:13px">${ic('alert', 16, 2)}${warn}</div>` : ''}
+    ${p && p.connected && p.globalSettingsSchema ? pluginStatusHTML(p) : ''}
     <section><h3>Darstellung</h3>
       <label>Titel<input class="field" data-in="title" value="${esc(s.title ?? '')}" placeholder="${esc(defaultTitle(s))}"></label>
       ${isDisplay ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px">
@@ -1035,6 +1093,62 @@ function offlineHTML() {
   </div></main>`;
 }
 
+// Plugin-weite Einstellungen (manifest: GlobalSettingsSchema), z. B. Zugangsdaten.
+function globalSettingsHTML(p) {
+  if (!S.gset || S.gset.plugin !== p.uuid) { loadGlobalSettings(p.uuid); return '<section class="gset"><h3>Einstellungen</h3><div style="color:var(--muted);font-size:13px">Lade …</div></section>'; }
+  const vals = S.gset.values;
+  const fields = p.globalSettingsSchema.filter((f) => shown(f, p.globalSettingsSchema, vals)).map((f) => {
+    const v = vals[f.key] ?? f.default ?? '';
+    const at = `data-in="gfield" data-key="${esc(f.key)}"`;
+    const help = f.help ? `<span class="help">${esc(f.help)}</span>` : '';
+    switch (f.type) {
+      case 'info':
+        return v ? `<div class="ginfo"><span>${esc(f.label)}</span><b>${esc(v)}</b></div>` : '';
+      case 'link':
+        return `<a class="btn ghost" href="${esc(f.url)}" target="_blank" rel="noopener">${ic('external', 16)}${esc(f.label)}</a>`;
+      case 'button':
+        return `<button type="button" class="btn ${f.primary ? 'primary' : ''}" data-act="gbutton" data-arg="${esc(f.key)}">${ic(f.primary ? 'plug' : 'refresh', 16)}${esc(f.label)}</button>${help}`;
+      case 'select':
+        return `<label>${esc(f.label)}<select class="field" ${at}>${f.options.map(([val, l]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${help}</label>`;
+      case 'password':
+        return `<label>${esc(f.label)}<input class="field mono" type="password" ${at} value="${esc(v)}" autocomplete="off" spellcheck="false">${help}</label>`;
+      default:
+        return `<label>${esc(f.label)}<input class="field mono" ${at} value="${esc(v)}" ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} autocomplete="off" spellcheck="false">${help}</label>`;
+    }
+  }).join('');
+  return `<section class="gset"><h3>Einstellungen</h3>${fields}</section>`;
+}
+async function loadGlobalSettings(plugin) {
+  if (S.gsetLoading === plugin) return;
+  S.gsetLoading = plugin;
+  try { S.gset = { plugin, values: await api.call('getGlobalSettings', { plugin }) }; }
+  catch { S.gset = { plugin, values: {} }; }
+  S.gsetLoading = null;
+  renderKeepingFocus();
+}
+const gpatch = {};
+const sendGlobal = debounce((plugin) => {
+  const settings = gpatch[plugin]; delete gpatch[plugin];
+  if (settings) api.run('setGlobalSettings', { plugin, settings }).catch(() => {});
+}, 500);
+function setGlobal(key, value) {
+  const plugin = S.gset.plugin;
+  S.gset.values[key] = value;
+  gpatch[plugin] = { ...(gpatch[plugin] || {}), [key]: value };
+  sendGlobal(plugin);
+  // Andere Felder hängen davon ab (showIf) → neu zeichnen.
+  const p = S.catalog.find((x) => x.uuid === plugin);
+  if (p && (p.globalSettingsSchema || []).some((f) => f.showIf && key in f.showIf)) renderKeepingFocus();
+}
+// Neu zeichnen, ohne dem Benutzer das gerade bearbeitete Feld wegzunehmen.
+function renderKeepingFocus() {
+  const a = document.activeElement;
+  const key = a && a.dataset && a.dataset.in === 'gfield' ? a.dataset.key : null;
+  const pos = key && a.selectionStart;
+  render();
+  if (key) { const el = document.querySelector(`[data-in="gfield"][data-key="${CSS.escape(key)}"]`); if (el) { el.focus(); if (pos != null && el.setSelectionRange) el.setSelectionRange(pos, pos); } }
+}
+
 const storeEntry = (uuid) => (S.store && S.store.plugins ? S.store.plugins.find((x) => x.uuid === uuid) : null);
 
 function pluginsHTML() {
@@ -1113,6 +1227,7 @@ function pluginsHTML() {
         <div><b style="font-size:20px;font-weight:600">${esc(dp.name)}</b><div style="margin-top:4px">${stateEl(dp)}</div></div>
       </div>
       ${dp.description ? `<p style="margin:0;font-size:14px;line-height:1.55;color:var(--muted)">${esc(dp.description)}</p>` : ''}
+      ${dp.globalSettingsSchema ? globalSettingsHTML(dp) : ''}
       <dl>
         <dt>UUID</dt><dd class="mono" style="font-size:12px">${esc(dp.uuid)}</dd>
         <dt>Autor</dt><dd>${esc(dp.author || '–')}</dd>
@@ -1549,6 +1664,13 @@ const ACTS = {
   plugin(arg) { S.pluginSel = arg; render(); },
   pluginTab(arg) { S.pluginTab = arg; if (arg === 'store' && !S.store) loadStore(false); render(); },
   storeRefresh() { loadStore(true); },
+  reloadOptions(k) { delete S.popts[k]; render(); },
+  openPluginSettings(uuid) { S.pluginSel = uuid; S.pluginTab = 'installed'; ACTS.nav('plugins'); },
+  gbutton(key) {
+    if (!S.gset) return;
+    S.gset.values[key] = Date.now();
+    api.run('setGlobalSettings', { plugin: S.gset.plugin, settings: { [key]: S.gset.values[key] } }).catch(() => {});
+  },
   async installFile() {
     if (S.pbusy) return;
     if (desktop) {
@@ -1650,6 +1772,7 @@ document.addEventListener('input', (e) => {
   const d = cur();
   if (k === 'q') { S.q = t.value; $('#liblist').innerHTML = libListHTML(); }
   else if (k === 'gh') S.gh = t.value;
+  else if (k === 'gfield' && S.gset) setGlobal(t.dataset.key, t.value);
   else if (k === 'brightness' && d) { d.brightness = clamp(+t.value, 0, 100); syncBrightness(t); sendBrightness(d.brightness); }
   else if (k === 'title') { const s = slot(S.sel); if (!s) return; s.title = t.value || null; renderStage(); sendAppearance(S.sel, s); }
   else if (k === 'sfield' && t.dataset.type !== 'shortcut') {
@@ -1657,6 +1780,9 @@ document.addEventListener('input', (e) => {
     let v = t.value;
     if (t.dataset.type === 'number') { if (v.trim() === '' || isNaN(+v)) return; v = +v; }
     s.settings = { ...s.settings, [t.dataset.key]: v }; renderStage(); sendSettings(S.sel, s.settings);
+    const f = findAction(s.plugin, s.action);
+    const schema = (f && f.a.settingsSchema) || [];
+    if (schema.some((x) => (x.dependsOn || []).includes(t.dataset.key) || (x.showIf && t.dataset.key in x.showIf))) render();
   }
   else if (k === 'setting') {
     const s = slot(S.sel); if (!s) return;

@@ -109,7 +109,16 @@ pub struct App {
     plugins_dir: PathBuf,
     /// Bundled/extra plugin directories (read-only for the app).
     extra_plugin_dirs: Vec<PathBuf>,
+    /// Open `pluginRequest`s: id → (plugin, sent at, reply).
+    plugin_requests: HashMap<u64, PendingRequest>,
+    next_request: u64,
 }
+
+type PendingRequest = (
+    String,
+    std::time::Instant,
+    tokio::sync::oneshot::Sender<Result<Value, String>>,
+);
 
 impl App {
     pub fn new(
@@ -129,7 +138,38 @@ impl App {
             input: InputHandle::spawn(),
             plugins_dir: PathBuf::new(),
             extra_plugin_dirs: Vec::new(),
+            plugin_requests: HashMap::new(),
+            next_request: 1,
         }
+    }
+
+    /// Forwards a `pluginRequest`; the reply comes later via
+    /// `sendToPropertyInspector` (see `on_plugin_event`).
+    pub async fn plugin_request(
+        &mut self,
+        plugin: String,
+        payload: Value,
+        reply: tokio::sync::oneshot::Sender<Result<Value, String>>,
+    ) {
+        // Forget requests a plugin never answered.
+        self.plugin_requests
+            .retain(|_, (_, at, _)| at.elapsed() < std::time::Duration::from_secs(30));
+        if !self.plugins.is_connected(&plugin).await {
+            reply.send(Err("Plugin läuft nicht".into())).ok();
+            return;
+        }
+        let id = self.next_request;
+        self.next_request += 1;
+        let mut payload = match payload {
+            Value::Object(map) => Value::Object(map),
+            other => json!({ "request": other }),
+        };
+        payload["requestId"] = json!(id);
+        self.plugin_requests
+            .insert(id, (plugin.clone(), std::time::Instant::now(), reply));
+        self.plugins
+            .send(&plugin, &protocol::send_to_plugin(&plugin, &payload))
+            .await;
     }
 
     pub fn set_plugin_dirs(&mut self, plugins_dir: PathBuf, extra: Vec<PathBuf>) {
@@ -507,7 +547,11 @@ impl App {
                 self.plugin_registered(&plugin).await;
                 Ok(())
             }
-            PluginEvent::Disconnected => Ok(()),
+            PluginEvent::Disconnected => {
+                self.plugin_requests
+                    .retain(|_, (owner, _, _)| owner != &plugin);
+                Ok(())
+            }
             PluginEvent::Inbound(event) => self.on_plugin_event(&plugin, event).await,
         };
         if let Err(err) = result {
@@ -570,6 +614,7 @@ impl App {
             InboundEvent::SetGlobalSettings { context, payload } => {
                 anyhow::ensure!(context == plugin, "global settings context mismatch");
                 self.store.save_global_settings(plugin, &payload)?;
+                self.emit(json!({ "event": "globalSettingsChanged", "plugin": plugin }));
             }
             InboundEvent::GetGlobalSettings { context } => {
                 anyhow::ensure!(context == plugin, "global settings context mismatch");
@@ -634,6 +679,24 @@ impl App {
                 tracing::info!(target: "plugin", %plugin, "{}", payload.message);
             }
             InboundEvent::OpenUrl { payload } => open_url(&payload.url)?,
+            InboundEvent::SendToPropertyInspector { payload, .. } => {
+                let id = payload["requestId"].as_u64().unwrap_or_default();
+                match self.plugin_requests.remove(&id) {
+                    Some((owner, _, reply)) if owner == plugin => {
+                        let result = match payload["error"].as_str() {
+                            Some(error) => Err(error.to_owned()),
+                            None => Ok(payload),
+                        };
+                        reply.send(result).ok();
+                    }
+                    Some(entry) => {
+                        self.plugin_requests.insert(id, entry);
+                    }
+                    None => {
+                        tracing::debug!(%plugin, "sendToPropertyInspector without open request")
+                    }
+                }
+            }
             InboundEvent::Unsupported => tracing::debug!(%plugin, "unsupported plugin event"),
         }
         Ok(())
@@ -685,7 +748,16 @@ impl App {
                 let settings = match settings {
                     Some(settings) => Some(settings),
                     None if plugin == BUILTIN_PLUGIN => Some(builtin::default_settings(&action)),
-                    None => None,
+                    None => self.plugins.get(&plugin).await.and_then(|p| {
+                        let schema = p
+                            .manifest
+                            .actions
+                            .iter()
+                            .find(|a| a.uuid == action)?
+                            .settings_schema
+                            .clone()?;
+                        Some(builtin::schema_defaults(&schema))
+                    }),
                 };
                 let mut instance = ActionInstance::new(plugin, action);
                 if let Some(settings) = settings {
@@ -780,10 +852,32 @@ impl App {
                 }
                 Ok(json!({ "device": n3_driver::virtual_deck::VIRTUAL_DEVICE_ID }))
             }
+            ApiCommand::GetGlobalSettings { plugin } => self.store.load_global_settings(&plugin),
+            ApiCommand::SetGlobalSettings { plugin, settings } => {
+                anyhow::ensure!(
+                    self.plugins.get(&plugin).await.is_some(),
+                    "plugin is not installed"
+                );
+                // Merge, so values the plugin stored itself (e.g. tokens) survive.
+                let mut merged = self.store.load_global_settings(&plugin)?;
+                if let (Some(target), Value::Object(patch)) = (merged.as_object_mut(), settings) {
+                    for (key, value) in patch {
+                        target.insert(key, value);
+                    }
+                }
+                self.store.save_global_settings(&plugin, &merged)?;
+                self.plugins
+                    .send(&plugin, &protocol::did_receive_global_settings(&merged))
+                    .await;
+                self.emit(json!({ "event": "globalSettingsChanged", "plugin": plugin }));
+                Ok(merged)
+            }
             ApiCommand::ActivatePlugin { staged } => self.activate_plugin(&staged).await,
             ApiCommand::UninstallPlugin { plugin } => self.uninstall_plugin(&plugin).await,
-            ApiCommand::InstallPlugin { .. } | ApiCommand::PluginStore { .. } => {
-                bail!("handled by the installer")
+            ApiCommand::InstallPlugin { .. }
+            | ApiCommand::PluginStore { .. }
+            | ApiCommand::PluginRequest { .. } => {
+                bail!("handled outside on_api_command")
             }
         }
     }
@@ -918,6 +1012,7 @@ impl App {
                         "name": a.name,
                         "tooltip": a.tooltip,
                         "controllers": a.controllers,
+                        "settingsSchema": a.settings_schema,
                         "icon": render::load_icon(&plugin.path, &a.icon)
                             .and_then(|i| render::to_png_data_url(&i).ok()),
                     })
@@ -931,6 +1026,7 @@ impl App {
                 "category": plugin.manifest.category,
                 "description": plugin.manifest.description,
                 "removable": plugin.path.starts_with(&self.plugins_dir),
+                "globalSettingsSchema": plugin.manifest.global_settings_schema,
                 "connected": self.plugins.is_connected(&plugin.uuid).await,
                 "actions": actions,
             }));

@@ -52,8 +52,8 @@ jobs:
       - name: Tests
         run: cargo test
 
-      - name: Dienst (CLI) bauen
-        run: cargo build --release -p n3-daemon
+      - name: Dienst (CLI) und Discord-Plugin bauen
+        run: cargo build --release -p n3-daemon -p opendeckn3-discord
 
       - name: Desktop-App + Installer bauen (Tauri)
         shell: pwsh
@@ -83,6 +83,19 @@ jobs:
           $plugin = "de.opendeckn3.counter"
           Compress-Archive -Path "plugins\examples\$plugin.sdPlugin" -DestinationPath "$env:RUNNER_TEMP\$plugin.zip" -Force
           Copy-Item "$env:RUNNER_TEMP\$plugin.zip" "target\installer\$plugin.streamDeckPlugin"
+
+          # Discord-Plugin (Windows-Binary); Plugin-Version = Release-Version, damit der Katalog Updates erkennt.
+          $discord = "$env:RUNNER_TEMP\discord\de.opendeckn3.discord.sdPlugin"
+          Remove-Item -Recurse -Force "$env:RUNNER_TEMP\discord" -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force $discord | Out-Null
+          Copy-Item -Recurse plugins\discord\de.opendeckn3.discord.sdPlugin\* $discord
+          Copy-Item target\release\opendeckn3-discord.exe $discord
+          # Textersetzung statt JSON-Rundreise (PowerShell verändert sonst verschachtelte Arrays).
+          $m = Get-Content "$discord\manifest.json" -Raw -Encoding utf8
+          $m = $m -replace '"Version":\s*"[^"]*"', ('"Version": "' + $v + '"')
+          [IO.File]::WriteAllText("$discord\manifest.json", $m)
+          Compress-Archive -Path $discord -DestinationPath "$env:RUNNER_TEMP\discord.zip" -Force
+          Copy-Item "$env:RUNNER_TEMP\discord.zip" "target\installer\de.opendeckn3.discord-windows.streamDeckPlugin"
 
           # Prüfsummen – der Auto-Updater der App installiert nur verifizierte Installer.
           Push-Location target\installer

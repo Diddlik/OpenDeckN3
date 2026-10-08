@@ -119,6 +119,7 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit Symbol und 
 - [x] Titel direkt auf den Tasten-Displays
 - [x] Eingebaut: Tastenkürzel, Lautstärke, Medien, Programme, Websites, Befehle, Text
 - [x] Plugins per Klick installieren – aus Datei oder direkt aus GitHub-Releases
+- [x] Discord-Plugin: Mikro, Kopfhörer, Kanäle, Lautstärken, Soundboard, Kamera, Bildschirmfreigabe
 - [ ] Multi-Aktionen und Ordner
 - [ ] Automatischer Profilwechsel je nach aktivem Programm
 - [ ] Weitere Geräte

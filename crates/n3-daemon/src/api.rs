@@ -88,10 +88,25 @@ pub enum ApiCommand {
     UninstallPlugin {
         plugin: String,
     },
+    GetGlobalSettings {
+        plugin: String,
+    },
+    /// Merges `settings` into the plugin's global settings.
+    SetGlobalSettings {
+        plugin: String,
+        settings: Value,
+    },
     /// Catalog from the registries with the latest GitHub release per plugin.
     PluginStore {
         #[serde(default)]
         refresh: bool,
+    },
+    /// Asks a plugin for data, e.g. options of a settings field (`source` in
+    /// a schema). The plugin receives `sendToPlugin` and answers with
+    /// `sendToPropertyInspector` carrying the same `requestId`.
+    PluginRequest {
+        plugin: String,
+        payload: Value,
     },
     /// Internal: moves an unpacked plugin into place and starts it.
     #[serde(skip_deserializing)]
@@ -197,14 +212,27 @@ async fn handle_client(
         };
     tracing::info!(%addr, "UI client connected");
     let (mut sink, mut incoming) = ws.split();
+    // Replies of slow commands (downloads, plugin queries) must not block the
+    // connection: requests are queued in order, replies awaited in parallel.
+    let (replies_tx, mut replies) = mpsc::unbounded_channel::<Value>();
 
     loop {
         let outgoing = tokio::select! {
             msg = incoming.next() => match msg {
-                Some(Ok(Message::Text(text))) => handle_request(&text, &requests).await,
+                Some(Ok(Message::Text(text))) => match submit(&text, &requests).await {
+                    Ok((id, rx)) => {
+                        let tx = replies_tx.clone();
+                        tokio::spawn(async move {
+                            tx.send(reply(id, rx.await)).ok();
+                        });
+                        continue;
+                    }
+                    Err(error) => error,
+                },
                 Some(Ok(Message::Close(_))) | None | Some(Err(_)) => break,
                 Some(Ok(_)) => continue,
             },
+            Some(reply) = replies.recv() => reply,
             event = events.recv() => match event {
                 Ok(event) => event,
                 Err(broadcast::error::RecvError::Lagged(n)) => json!({ "event": "lagged", "missed": n }),
@@ -222,7 +250,10 @@ async fn handle_client(
     tracing::info!(%addr, "UI client disconnected");
 }
 
-async fn handle_request(text: &str, requests: &mpsc::Sender<ApiRequest>) -> Value {
+type Reply = oneshot::Receiver<Result<Value, String>>;
+
+/// Parses a request and queues it for the main loop. `Err` is the error reply.
+async fn submit(text: &str, requests: &mpsc::Sender<ApiRequest>) -> Result<(Value, Reply), Value> {
     let envelope: Envelope = match serde_json::from_str(text) {
         Ok(envelope) => envelope,
         Err(err) => {
@@ -230,17 +261,23 @@ async fn handle_request(text: &str, requests: &mpsc::Sender<ApiRequest>) -> Valu
                 .ok()
                 .and_then(|v| v.get("id").cloned())
                 .unwrap_or(Value::Null);
-            return json!({ "id": id, "ok": false, "error": format!("bad request: {err}") });
+            return Err(json!({ "id": id, "ok": false, "error": format!("bad request: {err}") }));
         }
     };
     let (tx, rx) = oneshot::channel();
     if requests.send((envelope.command, tx)).await.is_err() {
-        return json!({ "id": envelope.id, "ok": false, "error": "daemon is shutting down" });
+        return Err(json!({ "id": envelope.id, "ok": false, "error": "daemon is shutting down" }));
     }
-    match rx.await {
-        Ok(Ok(result)) => json!({ "id": envelope.id, "ok": true, "result": result }),
-        Ok(Err(error)) => json!({ "id": envelope.id, "ok": false, "error": error }),
-        Err(_) => json!({ "id": envelope.id, "ok": false, "error": "no response" }),
+    Ok((envelope.id, rx))
+}
+
+fn reply(id: Value, result: Result<Result<Value, String>, oneshot::error::RecvError>) -> Value {
+    match result {
+        Ok(Ok(result)) => json!({ "id": id, "ok": true, "result": result }),
+        Ok(Err(error)) => json!({ "id": id, "ok": false, "error": error }),
+        Err(_) => {
+            json!({ "id": id, "ok": false, "error": "keine Antwort (Plugin nicht erreichbar?)" })
+        }
     }
 }
 

@@ -26,6 +26,7 @@ crates/
   n3-desktop/  Desktop-App „OpenDeckN3“ (Tauri): Fenster, Tray, Autostart, eingebetteter Dienst
 plugins/examples/  Beispiel-Plugin „Zähler“ (Node, ohne Abhängigkeiten)
 plugins/registry.json  Plugin-Katalog (GitHub-Releases), siehe docs/PLUGINS_VEROEFFENTLICHEN.md
+plugins/discord/   Discord-Plugin (Rust, docs/PLUGIN_DISCORD.md); Tastenbilder: tools/make-discord-icons.cjs
 tools/smoke-test.mjs  End-to-End-Test gegen den laufenden Dienst
 udev/          Linux-Regeln für Gerätezugriff
 assets/        App-Icon (erzeugt mit tools/make-icon.py)
