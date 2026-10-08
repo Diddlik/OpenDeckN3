@@ -63,6 +63,23 @@ siehst du genauso in der Vorschau. Keine Überraschungen, kein Rätselraten.
   </tr>
 </table>
 
+## 🧰 Schon alles an Bord
+
+Kein Plugin-Gebastel für die Basics – diese Aktionen sind direkt eingebaut und in Sekunden eingerichtet:
+
+| | Aktion | Auf der Taste | Am Drehregler |
+| :---: | --- | --- | --- |
+| ⌨️ | **Tastenkürzel** | Jede Kombination – einfach drücken, die App nimmt sie auf | Eigenes Kürzel je Drehrichtung |
+| 🔊 | **Lautstärke** | Lauter, leiser oder stumm | Drehen regelt, Drücken schaltet stumm |
+| ⏯️ | **Medien** | Play/Pause, vor, zurück, Stopp | Drehen wechselt den Titel |
+| 🚀 | **Programm öffnen** | Apps, Dateien und Ordner starten | ✓ |
+| 🌐 | **Website öffnen** | Deine Lieblingsseiten auf Knopfdruck | ✓ |
+| 💻 | **Befehl ausführen** | Für Power-User: jede Kommandozeile | Eigener Befehl je Drehrichtung |
+| 📝 | **Text eingeben** | Signaturen, E-Mail-Adressen, Textbausteine | ✓ |
+| 🗂️ | **Profil wechseln** · ☀️ **Helligkeit** | Ein Knopf, ein neues Layout | Helligkeit stufenlos |
+
+Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit Symbol und Beschriftung.
+
 ## 🖼️ Einblicke
 
 <p align="center">
@@ -99,9 +116,10 @@ siehst du genauso in der Vorschau. Keine Überraschungen, kein Rätselraten.
 
 - [x] Desktop-App mit Tray, Autostart und Installer
 - [x] Profile, eigene Bilder, Plugins, virtuelles Testgerät
-- [ ] Titel direkt auf den Tasten-Displays
+- [x] Titel direkt auf den Tasten-Displays
+- [x] Eingebaut: Tastenkürzel, Lautstärke, Medien, Programme, Websites, Befehle, Text
 - [ ] Plugins per Klick installieren
-- [ ] Mehr eingebaute Aktionen: Hotkeys, Programme starten, Medien, Multi-Aktionen
+- [ ] Multi-Aktionen und Ordner
 - [ ] Automatischer Profilwechsel je nach aktivem Programm
 - [ ] Weitere Geräte
 

@@ -18,5 +18,6 @@
   `cargo build`). Design-Referenz: `ui/design/prototyp-claude-design.html`. UI im Browser: `http://127.0.0.1:57132/`.
 - Desktop-App: `crates/n3-desktop` (Tauri 2), nicht in den `default-members` → `cargo build -p n3-desktop`
   (Linux braucht `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev`). Lädt `ui/` als Frontend, startet den Dienst über
-  `n3_daemon::run`. Icons: `python3 tools/make-icon.py`. Windows-Installer baut `.github/workflows/windows.yml`.
+  `n3_daemon::run`. Icons: `python3 tools/make-icon.py`; Icons der eingebauten Aktionen (Gerät):
+  `NODE_PATH=$(npm root -g) node tools/make-builtin-icons.cjs` (aus `ICONS`/`KCOL` in `ui/index.html`). Windows-Installer baut `.github/workflows/windows.yml`.
 - Doku auf Deutsch, Code/Kommentare auf Englisch.

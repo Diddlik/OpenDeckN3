@@ -12,7 +12,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await page.waitForTimeout(1500);
   // Test-Modus aus, damit Klicks nur auswählen
   await page.click('[data-act="test"]');
-  await page.click('[data-slot="k3"]');
+  await page.click('[data-slot="k0"]');
   await page.mouse.move(5, 5);
   await sleep(400);
   await page.screenshot({ path: out + '/editor-dark.png' });
@@ -23,7 +23,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await page.click('[data-act="nav"][data-arg="settings"]');
   await page.click('[data-act="theme"][data-arg="light"]');
   await page.click('[data-act="nav"][data-arg="editor"]'); await sleep(200);
-  await page.click('[data-slot="k0"]'); await page.mouse.move(5, 5); await sleep(300);
+  await page.click('[data-slot="k5"]'); await page.mouse.move(5, 5); await sleep(300);
   await page.screenshot({ path: out + '/editor-light.png' });
   await page.click('[data-act="nav"][data-arg="settings"]');
   await page.click('[data-act="theme"][data-arg="dark"]');
@@ -35,8 +35,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   let n = 0;
   const snap = async (count = 1) => { for (let i = 0; i < count; i++) { await page.screenshot({ clip, path: `${frames}/f${String(n++).padStart(3, '0')}.png` }); } };
   await snap(4);
-  for (let i = 0; i < 3; i++) { await page.click('[data-slot="k0"]'); await sleep(90); await snap(1); await sleep(160); await snap(2); }
-  await page.click('[data-slot="k1"]'); await sleep(90); await snap(1); await sleep(160); await snap(2);
+  for (let i = 0; i < 3; i++) { await page.click('[data-slot="k8"]'); await sleep(90); await snap(1); await sleep(160); await snap(2); }
+  await page.click('[data-slot="k2"]'); await sleep(90); await snap(1); await sleep(400); await snap(2);
   const e1 = await page.$('[data-slot="e1"]'); const b = await e1.boundingBox();
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
   for (let i = 0; i < 8; i++) { await page.mouse.wheel(0, 100); await sleep(150); await snap(1); }

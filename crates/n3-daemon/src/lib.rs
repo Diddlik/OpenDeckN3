@@ -8,6 +8,7 @@ mod app;
 mod builtin;
 mod render;
 mod store;
+mod system;
 mod ui_server;
 
 use std::path::PathBuf;

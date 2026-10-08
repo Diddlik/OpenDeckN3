@@ -119,6 +119,10 @@ impl PluginHost {
                         let name = path.file_name().unwrap_or_default().to_string_lossy();
                         name.trim_end_matches(".sdPlugin").to_owned()
                     });
+                    if uuid == crate::BUILTIN_PLUGIN {
+                        tracing::warn!(dir = %path.display(), "plugin uses a reserved UUID");
+                        continue;
+                    }
                     tracing::info!(%uuid, name = %manifest.name, "plugin discovered");
                     plugins.insert(
                         uuid.clone(),

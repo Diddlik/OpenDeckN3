@@ -42,7 +42,7 @@ de.example.myplugin.sdPlugin/
 }
 ```
 
-- `UUID` fehlt → Verzeichnisname ohne `.sdPlugin` wird verwendet.
+- `UUID` fehlt → Verzeichnisname ohne `.sdPlugin` wird verwendet. `opendeckn3.builtin` ist reserviert.
 - `CodePath*`: plattformspezifischer Pfad hat Vorrang. Endung `.js/.mjs/.cjs` → Start mit `node`,
   `.py` → `python3`, sonst direkt ausführbar.
 - `Controllers`: Standard `["Keypad"]`.
@@ -97,7 +97,7 @@ Gemeinsame Felder: `event`, `action`, `context`, `device`, `payload`.
 | `setGlobalSettings` | `context` = Plugin-UUID, `payload` | globale Einstellungen speichern |
 | `getGlobalSettings` | `context` = Plugin-UUID | löst `didReceiveGlobalSettings` aus |
 | `setImage` | `context`, `payload.image` (Data-URL PNG/JPEG/BMP oder `null`) | Tastenbild setzen / zurücksetzen |
-| `setTitle` | `context`, `payload.title` | Titel setzen (*Rendering auf dem Gerät folgt in M1*) |
+| `setTitle` | `context`, `payload.title` | Titel setzen – wird unten auf das Tastenbild gezeichnet (ein vom Nutzer gesetzter Titel hat Vorrang) |
 | `setState` | `context`, `payload.state` | Zustand wechseln (Bild aus `States`) |
 | `showOk` / `showAlert` | `context` | Rückmeldung (aktuell nur an die UI) |
 | `logMessage` | `payload.message` | Eintrag im Dienst-Log |

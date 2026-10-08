@@ -92,7 +92,20 @@ interface CatalogPlugin {
     uuid: string; name: string; tooltip: string;
     controllers: Controller[];
     icon: string | null;     // PNG-Data-URL
+    settingsSchema?: SettingsField[]; // Formular für die Einstellungen (eingebaute Aktionen)
   }[];
+}
+
+// Beschreibt ein Einstellungsfeld; die UI rendert daraus ein Formular.
+interface SettingsField {
+  key: string;               // Schlüssel in ActionInstance.settings
+  label: string;
+  type: "text" | "textarea" | "number" | "select" | "shortcut" | "file" | "profile";
+  controllers?: Controller[]; // nur für diese Slot-Arten anzeigen
+  default?: unknown;         // Startwert bei setAction ohne settings
+  options?: [string, string][]; // select: [Wert, Beschriftung]
+  min?: number; max?: number;   // number
+  placeholder?: string; help?: string;
 }
 
 type InputEvent =
@@ -109,7 +122,7 @@ type InputEvent =
 | `getCatalog` | – | `CatalogPlugin[]` |
 | `switchProfile` | `device`, `profile` | `null` – legt das Profil an, falls es fehlt |
 | `deleteProfile` | `device`, `profile` | `null` – aktives Profil kann nicht gelöscht werden |
-| `setAction` | `device`, `controller`, `position`, `plugin`, `action`, `settings?` | `null` – ersetzt eine vorhandene Belegung |
+| `setAction` | `device`, `controller`, `position`, `plugin`, `action`, `settings?` | `null` – ersetzt eine vorhandene Belegung; ohne `settings` gelten bei eingebauten Aktionen die Schema-Standardwerte |
 | `clearAction` | `device`, `controller`, `position` | `null` |
 | `setActionSettings` | `device`, `controller`, `position`, `settings` | `null` – Plugin erhält `didReceiveSettings` |
 | `setActionAppearance` | `device`, `controller`, `position`, `title?`, `image?` | `null` – `image: null` = Standardbild |
@@ -133,7 +146,29 @@ Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.
 | `input` | `device`, `input: InputEvent` | Taste/Drehregler in der UI kurz aufleuchten lassen |
 | `feedback` | `device`, `controller`, `position` | Plugin meldet OK/Fehler (Animation) |
 | `pluginStatus` | `plugin`, `connected` | Plugin-Status im Katalog |
+| `actionError` | `device`, `controller`, `position`, `message` | Eingebaute Aktion fehlgeschlagen (z. B. ungültiges Tastenkürzel, Programm nicht gefunden) → Fehlermeldung zeigen |
 | `lagged` | `missed` | Client war zu langsam → `getState` neu laden |
+
+## Eingebaute Aktionen
+
+Plugin-UUID `opendeckn3.builtin`, Aktions-UUIDs `opendeckn3.builtin.<name>`:
+
+| Aktion | Einstellungen | Taste | Drehregler |
+| --- | --- | --- | --- |
+| `hotkey` | `shortcut`, `clockwise`, `anticlockwise` (z. B. `Ctrl+Shift+M`, mehrere mit Leerzeichen) | drückt `shortcut` | drehen = `clockwise`/`anticlockwise` je Raste, drücken = `shortcut` |
+| `volume` | `mode` (`mute`/`up`/`down`), `step` (1–10) | Funktion aus `mode` | drehen = lauter/leiser, drücken = stumm |
+| `media` | `mode` (`playpause`/`next`/`previous`/`stop`) | Funktion aus `mode` | drehen = Titel vor/zurück, drücken = Play/Pause |
+| `launch` | `path`, `args` | Programm/Datei/Ordner öffnen | drücken |
+| `url` | `url` (http/https) | im Standardbrowser öffnen | drücken |
+| `command` | `command`, `clockwise`, `anticlockwise` (`%d` = Rasten) | Shell-Befehl (`cmd /C` bzw. `sh -c`) | drehen/drücken |
+| `text` | `text` | Text tippen | drücken |
+| `profile` | `profile` | Profil wechseln | – |
+| `brightness` | – | Helligkeitsstufen | stufenlos |
+
+Tastennamen im Tastenkürzel (Groß-/Kleinschreibung egal, auch deutsch): `Ctrl`/`Strg`, `Shift`, `Alt`, `AltGr`, `Win`,
+Buchstaben/Ziffern/Zeichen, `F1`–`F20`, `Enter`, `Esc`, `Tab`, `Space`, `Backspace`, `Delete`/`Entf`, `Insert`, `Home`/`Pos1`,
+`End`, `PageUp`, `PageDown`, `Up`/`Down`/`Left`/`Right`, `Plus`, `Minus`, `PrintScreen`, `VolumeUp`, `VolumeDown`, `Mute`,
+`PlayPause`, `Next`, `Prev`.
 
 ## Beispiel-Sitzung
 

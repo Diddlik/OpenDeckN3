@@ -177,6 +177,7 @@ fn main() {
             Some(vec![HIDDEN_ARG]),
         ))
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(Service {
             config_dir: config_dir.clone(),
             shutdown: CancellationToken::new(),

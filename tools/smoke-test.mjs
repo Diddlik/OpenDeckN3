@@ -81,6 +81,36 @@ ws.addEventListener("open", async () => {
     assert(state.devices[0].profiles.includes("gaming"), "new profile created");
     await call("switchProfile", { device: DEVICE, profile: "default" });
 
+    // Built-in actions: catalog with settings schema, defaults, real command, error reporting.
+    await call("switchProfile", { device: DEVICE, profile: "default" });
+    state = await call("getState");
+    const builtins = state.catalog.find((p) => p.uuid === "opendeckn3.builtin");
+    const hotkey = builtins.actions.find((a) => a.uuid === "opendeckn3.builtin.hotkey");
+    assert(hotkey?.settingsSchema?.some((f) => f.type === "shortcut"), "built-in actions come with a settings schema");
+    await call("setAction", { device: DEVICE, controller: "Keypad", position: 3,
+      plugin: "opendeckn3.builtin", action: "opendeckn3.builtin.volume" });
+    await waitForDevice((d) => d.profile.keys["3"]?.settings.mode === "mute", "built-in defaults are applied");
+
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { existsSync, readFileSync, rmSync } = await import("node:fs");
+    const marker = join(tmpdir(), `opendeckn3-smoke-${Date.now()}.txt`);
+    await call("setAction", { device: DEVICE, controller: "Keypad", position: 4,
+      plugin: "opendeckn3.builtin", action: "opendeckn3.builtin.command",
+      settings: { command: `echo smoke> "${marker}"` } });
+    await call("simulateInput", { device: DEVICE, input: { type: "keyDown", key: 4 } });
+    for (let i = 0; i < 50 && !existsSync(marker); i++) await sleep(100);
+    assert(existsSync(marker) && readFileSync(marker, "utf8").includes("smoke"), "command action runs a shell command");
+    rmSync(marker, { force: true });
+
+    await call("setAction", { device: DEVICE, controller: "Keypad", position: 5,
+      plugin: "opendeckn3.builtin", action: "opendeckn3.builtin.hotkey", settings: { shortcut: "Ctrl+Nope" } });
+    events.length = 0;
+    await call("simulateInput", { device: DEVICE, input: { type: "keyDown", key: 5 } });
+    for (let i = 0; i < 30 && !events.some((e) => e.event === "actionError"); i++) await sleep(100);
+    assert(events.some((e) => e.event === "actionError" && e.position === 5), "invalid shortcut is reported as actionError");
+    await waitForDevice((d) => d.previews["5"]?.startsWith("data:image/png"), "built-in key gets an icon with label");
+
     const started = await call("startVirtualDevice");
     assert(started.device === DEVICE, "startVirtualDevice is idempotent");
 

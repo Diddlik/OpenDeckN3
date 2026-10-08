@@ -14,18 +14,18 @@ ws.onopen = async () => {
     for (const p of ["gaming", "office", "streaming"]) await call("switchProfile", { device: D, profile: p });
     await call("deleteProfile", { device: D, profile: "default" }).catch(() => {});
     const slots = [
-      key(0, C, C + ".count", { settings: { count: 12, hue: 170 } }),
-      key(1, C, C + ".count", { settings: { count: 7, hue: 275 } }),
+      key(0, B, B + ".hotkey", { settings: { shortcut: "Ctrl+Shift+M" }, title: "Mikro aus" }),
+      key(1, B, B + ".media", { settings: { mode: "playpause" } }),
       key(2, B, B + ".brightness", { title: "Hell", image: icons.sun }),
       key(3, B, B + ".profile", { settings: { profile: "gaming" }, title: "Gaming", image: icons.gaming }),
       key(4, B, B + ".profile", { settings: { profile: "office" }, title: "Office", image: icons.office }),
-      key(5, C, C + ".count", { settings: { count: 3, hue: 25 } }),
-      key(6, B, B + ".profile", { settings: { profile: "gaming" } }),
-      key(7, B, B + ".brightness"),
+      key(5, B, B + ".launch", { settings: { path: "C:\\Program Files\\Spotify\\Spotify.exe", args: "" } }),
+      key(6, B, B + ".url", { settings: { url: "https://github.com/Diddlik/OpenDeckN3" } }),
+      key(7, B, B + ".volume", { settings: { mode: "mute", step: 1 } }),
       key(8, C, C + ".count", { settings: { count: 0, hue: 120 } }),
-      enc(0, C, C + ".count", { settings: { count: 4, hue: 200 } }),
+      enc(0, B, B + ".volume", { settings: { mode: "mute", step: 2 } }),
       enc(1, B, B + ".brightness"),
-      enc(2, C, C + ".count", { settings: { count: 9, hue: 320 } }),
+      enc(2, B, B + ".media", { settings: { mode: "playpause" } }),
     ];
     for (const s of slots) {
       const base = { device: D, controller: s.controller, position: s.position };

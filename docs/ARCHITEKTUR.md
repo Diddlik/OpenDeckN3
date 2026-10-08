@@ -78,6 +78,18 @@ dem Plugin gehört und zum aktiven Profil passt → dekodiert Bild → `DeviceCo
 **Profilwechsel:** `willDisappear` für alle alten Instanzen → Profil laden → `willAppear` für alle
 neuen Instanzen → alle Display-Tasten mit Standardbild neu zeichnen → UI erhält `profileChanged`.
 
+## Eingebaute Aktionen & Tastenbilder
+
+- `n3-daemon/src/builtin.rs`: Katalog mit `settingsSchema`, Standardwerte, Beschriftung und Icon je Aktion, Auswertung der
+  Eingaben (`effect`) – getrennt von der Ausführung, damit die Logik ohne Desktop testbar ist.
+- `n3-daemon/src/system/`: Seiteneffekte auf dem Rechner – `shortcut` (Parser für `Ctrl+Shift+M`), `input` (eigener Thread mit
+  `enigo`: SendInput unter Windows, X11 unter Linux), `launch` (Programme, Dateien, Shell-Befehle ohne Konsolenfenster).
+  Fehler landen als UI-Event `actionError` beim Nutzer.
+- Tastenbilder werden in `render::compose_key` zusammengesetzt (144 px): Bild (Nutzer → Plugin zur Laufzeit → Zustandsbild →
+  Icon) plus Titel (Nutzer → Plugin → automatische Beschriftung eingebauter Aktionen), gezeichnet mit eingebetteter Schrift
+  Geist (OFL, `assets/fonts/`). Icons der eingebauten Aktionen: `assets/builtin/`, erzeugt mit `tools/make-builtin-icons.cjs`
+  aus den Icons der Oberfläche.
+
 ## Persistenz
 
 Konfigurationsverzeichnis (Standard `~/.config/opendeckn3`, per `--config-dir` änderbar):
@@ -111,7 +123,6 @@ Alle binden nur an `127.0.0.1` und sind per CLI änderbar (`--plugin-port`, `--a
 
 ## Offene technische Punkte
 
-- Titel-Rendering (Schrift auf Tastenbild) fehlt – Titel werden bisher nur an die UI gemeldet.
 - SVG-Bilder von Plugins werden noch nicht unterstützt.
 - Plugin-Prozesse werden nach Absturz nicht automatisch neu gestartet.
 - Physische Lage der Drehregler/Tasten am Gerät mit echter Hardware verifizieren (siehe Gerätedoku).
