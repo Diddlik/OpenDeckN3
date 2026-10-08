@@ -22,7 +22,7 @@ const PREFIX: &str = "de.opendeckn3.discord.";
 /// Discord application behind "Schnell verbinden" (Public Client, testers
 /// registered by the maintainer). Empty until it is set up; can be overridden
 /// with `OPENDECKN3_DISCORD_CLIENT_ID`.
-const QUICK_CLIENT_ID: &str = "";
+const QUICK_CLIENT_ID: &str = "1557797665281147052";
 
 fn quick_client_id() -> String {
     std::env::var("OPENDECKN3_DISCORD_CLIENT_ID")
@@ -1377,8 +1377,9 @@ mod tests {
 
     #[tokio::test]
     async fn not_connected_alerts_and_asks_for_credentials() {
+        // Own application without a client id: the key asks for it.
         let (mut p, mut host, _rx) = plugin();
-        p.on_global_settings(json!({}));
+        p.on_global_settings(json!({ "authMode": "manual" }));
         appear(&mut p, "c1", "camera", json!({}));
         p.on_host(json!({ "event": "keyDown", "context": "c1" }));
         let msgs: Vec<Value> = std::iter::from_fn(|| host.try_recv().ok()).collect();
@@ -1454,6 +1455,20 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(devices, [("a".to_owned(), "Headset".to_owned())]);
+    }
+
+    #[tokio::test]
+    async fn quick_mode_key_press_starts_sign_in() {
+        let (mut p, mut host, _rx) = plugin();
+        p.on_global_settings(json!({}));
+        appear(&mut p, "c1", "mute", json!({}));
+        p.on_host(json!({ "event": "keyDown", "context": "c1" }));
+        let msgs: Vec<Value> = std::iter::from_fn(|| host.try_recv().ok()).collect();
+        assert!(msgs.iter().any(|m| m["event"] == "showAlert"));
+        assert!(
+            p.connecting,
+            "built-in application → sign-in starts right away"
+        );
     }
 
     #[test]

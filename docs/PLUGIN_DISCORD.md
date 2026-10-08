@@ -55,8 +55,9 @@ die Tokens.
 
 ### Für den Betreuer: Schnell-Anmeldung einrichten
 
-Anwendung „OpenDeckN3“ wie oben anlegen (mit **Public Client** und Redirect `http://localhost`), Client-ID in
-`plugins/discord/src/main.rs` als `QUICK_CLIENT_ID` eintragen, Tester unter **App Testers** hinzufügen. Für mehr als
+Die Anwendung „OpenDeckN3“ (Client-ID `1557797665281147052`, eingetragen als `QUICK_CLIENT_ID` in
+`plugins/discord/src/main.rs`) braucht **Public Client** und den Redirect `http://localhost`. Wer die Schnell-Anmeldung
+nutzen soll, wird dort unter **App Testers** hinzugefügt. Für mehr als
 50 Personen bräuchte die Anwendung eine RPC-Freigabe von Discord. Zum Testen lässt sich die ID ohne Neubau per
 Umgebungsvariable `OPENDECKN3_DISCORD_CLIENT_ID` setzen.
 
