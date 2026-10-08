@@ -39,6 +39,21 @@ pub fn launch(target: &str, args: &str) -> anyhow::Result<()> {
     let args = shell_words::split(args).context("Argumente ungültig (Anführungszeichen?)")?;
     let path = Path::new(target);
 
+    // Application-menu entries (Linux): run their Exec line.
+    #[cfg(all(unix, not(target_os = "macos")))]
+    if path.extension().is_some_and(|e| e == "desktop") && path.is_file() {
+        let entry = super::apps::DesktopEntry::read(path).context("Eintrag nicht lesbar")?;
+        let mut words = entry.command()?;
+        words.extend(args);
+        let child = Command::new(&words[0])
+            .args(&words[1..])
+            .stdin(Stdio::null())
+            .spawn()
+            .with_context(|| format!("„{}“ startet nicht", entry.name))?;
+        detach(child);
+        return Ok(());
+    }
+
     // Explicit executables, or bare names like `notepad` / `firefox` found via PATH.
     let bare_name = !target.contains(['/', '\\']) && !path.exists();
     if is_executable(path) || bare_name {
