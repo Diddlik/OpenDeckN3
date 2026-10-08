@@ -274,6 +274,15 @@ textarea.field{height:auto;min-height:140px;padding:10px 12px;font-family:'Geist
 .progress{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
 .progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .2s ease}
 .updbtn{height:40px;padding:0 12px;border-radius:10px;border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);background:var(--accent-soft);color:var(--accent-text);display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.fieldwrap{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.hotkey{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--input)}
+.hotkey .hk-actions{display:flex;justify-content:flex-end;gap:8px}
+.hotkey.rec{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.hotkey .caps{min-height:32px;display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.hotkey .ph{font-size:13px;color:var(--faint)}
+.hotkey.rec .ph{color:var(--accent-text)}
+kbd{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:30px;padding:0 9px;border-radius:8px;border:1px solid var(--line);border-bottom-width:3px;background:var(--raised);color:var(--text);font-family:'Geist Mono',monospace;font-size:12.5px;font-weight:500}
+.caps .plus{color:var(--faint);font-size:12px}
 .soon{font-size:11px;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--raised);color:var(--faint)}
 </style>
 </head>
@@ -821,10 +830,19 @@ function schemaFormHTML(s, schema) {
       case 'number':
         input = `<input class="field" type="number" ${at} value="${esc(v)}" min="${f.min ?? ''}" max="${f.max ?? ''}">`;
         break;
-      case 'shortcut':
-        input = `<span class="fieldrow"><input class="field mono" ${at} value="${esc(v)}" ${ph} spellcheck="false" autocomplete="off" aria-label="${esc(f.label)} – Tasten drücken zum Aufnehmen">
-          <button type="button" class="btn icon" data-act="clearField" data-arg="${esc(f.key)}" aria-label="Leeren" title="Leeren">${ic('x', 16)}</button></span>`;
-        break;
+      case 'shortcut': {
+        // Recorder statt Textfeld: Kombination wird per Tastendruck festgelegt.
+        const rec = S.rec === f.key;
+        const caps = rec
+          ? (S.recPreview ? capsHTML(S.recPreview) + '<span class="ph">+ …</span>' : '<span class="ph pulse">Drücke jetzt die Tastenkombination …</span>')
+          : v ? capsHTML(String(v)) : '<span class="ph">Noch keine Taste festgelegt</span>';
+        const buttons = rec
+          ? `<button type="button" class="btn ghost" data-act="cancelRec">Abbrechen</button>`
+          : `<button type="button" class="btn" data-act="startRec" data-arg="${esc(f.key)}">${ic('keyboard', 16)}${v ? 'Neu aufnehmen' : 'Aufnehmen'}</button>${v
+            ? `<button type="button" class="btn icon" data-act="clearField" data-arg="${esc(f.key)}" aria-label="Leeren" title="Leeren">${ic('x', 16)}</button>` : ''}`;
+        return `<div class="fieldwrap">${esc(f.label)}<div class="hotkey ${rec ? 'rec' : ''}" role="group" aria-label="${esc(f.label)}">
+          <div class="caps" aria-live="polite">${caps}</div><div class="hk-actions">${buttons}</div></div>${f.help ? `<span class="help">${esc(f.help)}</span>` : ''}</div>`;
+      }
       case 'file':
         input = `<span class="fieldrow"><input class="field mono" ${at} value="${esc(v)}" ${ph} spellcheck="false">${desktop
           ? `<button type="button" class="btn" data-act="browseFile" data-arg="${esc(f.key)}">${ic('folder', 16)}Durchsuchen …</button>` : ''}</span>`;
@@ -1306,7 +1324,9 @@ const ACTS = {
   test() { S.test = !S.test; render(); },
   group(arg) { S.closed[arg] = !S.closed[arg]; $('#liblist').innerHTML = libListHTML(); },
   clear() { clearSlot(S.sel); },
-  jsonMode() { S.json = !S.json; render(); },
+  jsonMode() { S.json = !S.json; S.rec = null; render(); },
+  startRec(key) { startRec(key); },
+  cancelRec() { stopRec(); },
   clearField(key) {
     const s = slot(S.sel); if (!s) return;
     s.settings = { ...s.settings, [key]: '' }; render(); sendSettings(S.sel, s.settings);
@@ -1405,7 +1425,12 @@ const ACTS = {
 };
 
 /* ---------- Ereignisse ---------- */
+document.addEventListener('keyup', (e) => {
+  // Die Windows-Taste allein (Startmenü) ist auch ein gültiges Kürzel.
+  if (S.rec && (e.key === 'Meta' || e.key === 'OS') && S.recPreview === 'Win') { e.preventDefault(); commitRec('Win'); }
+}, true);
 document.addEventListener('click', (e) => {
+  if (S.rec && !e.target.closest('.hotkey')) { stopRec(); }
   if (S.menu && !e.target.closest('.ctx')) { S.menu = null; renderOverlay(); }
   if (S.popover && !e.target.closest('.popover') && !e.target.closest('[data-act="popover"]')) { S.popover = null; render(); }
   const slotEl = e.target.closest('[data-slot]');
@@ -1482,7 +1507,22 @@ document.addEventListener('submit', (e) => {
   switchProfile(v).then(() => toast('ok', `Profil „${v}“ angelegt`)).catch(() => {});
 });
 
-// Tastenkürzel-Feld: gedrückte Kombination aufnehmen statt Text einzugeben.
+// Anzeige mit deutschen Tastennamen; gespeichert wird „Ctrl+Shift+M“ (der Dienst versteht beides).
+const KEY_DE = { Ctrl: 'Strg', Shift: 'Umschalt', Delete: 'Entf', Space: 'Leertaste', Insert: 'Einfg', Home: 'Pos1', End: 'Ende',
+  PageUp: 'Bild ↑', PageDown: 'Bild ↓', Up: '↑', Down: '↓', Left: '←', Right: '→', Backspace: '⌫', Enter: 'Enter ↵' };
+const capsHTML = (combo) => combo.split(' ').map((chord) => chord.split('+').map((k) => `<kbd>${esc(KEY_DE[k] || k)}</kbd>`).join('<span class="plus">+</span>')).join('<span class="plus">&nbsp;dann&nbsp;</span>');
+const modsOf = (e) => [e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift', e.metaKey && 'Win'].filter(Boolean);
+function startRec(key) { S.rec = key; S.recPreview = ''; S.recOther = false; render(); }
+function stopRec() { S.rec = null; S.recPreview = ''; render(); }
+function commitRec(combo) {
+  const key = S.rec; const s = slot(S.sel);
+  S.rec = null; S.recPreview = '';
+  if (!s || !key) { render(); return; }
+  s.settings = { ...s.settings, [key]: combo };
+  render(); renderStage();
+  api.run('setActionSettings', { ...slotParams(S.sel), settings: s.settings }).catch(() => {});
+}
+// Tastenkürzel-Recorder: gedrückte Kombination in Text wie „Ctrl+Shift+M“ übersetzen.
 function comboFromEvent(e) {
   if (['Control', 'Shift', 'Alt', 'Meta', 'AltGraph', 'OS'].includes(e.key)) return null;
   const mods = [];
@@ -1506,14 +1546,18 @@ function comboFromEvent(e) {
   return [...mods, name].join('+');
 }
 document.addEventListener('keydown', (e) => {
-  const rec = e.target.matches && e.target.matches('[data-type="shortcut"]');
-  // Tab ohne Zusatztaste bleibt Fokuswechsel (Barrierefreiheit).
-  if (rec && !(e.key === 'Tab' && !e.ctrlKey && !e.altKey && !e.metaKey)) {
+  if (S.rec) {
+    // Aufnahme läuft: jede Taste gehört dem Recorder, nichts wird getippt.
     e.preventDefault(); e.stopPropagation();
-    const combo = comboFromEvent(e); if (!combo) return;
-    const s = slot(S.sel); if (!s) return;
-    e.target.value = combo;
-    s.settings = { ...s.settings, [e.target.dataset.key]: combo }; renderStage(); sendSettings(S.sel, s.settings);
+    if (e.repeat) return;
+    if (e.key === 'Escape' && !modsOf(e).length) { stopRec(); return; }
+    const combo = comboFromEvent(e);
+    if (!combo) { // nur Zusatztaste gedrückt – live anzeigen und auf die eigentliche Taste warten
+      const preview = modsOf(e).join('+');
+      if (preview !== S.recPreview) { S.recPreview = preview; render(); }
+      return;
+    }
+    commitRec(combo);
     return;
   }
   if (e.key === 'Escape') {
@@ -1526,7 +1570,7 @@ document.addEventListener('keydown', (e) => {
   if (!(e.target.closest && e.target.closest('.device [data-slot]'))) return;
   if (e.key.startsWith('Arrow')) { e.preventDefault(); moveSel(e.key); S.json = false; render(); }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); clearSlot(S.sel); }
-});
+}, true); // Capture-Phase: der Recorder bekommt Tasten vor allen anderen Handlern
 
 document.addEventListener('wheel', (e) => {
   const b = e.target.closest && e.target.closest('[data-enc]');

@@ -56,7 +56,8 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
                 "controllers": controllers, "icon": null, "settingsSchema": schema,
             })
         };
-    let shortcut_help = "Beispiele: Ctrl+C · Alt+Tab · Win+D · Ctrl+Shift+Esc · mehrere nacheinander mit Leerzeichen";
+    let shortcut_help =
+        "Auf „Aufnehmen“ klicken und die Tasten drücken, z. B. Strg+Umschalt+M. Esc bricht ab.";
     vec![
         action(
             HOTKEY,
@@ -66,15 +67,15 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
             vec![
                 with(
                     field("shortcut", "Tastenkürzel", "shortcut", BOTH),
-                    json!({ "help": shortcut_help, "placeholder": "Klicken und Tasten drücken" }),
+                    json!({ "help": shortcut_help }),
                 ),
                 with(
                     field("clockwise", "Drehen rechts", "shortcut", ENCODER),
-                    json!({ "placeholder": "z. B. Ctrl+Plus" }),
+                    json!({ "help": "Wird je Raste beim Rechtsdrehen gedrückt" }),
                 ),
                 with(
                     field("anticlockwise", "Drehen links", "shortcut", ENCODER),
-                    json!({ "placeholder": "z. B. Ctrl+Minus" }),
+                    json!({ "help": "Wird je Raste beim Linksdrehen gedrückt" }),
                 ),
             ],
         ),
