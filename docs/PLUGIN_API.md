@@ -74,7 +74,23 @@ Manifest; die App baut daraus Formulare:
 | `button` | Knopf; setzt `key` auf einen neuen Zeitstempel – das Plugin reagiert auf die Änderung |
 | `link` | Knopf, der `url` im Browser öffnet |
 
-Gemeinsame Felder: `key`, `label`, `help`, `placeholder`, `default`, `controllers` (nur für `Keypad`/`Encoder` zeigen).
+Gemeinsame Felder: `key`, `label`, `help`, `placeholder`, `default`, `controllers` (nur für `Keypad`/`Encoder` zeigen),
+`showIf` (`{ "authMode": "manual" }` – Feld nur zeigen, wenn andere Felder diese Werte haben). Knöpfe mit
+`"primary": true` werden hervorgehoben und erscheinen bei getrennter Verbindung auch im Inspektor.
+
+**Auswahllisten aus dem Plugin:** Ein `select` mit `source` statt `options` bekommt seine Einträge zur Laufzeit vom
+Plugin, z. B. Discord-Server und -Kanäle. `dependsOn` nennt Felder, deren Werte mitgeschickt werden (Kanal hängt vom
+Server ab). Die App sendet dem Plugin
+
+```json
+{ "event": "sendToPlugin", "context": "<plugin-uuid>", "payload": { "request": "voiceChannels", "guild": "123", "requestId": 7 } }
+```
+
+und erwartet als Antwort `sendToPropertyInspector` mit derselben `requestId` und `options` (oder `error`):
+
+```json
+{ "event": "sendToPropertyInspector", "context": "<plugin-uuid>", "payload": { "requestId": 7, "options": [["456", "🔊 Lounge"]] } }
+```
 Ändert ein Plugin seine globalen Einstellungen selbst, aktualisiert die App das Formular (`globalSettingsChanged`).
 Ein vollständiges Beispiel ist das [Discord-Plugin](PLUGIN_DISCORD.md).
 

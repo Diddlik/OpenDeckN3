@@ -133,6 +133,7 @@ type InputEvent =
 | `uninstallPlugin` | `plugin` | `{ plugin }` – nur installierte, nicht mitgelieferte Plugins; Belegungen bleiben im Profil |
 | `pluginStore` | `refresh?` (Cache von 10 min umgehen) | `{ plugins: StoreEntry[], registries: string[], errors: string[] }` |
 | `getGlobalSettings` | `plugin` | globale Einstellungen des Plugins (Objekt) |
+| `pluginRequest` | `plugin`, `payload` (z. B. `{ request: "guilds" }`) | Antwort des Plugins (`sendToPropertyInspector`), z. B. `{ options: [[wert, text], …] }`; Fehler, wenn das Plugin `error` liefert oder nicht läuft |
 | `setGlobalSettings` | `plugin`, `settings` | zusammengeführte Einstellungen – `settings` wird in die vorhandenen gemischt (vom Plugin gespeicherte Werte wie Tokens bleiben); Plugin erhält `didReceiveGlobalSettings` |
 
 Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.

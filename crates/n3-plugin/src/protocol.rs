@@ -55,6 +55,12 @@ pub enum InboundEvent {
     OpenUrl {
         payload: OpenUrlPayload,
     },
+    /// Answer to `sendToPlugin` (here: to a `pluginRequest` of the app).
+    SendToPropertyInspector {
+        #[serde(default)]
+        context: String,
+        payload: Value,
+    },
     /// Any event this host does not implement yet.
     #[serde(other)]
     Unsupported,
@@ -156,6 +162,10 @@ pub fn device_did_connect(device: &DeviceInfo) -> Value {
 
 pub fn device_did_disconnect(device: &str) -> Value {
     json!({ "event": "deviceDidDisconnect", "device": device })
+}
+
+pub fn send_to_plugin(plugin: &str, payload: &Value) -> Value {
+    json!({ "event": "sendToPlugin", "action": "", "context": plugin, "payload": payload })
 }
 
 pub fn did_receive_global_settings(settings: &Value) -> Value {

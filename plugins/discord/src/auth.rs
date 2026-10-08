@@ -33,8 +33,10 @@ pub struct Credentials {
 }
 
 impl Credentials {
+    /// The secret is optional: Discord applications set to "Public Client"
+    /// exchange the code without it.
     pub fn complete(&self) -> bool {
-        !self.client_id.is_empty() && !self.client_secret.is_empty()
+        !self.client_id.is_empty()
     }
 }
 
@@ -203,10 +205,10 @@ async fn token_request(
     creds: &Credentials,
     params: &[(&str, &str)],
 ) -> anyhow::Result<Tokens> {
-    let mut form: Vec<(&str, &str)> = vec![
-        ("client_id", &creds.client_id),
-        ("client_secret", &creds.client_secret),
-    ];
+    let mut form: Vec<(&str, &str)> = vec![("client_id", &creds.client_id)];
+    if !creds.client_secret.is_empty() {
+        form.push(("client_secret", &creds.client_secret));
+    }
     form.extend_from_slice(params);
     let res = http
         .post(format!("{}/oauth2/token", api_base()))
@@ -222,6 +224,11 @@ async fn token_request(
             .or_else(|| body["error"].as_str())
             .unwrap_or("unbekannt");
         if body["error"] == "invalid_client" {
+            if creds.client_secret.is_empty() {
+                bail!(
+                    "Discord verlangt ein Client-Secret: in der Anwendung „Public Client“ einschalten oder das Secret eintragen ({reason})"
+                );
+            }
             bail!("Client-Secret ist falsch ({reason})");
         }
         if reason.contains("redirect_uri") {

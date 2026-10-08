@@ -12,36 +12,53 @@ Quellcode: [`plugins/discord`](../plugins/discord) (Rust, ein einzelnes Programm
 | --- | --- | --- | --- |
 | Mikrofon stummschalten | umschalten / ein / aus | – | rot, wenn stumm |
 | Kopfhörer stummschalten | umschalten / ein / aus | – | rot, wenn taub geschaltet |
-| Sprachkanal | betreten / verlassen (Kanal-ID) | – | grün, wenn im Kanal |
-| Textkanal | Kanal öffnen (Kanal-ID) | – | – |
+| Sprachkanal | betreten / verlassen (Server + Kanal aus Liste) | – | grün, wenn im Kanal |
+| Textkanal | Kanal öffnen (Server + Kanal aus Liste) | – | – |
 | Benachrichtigung | Zähler zurücksetzen | – | Anzahl neuer Benachrichtigungen |
-| Benutzer-Lautstärkeregelung | lauter / leiser / stumm (Benutzer-ID) | drehen = 0–200 %, drücken = stumm | Lautstärke in % |
+| Benutzer-Lautstärkeregelung | lauter / leiser / stumm (Person aus dem Sprachkanal) | drehen = 0–200 %, drücken = stumm | Lautstärke in % |
 | Lautstärkeregelung | lauter / leiser / stumm (Eingabe oder Ausgabe) | drehen = Lautstärke, drücken = stumm | Lautstärke in % |
-| Sprachboard | Sound abspielen (Name oder ID) | – | – |
-| Audiogerät einstellen | Eingabe-/Ausgabegerät wählen (Name oder Teil davon) | – | grün, wenn aktiv |
+| Sprachboard | Sound abspielen (aus Liste) | – | – |
+| Audiogerät einstellen | Eingabe-/Ausgabegerät wählen (aus Liste) | – | grün, wenn aktiv |
 | Kamera ein-/ausschalten | umschalten | – | grün, wenn an |
 | Bildschirmfreigabe ein-/ausschalten | umschalten | – | grün, wenn aktiv |
 | Drücken zum Sprechen | solange gedrückt: Mikro an, danach wieder stumm | – | grün, solange gedrückt |
 | Sprachaktivierung umschalten | Sprachaktivierung ↔ Push-to-Talk | – | Tastatur-Symbol bei Push-to-Talk |
 
-Kanal- und Benutzer-IDs: in Discord **Einstellungen → Erweitert → Entwicklermodus** einschalten, dann Rechtsklick auf
-den Kanal bzw. die Person → „ID kopieren“.
+Server, Kanäle, Personen (im eigenen Sprachkanal), Soundboard-Sounds und Audiogeräte wählst du im Inspektor aus
+Listen, die das Plugin live bei Discord abfragt – IDs oder der Entwicklermodus sind nicht nötig.
 
-## Einrichtung (einmalig, ca. 3 Minuten)
+## Verbinden
 
-Discord lässt RPC nur für **freigegebene Anwendungen** oder für Konten zu, die bei einer Anwendung als **Tester**
-eingetragen sind. Deshalb legst du dir eine eigene (kostenlose) Anwendung an:
+**Schnell (Standard):** Plugins → Discord → **Mit Discord verbinden** → in Discord **Autorisieren**. Fertig – auch der
+Inspektor jeder Discord-Taste zeigt den Status und den Knopf. Dafür nutzt das Plugin die gemeinsame Discord-Anwendung
+„OpenDeckN3“.
+
+Discord erlaubt die Sprachsteuerung nur Anwendungen, die Discord freigeschaltet hat (wie Elgato oder VSD Craft), oder
+Konten, die bei einer Anwendung als **Tester** eingetragen sind (höchstens 50). Die Schnell-Anmeldung funktioniert
+deshalb für den Betreuer der OpenDeckN3-Anwendung und die dort eingetragenen Tester. Alle anderen nutzen eine eigene
+Anwendung:
+
+**Eigene Discord-Anwendung (funktioniert immer, einmalig ca. 3 Minuten):**
 
 1. Im [Discord Developer Portal](https://discord.com/developers/applications) **New Application** anlegen, Name z. B.
    „OpenDeckN3“.
-2. Unter **OAuth2**: **Client ID** kopieren, **Reset Secret** → **Client Secret** kopieren (wird nur einmal angezeigt).
-3. Ebenfalls unter **OAuth2 → Redirects**: `http://localhost` eintragen und speichern (dort muss nichts laufen).
-4. Falls beim Verbinden „nicht auf der Testerliste“ erscheint: unter **App Testers** das eigene Konto hinzufügen.
-5. In OpenDeckN3: **Plugins → Discord** → Client-ID, Client-Secret eintragen → **Mit Discord verbinden**.
-6. In Discord erscheint ein Fenster „OpenDeckN3 möchte …“ → **Autorisieren**. Der Status zeigt „Verbunden als …“.
+2. Unter **OAuth2**: **Client ID** kopieren, **Public Client** einschalten (dann ist kein Secret nötig – sonst
+   **Reset Secret** und das Secret kopieren).
+3. Unter **OAuth2 → Redirects**: `http://localhost` eintragen und speichern (dort muss nichts laufen).
+4. Erscheint beim Verbinden „nicht auf der Testerliste“: unter **App Testers** das eigene Konto hinzufügen.
+5. In OpenDeckN3: Plugins → Discord → Anmeldung **„Eigene Discord-Anwendung“** → Client-ID (und ggf. Secret) eintragen
+   → **Mit Discord verbinden** → in Discord **Autorisieren**.
 
-Danach verbindet sich das Plugin bei jedem Start automatisch (gespeichertes Token, wird selbst erneuert). Client-Secret
-und Tokens liegen nur lokal in `<config>/plugin-settings/de.opendeckn3.discord.json`. **Abmelden** löscht die Tokens.
+Danach verbindet sich das Plugin bei jedem Start automatisch (gespeichertes Token, wird selbst erneuert). Tokens und
+ein eventuelles Secret liegen nur lokal in `<config>/plugin-settings/de.opendeckn3.discord.json`. **Abmelden** löscht
+die Tokens.
+
+### Für den Betreuer: Schnell-Anmeldung einrichten
+
+Anwendung „OpenDeckN3“ wie oben anlegen (mit **Public Client** und Redirect `http://localhost`), Client-ID in
+`plugins/discord/src/main.rs` als `QUICK_CLIENT_ID` eintragen, Tester unter **App Testers** hinzufügen. Für mehr als
+50 Personen bräuchte die Anwendung eine RPC-Freigabe von Discord. Zum Testen lässt sich die ID ohne Neubau per
+Umgebungsvariable `OPENDECKN3_DISCORD_CLIENT_ID` setzen.
 
 ## Gut zu wissen
 
@@ -66,7 +83,8 @@ Ablauf: Handshake (`client_id`) → `AUTHORIZE` (Bestätigungsfenster, liefert e
 `AUTHENTICATE`. Danach `SUBSCRIBE` auf `VOICE_SETTINGS_UPDATE`, `VOICE_CHANNEL_SELECT`, `NOTIFICATION_CREATE`,
 `VIDEO_STATE_UPDATE`, `SCREENSHARE_STATE_UPDATE`, damit die Tasten den Zustand in Discord live zeigen. Befehle:
 `SET_VOICE_SETTINGS`, `SELECT_VOICE_CHANNEL`, `SELECT_TEXT_CHANNEL`, `SET_USER_VOICE_SETTINGS`, `GET_VOICE_SETTINGS`,
-`GET_SELECTED_VOICE_CHANNEL` sowie die oben genannten undokumentierten.
+`GET_SELECTED_VOICE_CHANNEL`, für die Auswahllisten `GET_GUILDS`, `GET_CHANNELS` sowie die oben genannten
+undokumentierten.
 
 Entwickeln/Testen ohne Discord: `cargo test -p opendeckn3-discord` (simuliertes Discord über einen In-Memory-Stream
 und einen lokalen Token-Server). `OPENDECKN3_DISCORD_API` lenkt die OAuth2-Anfragen auf einen Test-Server um.

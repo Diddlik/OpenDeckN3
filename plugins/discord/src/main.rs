@@ -19,6 +19,20 @@ use ipc::{IpcEvent, Rpc};
 
 const PREFIX: &str = "de.opendeckn3.discord.";
 
+/// Discord application behind "Schnell verbinden" (Public Client, testers
+/// registered by the maintainer). Empty until it is set up; can be overridden
+/// with `OPENDECKN3_DISCORD_CLIENT_ID`.
+const QUICK_CLIENT_ID: &str = "";
+
+fn quick_client_id() -> String {
+    std::env::var("OPENDECKN3_DISCORD_CLIENT_ID")
+        .ok()
+        .filter(|id| !id.trim().is_empty())
+        .unwrap_or_else(|| QUICK_CLIENT_ID.to_owned())
+}
+
+const NEEDS_SETUP: &str = "Client-ID eintragen (Anmeldung: „Eigene Discord-Anwendung“)";
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Act {
     Mute,
@@ -206,21 +220,35 @@ impl Plugin {
         }
     }
 
+    /// Quick sign-in uses the built-in application; manual mode the user's own.
+    fn credentials(&self) -> Credentials {
+        let redirect = self.global_str("redirectUri");
+        let redirect_uri = if redirect.is_empty() {
+            "http://localhost".into()
+        } else {
+            redirect
+        };
+        if self.global_str("authMode") == "manual" {
+            Credentials {
+                client_id: self.global_str("clientId"),
+                client_secret: self.global_str("clientSecret"),
+                redirect_uri,
+            }
+        } else {
+            Credentials {
+                client_id: quick_client_id(),
+                client_secret: String::new(),
+                redirect_uri: "http://localhost".into(),
+            }
+        }
+    }
+
     fn on_global_settings(&mut self, settings: Value) {
         let previous = std::mem::replace(
             &mut self.global,
             settings.as_object().cloned().unwrap_or_default(),
         );
-        let redirect = self.global_str("redirectUri");
-        let creds = Credentials {
-            client_id: self.global_str("clientId"),
-            client_secret: self.global_str("clientSecret"),
-            redirect_uri: if redirect.is_empty() {
-                "http://localhost".into()
-            } else {
-                redirect
-            },
-        };
+        let creds = self.credentials();
         let changed = |key: &str| previous.get(key) != self.global.get(key);
         let first = !self.loaded;
         self.loaded = true;
@@ -228,7 +256,7 @@ impl Plugin {
         if first {
             self.creds = creds;
             if !self.creds.complete() {
-                self.set_status("Client-ID und Client-Secret eintragen");
+                self.set_status(self.setup_hint());
             } else if self.tokens().is_some() {
                 self.start_connect(false);
             } else {
@@ -257,7 +285,7 @@ impl Plugin {
             if self.creds.complete() {
                 self.start_connect(true);
             } else {
-                self.set_status("Client-ID und Client-Secret eintragen");
+                self.set_status(self.setup_hint());
             }
             return;
         }
@@ -266,8 +294,16 @@ impl Plugin {
             if self.creds.complete() {
                 self.start_connect(true);
             } else {
-                self.set_status("Client-ID und Client-Secret eintragen");
+                self.set_status(self.setup_hint());
             }
+        }
+    }
+
+    fn setup_hint(&self) -> &'static str {
+        if self.global_str("authMode") == "manual" || quick_client_id().is_empty() {
+            NEEDS_SETUP
+        } else {
+            "Nicht verbunden – „Mit Discord verbinden“ klicken"
         }
     }
 
@@ -584,6 +620,7 @@ impl Plugin {
                 }
                 self.refresh(&context);
             }
+            "sendToPlugin" => self.on_request(msg["payload"].clone()),
             "willDisappear" => {
                 self.contexts.remove(&context);
             }
@@ -596,6 +633,29 @@ impl Plugin {
             }
             _ => {}
         }
+    }
+
+    /// Options for the settings forms (`source` fields in the manifest).
+    fn on_request(&self, payload: Value) {
+        let (host, uuid, rpc) = (self.host.clone(), self.uuid.clone(), self.rpc.clone());
+        let voice = self.voice.clone();
+        tokio::spawn(async move {
+            let id = payload["requestId"].clone();
+            let answer = match rpc {
+                None => Err(anyhow::anyhow!(
+                    "Nicht mit Discord verbunden – Plugins → Discord → „Mit Discord verbinden“"
+                )),
+                Some(rpc) => options(&rpc, &voice, &payload).await,
+            };
+            let payload = match answer {
+                Ok(options) => json!({ "requestId": id, "options": options }),
+                Err(err) => json!({ "requestId": id, "error": format!("{err:#}") }),
+            };
+            host.send(
+                json!({ "event": "sendToPropertyInspector", "context": uuid, "payload": payload }),
+            )
+            .ok();
+        });
     }
 
     /// Sends a command in the background; failures flash the key.
@@ -626,7 +686,7 @@ impl Plugin {
         }
         self.alert(context);
         if !self.creds.complete() {
-            self.set_status("Client-ID und Client-Secret eintragen (Plugins → Discord)");
+            self.set_status(self.setup_hint());
         } else {
             self.start_connect(true);
         }
@@ -892,6 +952,106 @@ impl Plugin {
             Msg::CallFailed(context, error) => self.on_call_failed(context, error),
         }
     }
+}
+
+/// `[[value, label], …]` for a dropdown.
+async fn options(rpc: &Rpc, voice: &Value, req: &Value) -> anyhow::Result<Vec<(String, String)>> {
+    let text = |v: &Value| v.as_str().unwrap_or_default().to_owned();
+    let mut list: Vec<(String, String)> = match req["request"].as_str().unwrap_or_default() {
+        "guilds" => {
+            let data = rpc.call("GET_GUILDS", json!({})).await?;
+            let guilds = data["guilds"].as_array().cloned().unwrap_or_default();
+            guilds
+                .iter()
+                .map(|g| (text(&g["id"]), text(&g["name"])))
+                .collect()
+        }
+        kind @ ("voiceChannels" | "textChannels") => {
+            let guild = req["guild"].as_str().unwrap_or_default();
+            anyhow::ensure!(!guild.is_empty(), "Erst einen Server wählen");
+            let data = rpc
+                .call("GET_CHANNELS", json!({ "guild_id": guild }))
+                .await?;
+            // Channel types: 0 text, 5 announcements, 2 voice, 13 stage.
+            let wanted: &[i64] = if kind == "voiceChannels" {
+                &[2, 13]
+            } else {
+                &[0, 5]
+            };
+            let channels = data["channels"].as_array().cloned().unwrap_or_default();
+            channels
+                .iter()
+                .filter(|c| wanted.contains(&c["type"].as_i64().unwrap_or(-1)))
+                .map(|c| {
+                    let prefix = if kind == "voiceChannels" {
+                        "🔊 "
+                    } else {
+                        "# "
+                    };
+                    (text(&c["id"]), format!("{prefix}{}", text(&c["name"])))
+                })
+                .collect()
+        }
+        "users" => {
+            let data = rpc.call("GET_SELECTED_VOICE_CHANNEL", json!({})).await?;
+            anyhow::ensure!(
+                !data.is_null(),
+                "Erst einem Sprachkanal beitreten – dann erscheinen die Personen darin"
+            );
+            let states = data["voice_states"].as_array().cloned().unwrap_or_default();
+            states
+                .iter()
+                .map(|s| {
+                    let user = &s["user"];
+                    let name = [&s["nick"], &user["global_name"], &user["username"]]
+                        .into_iter()
+                        .find_map(|v| v.as_str().filter(|n| !n.is_empty()))
+                        .unwrap_or("?");
+                    (text(&user["id"]), name.to_owned())
+                })
+                .collect()
+        }
+        "sounds" => {
+            let data = rpc.call("GET_SOUNDBOARD_SOUNDS", json!({})).await?;
+            let sounds = data
+                .as_array()
+                .or_else(|| data["sounds"].as_array())
+                .cloned()
+                .unwrap_or_default();
+            sounds
+                .iter()
+                .map(|s| {
+                    let id = s["sound_id"]
+                        .as_str()
+                        .map(str::to_owned)
+                        .unwrap_or_else(|| s["sound_id"].to_string());
+                    let emoji = s["emoji_name"]
+                        .as_str()
+                        .map(|e| format!("{e} "))
+                        .unwrap_or_default();
+                    (id, format!("{emoji}{}", text(&s["name"])))
+                })
+                .collect()
+        }
+        "devices" => {
+            let target = if req["target"] == "output" {
+                "output"
+            } else {
+                "input"
+            };
+            let devices = voice[target]["available_devices"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
+            devices
+                .iter()
+                .map(|d| (text(&d["id"]), text(&d["name"])))
+                .collect()
+        }
+        other => anyhow::bail!("unbekannte Anfrage {other}"),
+    };
+    list.retain(|(id, _)| !id.is_empty());
+    Ok(list)
 }
 
 fn target_of(inst: &Instance) -> &'static str {
@@ -1234,6 +1394,80 @@ mod tests {
                 .unwrap()
                 .contains("Client-ID")
         );
+    }
+
+    #[tokio::test]
+    async fn dropdown_options_from_discord() {
+        let stream = ipc::tests::fake_discord(|f| {
+            let data = match f["cmd"].as_str().unwrap() {
+                "GET_GUILDS" => {
+                    json!({ "guilds": [{ "id": "g1", "name": "Wolverines Apartment" }] })
+                }
+                "GET_CHANNELS" => {
+                    assert_eq!(f["args"]["guild_id"], "g1");
+                    json!({ "channels": [
+                        { "id": "c1", "name": "Kickerraum", "type": 2 },
+                        { "id": "c2", "name": "allgemein", "type": 0 }] })
+                }
+                "GET_SELECTED_VOICE_CHANNEL" => json!({ "voice_states": [
+                    { "nick": "Max", "user": { "id": "u1", "username": "max" } },
+                    { "user": { "id": "u2", "username": "eva", "global_name": "Eva" } }] }),
+                _ => json!({}),
+            };
+            vec![json!({ "cmd": f["cmd"], "nonce": f["nonce"], "data": data })]
+        });
+        let (tx, _rx) = mpsc::unbounded_channel();
+        let rpc = Rpc::handshake(stream, "1", tx).await.unwrap();
+        let voice = json!({ "input": { "available_devices": [{ "id": "a", "name": "Headset" }] } });
+        let get = |req: Value| {
+            let (rpc, voice) = (rpc.clone(), voice.clone());
+            async move { options(&rpc, &voice, &req).await }
+        };
+        assert_eq!(
+            get(json!({ "request": "guilds" })).await.unwrap(),
+            [("g1".into(), "Wolverines Apartment".into())]
+        );
+        let voice_channels = get(json!({ "request": "voiceChannels", "guild": "g1" }))
+            .await
+            .unwrap();
+        assert_eq!(
+            voice_channels,
+            [("c1".to_owned(), "🔊 Kickerraum".to_owned())]
+        );
+        let text_channels = get(json!({ "request": "textChannels", "guild": "g1" }))
+            .await
+            .unwrap();
+        assert_eq!(text_channels[0].0, "c2");
+        assert!(
+            get(json!({ "request": "voiceChannels" })).await.is_err(),
+            "needs a guild"
+        );
+        let users = get(json!({ "request": "users" })).await.unwrap();
+        assert_eq!(
+            users,
+            [
+                ("u1".to_owned(), "Max".to_owned()),
+                ("u2".to_owned(), "Eva".to_owned())
+            ]
+        );
+        let devices = get(json!({ "request": "devices", "target": "input" }))
+            .await
+            .unwrap();
+        assert_eq!(devices, [("a".to_owned(), "Headset".to_owned())]);
+    }
+
+    #[test]
+    fn quick_mode_needs_no_secret() {
+        let (mut p, _host, _rx) = plugin();
+        p.global = json!({ "authMode": "manual", "clientId": " 77 " })
+            .as_object()
+            .unwrap()
+            .clone();
+        let creds = p.credentials();
+        assert_eq!(creds.client_id, "77");
+        assert!(creds.complete(), "secret is optional (public client)");
+        p.global = Map::new();
+        assert_eq!(p.credentials().client_secret, "");
     }
 
     #[test]

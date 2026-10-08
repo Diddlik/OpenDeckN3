@@ -3,7 +3,7 @@
   "Name": "Discord",
   "Author": "OpenDeckN3",
   "Version": "0.1.0",
-  "Description": "Steuert die Discord-App: Mikro und Kopfhörer stumm, Kanäle, Lautstärken, Soundboard, Kamera, Bildschirmfreigabe. Braucht eine eigene Discord-Anwendung (Client-ID/Secret) – Anleitung unter „Einstellungen“.",
+  "Description": "Steuert die Discord-App: Mikro und Kopfhörer stumm, Kanäle, Lautstärken, Soundboard, Kamera, Bildschirmfreigabe. Verbinden mit einem Klick unter „Einstellungen“ – Server, Kanäle, Personen und Sounds zum Auswählen.",
   "Category": "Discord",
   "Icon": "imgs/plugin",
   "CodePathWin": "opendeckn3-discord.exe",
@@ -27,34 +27,64 @@
       "label": "Status"
     },
     {
+      "type": "button",
+      "key": "connect",
+      "label": "Mit Discord verbinden",
+      "primary": true,
+      "help": "Discord-Desktop-App muss laufen – dort einmal „Autorisieren“ klicken."
+    },
+    {
+      "type": "select",
+      "key": "authMode",
+      "label": "Anmeldung",
+      "default": "quick",
+      "options": [
+        [
+          "quick",
+          "Schnell (OpenDeckN3-Anwendung)"
+        ],
+        [
+          "manual",
+          "Eigene Discord-Anwendung"
+        ]
+      ],
+      "help": "Schnell: ein Klick, für eingetragene Tester der OpenDeckN3-Anwendung. Eigene Anwendung: funktioniert immer, einmalig ca. 3 Minuten Einrichtung."
+    },
+    {
       "type": "link",
       "label": "Discord Developer Portal öffnen",
-      "url": "https://discord.com/developers/applications"
+      "url": "https://discord.com/developers/applications",
+      "showIf": {
+        "authMode": "manual"
+      }
     },
     {
       "type": "text",
       "key": "clientId",
       "label": "Client-ID",
-      "help": "Eigene Anwendung im Developer Portal anlegen → OAuth2 → Client ID."
+      "help": "Developer Portal → deine Anwendung → OAuth2 → Client ID.",
+      "showIf": {
+        "authMode": "manual"
+      }
     },
     {
       "type": "password",
       "key": "clientSecret",
-      "label": "Client-Secret",
-      "help": "OAuth2 → „Reset Secret“. Wird nur lokal gespeichert."
+      "label": "Client-Secret (optional)",
+      "help": "Nicht nötig, wenn in der Anwendung „Public Client“ eingeschaltet ist. Wird nur lokal gespeichert.",
+      "showIf": {
+        "authMode": "manual"
+      }
     },
     {
       "type": "text",
       "key": "redirectUri",
       "label": "Redirect-URI",
       "default": "http://localhost",
-      "help": "Muss unter OAuth2 → Redirects eingetragen sein."
-    },
-    {
-      "type": "button",
-      "key": "connect",
-      "label": "Mit Discord verbinden",
-      "help": "Discord muss laufen – dort erscheint eine Bestätigung."
+      "help": "Muss unter OAuth2 → Redirects eingetragen sein.",
+      "showIf": {
+        "authMode": "manual"
+      }
     },
     {
       "type": "button",
@@ -159,11 +189,19 @@
       ],
       "SettingsSchema": [
         {
-          "type": "text",
+          "type": "select",
+          "key": "guild",
+          "label": "Server",
+          "source": "guilds"
+        },
+        {
+          "type": "select",
           "key": "channel",
-          "label": "Kanal-ID",
-          "help": "In Discord: Einstellungen → Erweitert → Entwicklermodus an, dann Rechtsklick auf den Kanal → „Kanal-ID kopieren“.",
-          "placeholder": "z. B. 123456789012345678"
+          "label": "Sprachkanal",
+          "source": "voiceChannels",
+          "dependsOn": [
+            "guild"
+          ]
         },
         {
           "type": "select",
@@ -202,11 +240,19 @@
       ],
       "SettingsSchema": [
         {
-          "type": "text",
+          "type": "select",
+          "key": "guild",
+          "label": "Server",
+          "source": "guilds"
+        },
+        {
+          "type": "select",
           "key": "channel",
-          "label": "Kanal-ID",
-          "help": "In Discord: Einstellungen → Erweitert → Entwicklermodus an, dann Rechtsklick auf den Kanal → „Kanal-ID kopieren“.",
-          "placeholder": "z. B. 123456789012345678"
+          "label": "Textkanal",
+          "source": "textChannels",
+          "dependsOn": [
+            "guild"
+          ]
         }
       ]
     },
@@ -246,11 +292,11 @@
       ],
       "SettingsSchema": [
         {
-          "type": "text",
+          "type": "select",
           "key": "user",
-          "label": "Benutzer-ID",
-          "help": "Entwicklermodus an, dann Rechtsklick auf die Person → „Benutzer-ID kopieren“.",
-          "placeholder": "z. B. 123456789012345678"
+          "label": "Person",
+          "source": "users",
+          "help": "Zeigt die Personen in deinem aktuellen Sprachkanal."
         },
         {
           "type": "select",
@@ -369,11 +415,10 @@
       ],
       "SettingsSchema": [
         {
-          "type": "text",
+          "type": "select",
           "key": "sound",
           "label": "Sound",
-          "help": "Name (z. B. „Airhorn“) oder Sound-ID",
-          "placeholder": "z. B. Airhorn"
+          "source": "sounds"
         }
       ]
     },
@@ -411,11 +456,13 @@
           "default": "input"
         },
         {
-          "type": "text",
+          "type": "select",
           "key": "device",
           "label": "Gerät",
-          "help": "Name oder Teil davon, z. B. „Headset“",
-          "placeholder": "z. B. Headset"
+          "source": "devices",
+          "dependsOn": [
+            "target"
+          ]
         }
       ]
     },

@@ -109,7 +109,16 @@ pub struct App {
     plugins_dir: PathBuf,
     /// Bundled/extra plugin directories (read-only for the app).
     extra_plugin_dirs: Vec<PathBuf>,
+    /// Open `pluginRequest`s: id → (plugin, sent at, reply).
+    plugin_requests: HashMap<u64, PendingRequest>,
+    next_request: u64,
 }
+
+type PendingRequest = (
+    String,
+    std::time::Instant,
+    tokio::sync::oneshot::Sender<Result<Value, String>>,
+);
 
 impl App {
     pub fn new(
@@ -129,7 +138,38 @@ impl App {
             input: InputHandle::spawn(),
             plugins_dir: PathBuf::new(),
             extra_plugin_dirs: Vec::new(),
+            plugin_requests: HashMap::new(),
+            next_request: 1,
         }
+    }
+
+    /// Forwards a `pluginRequest`; the reply comes later via
+    /// `sendToPropertyInspector` (see `on_plugin_event`).
+    pub async fn plugin_request(
+        &mut self,
+        plugin: String,
+        payload: Value,
+        reply: tokio::sync::oneshot::Sender<Result<Value, String>>,
+    ) {
+        // Forget requests a plugin never answered.
+        self.plugin_requests
+            .retain(|_, (_, at, _)| at.elapsed() < std::time::Duration::from_secs(30));
+        if !self.plugins.is_connected(&plugin).await {
+            reply.send(Err("Plugin läuft nicht".into())).ok();
+            return;
+        }
+        let id = self.next_request;
+        self.next_request += 1;
+        let mut payload = match payload {
+            Value::Object(map) => Value::Object(map),
+            other => json!({ "request": other }),
+        };
+        payload["requestId"] = json!(id);
+        self.plugin_requests
+            .insert(id, (plugin.clone(), std::time::Instant::now(), reply));
+        self.plugins
+            .send(&plugin, &protocol::send_to_plugin(&plugin, &payload))
+            .await;
     }
 
     pub fn set_plugin_dirs(&mut self, plugins_dir: PathBuf, extra: Vec<PathBuf>) {
@@ -507,7 +547,11 @@ impl App {
                 self.plugin_registered(&plugin).await;
                 Ok(())
             }
-            PluginEvent::Disconnected => Ok(()),
+            PluginEvent::Disconnected => {
+                self.plugin_requests
+                    .retain(|_, (owner, _, _)| owner != &plugin);
+                Ok(())
+            }
             PluginEvent::Inbound(event) => self.on_plugin_event(&plugin, event).await,
         };
         if let Err(err) = result {
@@ -635,6 +679,24 @@ impl App {
                 tracing::info!(target: "plugin", %plugin, "{}", payload.message);
             }
             InboundEvent::OpenUrl { payload } => open_url(&payload.url)?,
+            InboundEvent::SendToPropertyInspector { payload, .. } => {
+                let id = payload["requestId"].as_u64().unwrap_or_default();
+                match self.plugin_requests.remove(&id) {
+                    Some((owner, _, reply)) if owner == plugin => {
+                        let result = match payload["error"].as_str() {
+                            Some(error) => Err(error.to_owned()),
+                            None => Ok(payload),
+                        };
+                        reply.send(result).ok();
+                    }
+                    Some(entry) => {
+                        self.plugin_requests.insert(id, entry);
+                    }
+                    None => {
+                        tracing::debug!(%plugin, "sendToPropertyInspector without open request")
+                    }
+                }
+            }
             InboundEvent::Unsupported => tracing::debug!(%plugin, "unsupported plugin event"),
         }
         Ok(())
@@ -812,8 +874,10 @@ impl App {
             }
             ApiCommand::ActivatePlugin { staged } => self.activate_plugin(&staged).await,
             ApiCommand::UninstallPlugin { plugin } => self.uninstall_plugin(&plugin).await,
-            ApiCommand::InstallPlugin { .. } | ApiCommand::PluginStore { .. } => {
-                bail!("handled by the installer")
+            ApiCommand::InstallPlugin { .. }
+            | ApiCommand::PluginStore { .. }
+            | ApiCommand::PluginRequest { .. } => {
+                bail!("handled outside on_api_command")
             }
         }
     }
