@@ -201,12 +201,18 @@ pub fn exists(action: &str) -> bool {
 
 /// Initial settings from the schema defaults.
 pub fn default_settings(action: &str) -> Value {
+    match ACTIONS.iter().find(|a| a["uuid"] == action) {
+        Some(spec) => schema_defaults(&spec["settingsSchema"]),
+        None => Value::Object(Map::new()),
+    }
+}
+
+/// `{key: default}` for all fields of a settings schema that have a default.
+pub fn schema_defaults(schema: &Value) -> Value {
     let mut settings = Map::new();
-    if let Some(spec) = ACTIONS.iter().find(|a| a["uuid"] == action) {
-        for field in spec["settingsSchema"].as_array().into_iter().flatten() {
-            if let (Some(key), Some(default)) = (field["key"].as_str(), field.get("default")) {
-                settings.insert(key.to_owned(), default.clone());
-            }
+    for field in schema.as_array().into_iter().flatten() {
+        if let (Some(key), Some(default)) = (field["key"].as_str(), field.get("default")) {
+            settings.insert(key.to_owned(), default.clone());
         }
     }
     Value::Object(settings)

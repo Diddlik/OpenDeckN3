@@ -88,6 +88,14 @@ pub enum ApiCommand {
     UninstallPlugin {
         plugin: String,
     },
+    GetGlobalSettings {
+        plugin: String,
+    },
+    /// Merges `settings` into the plugin's global settings.
+    SetGlobalSettings {
+        plugin: String,
+        settings: Value,
+    },
     /// Catalog from the registries with the latest GitHub release per plugin.
     PluginStore {
         #[serde(default)]

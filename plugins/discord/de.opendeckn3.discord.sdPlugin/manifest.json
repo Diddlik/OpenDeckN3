@@ -1,0 +1,491 @@
+{
+  "UUID": "de.opendeckn3.discord",
+  "Name": "Discord",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Steuert die Discord-App: Mikro und Kopfhörer stumm, Kanäle, Lautstärken, Soundboard, Kamera, Bildschirmfreigabe. Braucht eine eigene Discord-Anwendung (Client-ID/Secret) – Anleitung unter „Einstellungen“.",
+  "Category": "Discord",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-discord.exe",
+  "CodePathLin": "opendeckn3-discord",
+  "CodePathMac": "opendeckn3-discord",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    },
+    {
+      "Platform": "mac"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "link",
+      "label": "Discord Developer Portal öffnen",
+      "url": "https://discord.com/developers/applications"
+    },
+    {
+      "type": "text",
+      "key": "clientId",
+      "label": "Client-ID",
+      "help": "Eigene Anwendung im Developer Portal anlegen → OAuth2 → Client ID."
+    },
+    {
+      "type": "password",
+      "key": "clientSecret",
+      "label": "Client-Secret",
+      "help": "OAuth2 → „Reset Secret“. Wird nur lokal gespeichert."
+    },
+    {
+      "type": "text",
+      "key": "redirectUri",
+      "label": "Redirect-URI",
+      "default": "http://localhost",
+      "help": "Muss unter OAuth2 → Redirects eingetragen sein."
+    },
+    {
+      "type": "button",
+      "key": "connect",
+      "label": "Mit Discord verbinden",
+      "help": "Discord muss laufen – dort erscheint eine Bestätigung."
+    },
+    {
+      "type": "button",
+      "key": "signOut",
+      "label": "Abmelden"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.discord.mute",
+      "Name": "Mikrofon stummschalten",
+      "Tooltip": "Mikrofon in Discord stumm/an",
+      "Icon": "imgs/mic",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/mic"
+        },
+        {
+          "Image": "imgs/mic-off"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "toggle",
+              "Umschalten"
+            ],
+            [
+              "on",
+              "Ein"
+            ],
+            [
+              "off",
+              "Aus"
+            ]
+          ],
+          "default": "toggle"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.deafen",
+      "Name": "Kopfhörer stummschalten",
+      "Tooltip": "Ton in Discord aus/an (Kopfhörer)",
+      "Icon": "imgs/headphones",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/headphones"
+        },
+        {
+          "Image": "imgs/headphones-off"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "toggle",
+              "Umschalten"
+            ],
+            [
+              "on",
+              "Ein"
+            ],
+            [
+              "off",
+              "Aus"
+            ]
+          ],
+          "default": "toggle"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.voicechannel",
+      "Name": "Sprachkanal",
+      "Tooltip": "Sprachkanal betreten oder verlassen",
+      "Icon": "imgs/voice",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/voice"
+        },
+        {
+          "Image": "imgs/voice-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "text",
+          "key": "channel",
+          "label": "Kanal-ID",
+          "help": "In Discord: Einstellungen → Erweitert → Entwicklermodus an, dann Rechtsklick auf den Kanal → „Kanal-ID kopieren“.",
+          "placeholder": "z. B. 123456789012345678"
+        },
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "toggle",
+              "Betreten/Verlassen"
+            ],
+            [
+              "join",
+              "Betreten"
+            ],
+            [
+              "leave",
+              "Verlassen"
+            ]
+          ],
+          "default": "toggle"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.textchannel",
+      "Name": "Textkanal",
+      "Tooltip": "Textkanal in Discord öffnen",
+      "Icon": "imgs/text",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/text"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "text",
+          "key": "channel",
+          "label": "Kanal-ID",
+          "help": "In Discord: Einstellungen → Erweitert → Entwicklermodus an, dann Rechtsklick auf den Kanal → „Kanal-ID kopieren“.",
+          "placeholder": "z. B. 123456789012345678"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.notifications",
+      "Name": "Benachrichtigung",
+      "Tooltip": "Zeigt neue Discord-Benachrichtigungen; Drücken setzt den Zähler zurück",
+      "Icon": "imgs/bell",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/bell"
+        },
+        {
+          "Image": "imgs/bell-dot"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.uservolume",
+      "Name": "Benutzer-Lautstärkeregelung",
+      "Tooltip": "Lautstärke einer Person im Sprachkanal · Drehregler: drehen = Lautstärke, drücken = stumm",
+      "Icon": "imgs/user-volume",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/user-volume"
+        },
+        {
+          "Image": "imgs/user-volume-off"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "text",
+          "key": "user",
+          "label": "Benutzer-ID",
+          "help": "Entwicklermodus an, dann Rechtsklick auf die Person → „Benutzer-ID kopieren“.",
+          "placeholder": "z. B. 123456789012345678"
+        },
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "mute",
+              "Stumm an/aus"
+            ],
+            [
+              "up",
+              "Lauter"
+            ],
+            [
+              "down",
+              "Leiser"
+            ]
+          ],
+          "default": "mute",
+          "controllers": [
+            "Keypad"
+          ]
+        },
+        {
+          "type": "number",
+          "key": "step",
+          "label": "Schritt (%)",
+          "default": 10,
+          "min": 1,
+          "max": 50,
+          "help": "Pro Druck bzw. Raste"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.volume",
+      "Name": "Lautstärkeregelung",
+      "Tooltip": "Mikrofon- oder Ausgabelautstärke · Drehregler: drehen = Lautstärke, drücken = stumm",
+      "Icon": "imgs/volume",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/volume"
+        },
+        {
+          "Image": "imgs/volume-off"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "target",
+          "label": "Gerät",
+          "options": [
+            [
+              "output",
+              "Ausgabe (Lautsprecher/Kopfhörer)"
+            ],
+            [
+              "input",
+              "Eingabe (Mikrofon)"
+            ]
+          ],
+          "default": "output"
+        },
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "options": [
+            [
+              "mute",
+              "Stumm an/aus"
+            ],
+            [
+              "up",
+              "Lauter"
+            ],
+            [
+              "down",
+              "Leiser"
+            ]
+          ],
+          "default": "mute",
+          "controllers": [
+            "Keypad"
+          ]
+        },
+        {
+          "type": "number",
+          "key": "step",
+          "label": "Schritt (%)",
+          "default": 5,
+          "min": 1,
+          "max": 50,
+          "help": "Pro Druck bzw. Raste"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.soundboard",
+      "Name": "Sprachboard",
+      "Tooltip": "Spielt einen Soundboard-Sound im Sprachkanal ab",
+      "Icon": "imgs/soundboard",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/soundboard"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "text",
+          "key": "sound",
+          "label": "Sound",
+          "help": "Name (z. B. „Airhorn“) oder Sound-ID",
+          "placeholder": "z. B. Airhorn"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.audiodevice",
+      "Name": "Audiogerät einstellen",
+      "Tooltip": "Wechselt das Eingabe- oder Ausgabegerät in Discord",
+      "Icon": "imgs/audiodevice",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/audiodevice"
+        },
+        {
+          "Image": "imgs/audiodevice-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "target",
+          "label": "Art",
+          "options": [
+            [
+              "input",
+              "Eingabe (Mikrofon)"
+            ],
+            [
+              "output",
+              "Ausgabe (Lautsprecher/Kopfhörer)"
+            ]
+          ],
+          "default": "input"
+        },
+        {
+          "type": "text",
+          "key": "device",
+          "label": "Gerät",
+          "help": "Name oder Teil davon, z. B. „Headset“",
+          "placeholder": "z. B. Headset"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.camera",
+      "Name": "Kamera ein-/ausschalten",
+      "Tooltip": "Kamera im Sprachkanal ein/aus",
+      "Icon": "imgs/camera",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/camera-off"
+        },
+        {
+          "Image": "imgs/camera"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.screenshare",
+      "Name": "Bildschirmfreigabe ein-/ausschalten",
+      "Tooltip": "Bildschirmfreigabe starten/beenden",
+      "Icon": "imgs/screen",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/screen"
+        },
+        {
+          "Image": "imgs/screen-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.pushtotalk",
+      "Name": "Drücken zum Sprechen",
+      "Tooltip": "Solange gedrückt: Mikrofon an, danach wieder stumm",
+      "Icon": "imgs/ptt",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/ptt"
+        },
+        {
+          "Image": "imgs/ptt-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.voicemode",
+      "Name": "Sprachaktivierung umschalten",
+      "Tooltip": "Wechselt zwischen Sprachaktivierung und Push-to-Talk",
+      "Icon": "imgs/voicemode",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/voicemode"
+        },
+        {
+          "Image": "imgs/voicemode-ptt"
+        }
+      ]
+    }
+  ]
+}

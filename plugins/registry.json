@@ -2,6 +2,16 @@
   "version": 1,
   "plugins": [
     {
+      "uuid": "de.opendeckn3.discord",
+      "name": "Discord",
+      "description": "Mikro und Kopfhörer stumm, Sprach- und Textkanäle, Lautstärken (auch einzelner Personen), Soundboard, Audiogerät, Kamera, Bildschirmfreigabe, Push-to-Talk. Braucht eine eigene Discord-Anwendung (Client-ID/Secret).",
+      "author": "OpenDeckN3",
+      "repo": "Diddlik/OpenDeckN3",
+      "asset": "de.opendeckn3.discord-windows.streamDeckPlugin",
+      "category": "Discord",
+      "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_DISCORD.md"
+    },
+    {
       "uuid": "de.opendeckn3.counter",
       "name": "Zähler (Beispiel)",
       "description": "Beispiel-Plugin: zählt Tastendrücke und färbt die Taste ein, Drehregler ändern den Farbton.",

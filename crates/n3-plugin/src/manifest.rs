@@ -34,6 +34,10 @@ pub struct PluginManifest {
     pub code_path_win: Option<String>,
     #[serde(default)]
     pub property_inspector_path: Option<String>,
+    /// OpenDeckN3 extension: form for the plugin's global settings
+    /// (same field format as `SettingsSchema`).
+    #[serde(default)]
+    pub global_settings_schema: Option<serde_json::Value>,
 }
 
 fn default_category() -> String {
@@ -57,6 +61,10 @@ pub struct ActionManifest {
     pub controllers: Vec<String>,
     #[serde(default)]
     pub states: Vec<ActionState>,
+    /// OpenDeckN3 extension: settings form shown in the app instead of a
+    /// property inspector (see docs/PLUGIN_API.md).
+    #[serde(default)]
+    pub settings_schema: Option<serde_json::Value>,
 }
 
 fn default_controllers() -> Vec<String> {

@@ -47,6 +47,37 @@ de.example.myplugin.sdPlugin/
   `.py` → `python3`, sonst direkt ausführbar.
 - `Controllers`: Standard `["Keypad"]`.
 
+### Einstellungsformulare (OpenDeckN3-Erweiterung)
+
+Property-Inspector-Seiten (HTML) zeigt OpenDeckN3 nicht an. Stattdessen beschreibt ein Plugin seine Einstellungen im
+Manifest; die App baut daraus Formulare:
+
+- **`SettingsSchema`** an einer Aktion → Felder im Inspektor der belegten Taste. Werte landen in `settings`
+  (Plugin erhält `didReceiveSettings`). Felder mit `default` werden beim Belegen vorausgefüllt.
+- **`GlobalSettingsSchema`** am Plugin → Abschnitt „Einstellungen“ auf der Plugins-Seite. Werte landen in den globalen
+  Einstellungen (Plugin erhält `didReceiveGlobalSettings`). Ideal für Zugangsdaten.
+
+```json
+"SettingsSchema": [
+  { "type": "select", "key": "mode", "label": "Funktion", "default": "toggle",
+    "options": [["toggle", "Umschalten"], ["on", "Ein"], ["off", "Aus"]] },
+  { "type": "number", "key": "step", "label": "Schritt", "default": 5, "min": 1, "max": 50,
+    "controllers": ["Encoder"], "help": "Pro Raste" }
+]
+```
+
+| `type` | Darstellung |
+| --- | --- |
+| `text`, `textarea`, `number`, `select`, `file`, `shortcut`, `profile` | Eingabefelder wie bei den eingebauten Aktionen |
+| `password` | verdecktes Feld (nur `GlobalSettingsSchema`) |
+| `info` | zeigt den Wert von `key` nur an, z. B. einen Status, den das Plugin selbst per `setGlobalSettings` schreibt |
+| `button` | Knopf; setzt `key` auf einen neuen Zeitstempel – das Plugin reagiert auf die Änderung |
+| `link` | Knopf, der `url` im Browser öffnet |
+
+Gemeinsame Felder: `key`, `label`, `help`, `placeholder`, `default`, `controllers` (nur für `Keypad`/`Encoder` zeigen).
+Ändert ein Plugin seine globalen Einstellungen selbst, aktualisiert die App das Formular (`globalSettingsChanged`).
+Ein vollständiges Beispiel ist das [Discord-Plugin](PLUGIN_DISCORD.md).
+
 ## Start & Registrierung
 
 Der Dienst startet das Plugin mit:

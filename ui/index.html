@@ -206,6 +206,10 @@ section.danger h3{color:var(--err)!important}
 .page{flex:1;display:flex;flex-wrap:wrap;align-items:stretch}
 .page-main{flex:999 1 560px;min-width:0;padding:32px;display:flex;flex-direction:column;gap:24px}
 .page h1{margin:0;font-size:28px;font-weight:600;letter-spacing:-.02em}
+.gset{display:flex;flex-direction:column;gap:12px}.gset h3{margin:0;font-size:13px;color:var(--muted);font-weight:600}
+.gset label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.gset .help{font-size:12px;color:var(--faint);line-height:1.45}
+.ginfo{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:var(--input);border:1px solid var(--line);font-size:12px;color:var(--muted)}.ginfo b{font-size:14px;color:var(--text);font-weight:500}
 .ghform{display:flex;gap:10px;flex-wrap:wrap}.ghform .field{flex:1 1 260px}
 .scard{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:16px;border:1px solid var(--line2);background:var(--panel)}
 .scard p{margin:0;font-size:13px;line-height:1.5;color:var(--muted)}
@@ -439,7 +443,7 @@ const S = {
   port: local.get('apiPort', DEFAULT_API_PORT),
   sel: 'k0', test: true, pressed: null, flip: false,
   drag: null, over: null, q: '', closed: {}, pluginSel: null, json: false,
-  pluginTab: 'installed', store: null, pbusy: null, gh: '',
+  pluginTab: 'installed', store: null, pbusy: null, gh: '', gset: null,
   ob: { step: 0, copied: false, placed: false },
   menu: null, popover: null, modal: null,
   autostart: false,
@@ -601,6 +605,9 @@ function onEvent(ev) {
       break;
     }
     case 'pluginsChanged': refreshSoon(); break;
+    case 'globalSettingsChanged':
+      if (S.gset && S.gset.plugin === ev.plugin && !gpatch[ev.plugin] && S.route === 'plugins') loadGlobalSettings(ev.plugin);
+      break;
     case 'lagged': refresh(); break;
   }
 }
@@ -1035,6 +1042,59 @@ function offlineHTML() {
   </div></main>`;
 }
 
+// Plugin-weite Einstellungen (manifest: GlobalSettingsSchema), z. B. Zugangsdaten.
+function globalSettingsHTML(p) {
+  if (!S.gset || S.gset.plugin !== p.uuid) { loadGlobalSettings(p.uuid); return '<section class="gset"><h3>Einstellungen</h3><div style="color:var(--muted);font-size:13px">Lade …</div></section>'; }
+  const vals = S.gset.values;
+  const fields = p.globalSettingsSchema.map((f) => {
+    const v = vals[f.key] ?? f.default ?? '';
+    const at = `data-in="gfield" data-key="${esc(f.key)}"`;
+    const help = f.help ? `<span class="help">${esc(f.help)}</span>` : '';
+    switch (f.type) {
+      case 'info':
+        return v ? `<div class="ginfo"><span>${esc(f.label)}</span><b>${esc(v)}</b></div>` : '';
+      case 'link':
+        return `<a class="btn ghost" href="${esc(f.url)}" target="_blank" rel="noopener">${ic('external', 16)}${esc(f.label)}</a>`;
+      case 'button':
+        return `<button type="button" class="btn" data-act="gbutton" data-arg="${esc(f.key)}">${ic('refresh', 16)}${esc(f.label)}</button>${help}`;
+      case 'select':
+        return `<label>${esc(f.label)}<select class="field" ${at}>${f.options.map(([val, l]) => `<option value="${esc(val)}" ${String(val) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>${help}</label>`;
+      case 'password':
+        return `<label>${esc(f.label)}<input class="field mono" type="password" ${at} value="${esc(v)}" autocomplete="off" spellcheck="false">${help}</label>`;
+      default:
+        return `<label>${esc(f.label)}<input class="field mono" ${at} value="${esc(v)}" ${f.placeholder ? `placeholder="${esc(f.placeholder)}"` : ''} autocomplete="off" spellcheck="false">${help}</label>`;
+    }
+  }).join('');
+  return `<section class="gset"><h3>Einstellungen</h3>${fields}</section>`;
+}
+async function loadGlobalSettings(plugin) {
+  if (S.gsetLoading === plugin) return;
+  S.gsetLoading = plugin;
+  try { S.gset = { plugin, values: await api.call('getGlobalSettings', { plugin }) }; }
+  catch { S.gset = { plugin, values: {} }; }
+  S.gsetLoading = null;
+  if (S.route === 'plugins') renderKeepingFocus();
+}
+const gpatch = {};
+const sendGlobal = debounce((plugin) => {
+  const settings = gpatch[plugin]; delete gpatch[plugin];
+  if (settings) api.run('setGlobalSettings', { plugin, settings }).catch(() => {});
+}, 500);
+function setGlobal(key, value) {
+  const plugin = S.gset.plugin;
+  S.gset.values[key] = value;
+  gpatch[plugin] = { ...(gpatch[plugin] || {}), [key]: value };
+  sendGlobal(plugin);
+}
+// Neu zeichnen, ohne dem Benutzer das gerade bearbeitete Feld wegzunehmen.
+function renderKeepingFocus() {
+  const a = document.activeElement;
+  const key = a && a.dataset && a.dataset.in === 'gfield' ? a.dataset.key : null;
+  const pos = key && a.selectionStart;
+  render();
+  if (key) { const el = document.querySelector(`[data-in="gfield"][data-key="${CSS.escape(key)}"]`); if (el) { el.focus(); if (pos != null && el.setSelectionRange) el.setSelectionRange(pos, pos); } }
+}
+
 const storeEntry = (uuid) => (S.store && S.store.plugins ? S.store.plugins.find((x) => x.uuid === uuid) : null);
 
 function pluginsHTML() {
@@ -1113,6 +1173,7 @@ function pluginsHTML() {
         <div><b style="font-size:20px;font-weight:600">${esc(dp.name)}</b><div style="margin-top:4px">${stateEl(dp)}</div></div>
       </div>
       ${dp.description ? `<p style="margin:0;font-size:14px;line-height:1.55;color:var(--muted)">${esc(dp.description)}</p>` : ''}
+      ${dp.globalSettingsSchema ? globalSettingsHTML(dp) : ''}
       <dl>
         <dt>UUID</dt><dd class="mono" style="font-size:12px">${esc(dp.uuid)}</dd>
         <dt>Autor</dt><dd>${esc(dp.author || '–')}</dd>
@@ -1549,6 +1610,11 @@ const ACTS = {
   plugin(arg) { S.pluginSel = arg; render(); },
   pluginTab(arg) { S.pluginTab = arg; if (arg === 'store' && !S.store) loadStore(false); render(); },
   storeRefresh() { loadStore(true); },
+  gbutton(key) {
+    if (!S.gset) return;
+    S.gset.values[key] = Date.now();
+    api.run('setGlobalSettings', { plugin: S.gset.plugin, settings: { [key]: S.gset.values[key] } }).catch(() => {});
+  },
   async installFile() {
     if (S.pbusy) return;
     if (desktop) {
@@ -1650,6 +1716,7 @@ document.addEventListener('input', (e) => {
   const d = cur();
   if (k === 'q') { S.q = t.value; $('#liblist').innerHTML = libListHTML(); }
   else if (k === 'gh') S.gh = t.value;
+  else if (k === 'gfield' && S.gset) setGlobal(t.dataset.key, t.value);
   else if (k === 'brightness' && d) { d.brightness = clamp(+t.value, 0, 100); syncBrightness(t); sendBrightness(d.brightness); }
   else if (k === 'title') { const s = slot(S.sel); if (!s) return; s.title = t.value || null; renderStage(); sendAppearance(S.sel, s); }
   else if (k === 'sfield' && t.dataset.type !== 'shortcut') {

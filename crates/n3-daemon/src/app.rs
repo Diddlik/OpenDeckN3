@@ -570,6 +570,7 @@ impl App {
             InboundEvent::SetGlobalSettings { context, payload } => {
                 anyhow::ensure!(context == plugin, "global settings context mismatch");
                 self.store.save_global_settings(plugin, &payload)?;
+                self.emit(json!({ "event": "globalSettingsChanged", "plugin": plugin }));
             }
             InboundEvent::GetGlobalSettings { context } => {
                 anyhow::ensure!(context == plugin, "global settings context mismatch");
@@ -685,7 +686,16 @@ impl App {
                 let settings = match settings {
                     Some(settings) => Some(settings),
                     None if plugin == BUILTIN_PLUGIN => Some(builtin::default_settings(&action)),
-                    None => None,
+                    None => self.plugins.get(&plugin).await.and_then(|p| {
+                        let schema = p
+                            .manifest
+                            .actions
+                            .iter()
+                            .find(|a| a.uuid == action)?
+                            .settings_schema
+                            .clone()?;
+                        Some(builtin::schema_defaults(&schema))
+                    }),
                 };
                 let mut instance = ActionInstance::new(plugin, action);
                 if let Some(settings) = settings {
@@ -779,6 +789,26 @@ impl App {
                     ));
                 }
                 Ok(json!({ "device": n3_driver::virtual_deck::VIRTUAL_DEVICE_ID }))
+            }
+            ApiCommand::GetGlobalSettings { plugin } => self.store.load_global_settings(&plugin),
+            ApiCommand::SetGlobalSettings { plugin, settings } => {
+                anyhow::ensure!(
+                    self.plugins.get(&plugin).await.is_some(),
+                    "plugin is not installed"
+                );
+                // Merge, so values the plugin stored itself (e.g. tokens) survive.
+                let mut merged = self.store.load_global_settings(&plugin)?;
+                if let (Some(target), Value::Object(patch)) = (merged.as_object_mut(), settings) {
+                    for (key, value) in patch {
+                        target.insert(key, value);
+                    }
+                }
+                self.store.save_global_settings(&plugin, &merged)?;
+                self.plugins
+                    .send(&plugin, &protocol::did_receive_global_settings(&merged))
+                    .await;
+                self.emit(json!({ "event": "globalSettingsChanged", "plugin": plugin }));
+                Ok(merged)
             }
             ApiCommand::ActivatePlugin { staged } => self.activate_plugin(&staged).await,
             ApiCommand::UninstallPlugin { plugin } => self.uninstall_plugin(&plugin).await,
@@ -918,6 +948,7 @@ impl App {
                         "name": a.name,
                         "tooltip": a.tooltip,
                         "controllers": a.controllers,
+                        "settingsSchema": a.settings_schema,
                         "icon": render::load_icon(&plugin.path, &a.icon)
                             .and_then(|i| render::to_png_data_url(&i).ok()),
                     })
@@ -931,6 +962,7 @@ impl App {
                 "category": plugin.manifest.category,
                 "description": plugin.manifest.description,
                 "removable": plugin.path.starts_with(&self.plugins_dir),
+                "globalSettingsSchema": plugin.manifest.global_settings_schema,
                 "connected": self.plugins.is_connected(&plugin.uuid).await,
                 "actions": actions,
             }));
