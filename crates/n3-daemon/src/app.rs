@@ -233,18 +233,40 @@ impl App {
         self.emit(json!({ "event": "deviceDisconnected", "device": id }));
     }
 
+    /// Keypad position that holds the button assignment of a knob press:
+    /// knobs follow the keys, i.e. on the N3 E0/E1/E2 press = keys 9/10/11.
+    fn knob_press_key(&self, device: &str, encoder: u8) -> anyhow::Result<u8> {
+        Ok(self.device(device)?.handle.info.layout.keys + encoder)
+    }
+
     async fn on_input(&mut self, device: &str, input: InputEvent) -> anyhow::Result<()> {
+        // Pressing a knob: a button assignment ("Tasten" mode) wins; otherwise
+        // plugins assigned to the knob get dialDown/dialUp (Stream Deck dials
+        // expect that). Built-in rotation actions ignore presses.
+        let knob_press = match input {
+            InputEvent::EncoderDown { encoder } => Some((encoder, true)),
+            InputEvent::EncoderUp { encoder } => Some((encoder, false)),
+            _ => None,
+        };
+        let input = match knob_press {
+            Some((encoder, down)) => {
+                self.set_encoder_pressed(device, encoder, down)?;
+                let key = self.knob_press_key(device, encoder)?;
+                let has_button = self.device(device)?.profile.keys.contains_key(&key);
+                match (has_button, down) {
+                    (true, true) => InputEvent::KeyDown { key },
+                    (true, false) => InputEvent::KeyUp { key },
+                    (false, _) => input,
+                }
+            }
+            None => input,
+        };
+
         let (controller, position, event) = match input {
             InputEvent::KeyDown { key } => (Controller::Keypad, key, "keyDown"),
             InputEvent::KeyUp { key } => (Controller::Keypad, key, "keyUp"),
-            InputEvent::EncoderDown { encoder } => {
-                self.set_encoder_pressed(device, encoder, true)?;
-                (Controller::Encoder, encoder, "dialDown")
-            }
-            InputEvent::EncoderUp { encoder } => {
-                self.set_encoder_pressed(device, encoder, false)?;
-                (Controller::Encoder, encoder, "dialUp")
-            }
+            InputEvent::EncoderDown { encoder } => (Controller::Encoder, encoder, "dialDown"),
+            InputEvent::EncoderUp { encoder } => (Controller::Encoder, encoder, "dialUp"),
             InputEvent::EncoderTwist { encoder, ticks } => {
                 let pressed = self.device(device)?.encoders_pressed[encoder as usize];
                 if self.is_builtin(device, Controller::Encoder, encoder)? {

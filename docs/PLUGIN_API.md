@@ -83,7 +83,7 @@ Gemeinsame Felder: `event`, `action`, `context`, `device`, `payload`.
 | `willAppear` | Instanz wird sichtbar (Profil aktiv / neu platziert) | – |
 | `willDisappear` | Instanz verschwindet | – |
 | `keyDown` / `keyUp` | Taste gedrückt / losgelassen | – |
-| `dialDown` / `dialUp` | Drehregler gedrückt / losgelassen | – |
+| `dialDown` / `dialUp` | Drehregler gedrückt / losgelassen (nur wenn der Regler keine eigene Drück-Belegung hat – sonst bekommt diese `keyDown`/`keyUp` als `Keypad`, Position 9–11) | – |
 | `dialRotate` | Drehregler gedreht | `ticks` (±n), `pressed` |
 | `didReceiveSettings` | Antwort auf `getSettings` oder Änderung durch die UI | – |
 | `didReceiveGlobalSettings` | Antwort auf `getGlobalSettings` | `settings` |

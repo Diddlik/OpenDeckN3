@@ -37,7 +37,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   await snap(4);
   for (let i = 0; i < 3; i++) { await page.click('[data-slot="k8"]'); await sleep(90); await snap(1); await sleep(160); await snap(2); }
   await page.click('[data-slot="k2"]'); await sleep(90); await snap(1); await sleep(400); await snap(2);
-  const e1 = await page.$('[data-slot="e1"]'); const b = await e1.boundingBox();
+  const e1 = await page.$('[data-enc="1"]'); const b = await e1.boundingBox();
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
   for (let i = 0; i < 8; i++) { await page.mouse.wheel(0, 100); await sleep(150); await snap(1); }
   for (let i = 0; i < 8; i++) { await page.mouse.wheel(0, -100); await sleep(150); await snap(1); }

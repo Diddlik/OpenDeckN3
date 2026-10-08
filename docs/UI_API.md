@@ -71,7 +71,7 @@ interface DeviceSnapshot {
 
 interface Profile {
   id: string; name: string;
-  keys: Record<string, ActionInstance>;      // "0".."8"
+  keys: Record<string, ActionInstance>;      // "0".."8" Tasten, "9".."11" = Drehregler 0..2 drücken
   encoders: Record<string, ActionInstance>;  // "0".."2"
 }
 
@@ -149,19 +149,31 @@ Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.
 | `actionError` | `device`, `controller`, `position`, `message` | Eingebaute Aktion fehlgeschlagen (z. B. ungültiges Tastenkürzel, Programm nicht gefunden) → Fehlermeldung zeigen |
 | `lagged` | `missed` | Client war zu langsam → `getState` neu laden |
 
+## Drehregler: drehen und drücken
+
+Ein Drehregler hat zwei getrennte Belegungen:
+
+- **Drehen** – `controller: "Encoder"`, Position 0–2 (`profile.encoders`).
+- **Drücken** – gilt als Taste: `controller: "Keypad"`, Position `layout.keys + Regler` (beim N3 9, 10, 11).
+  Ein Druck auf den Regler löst dann `keyDown`/`keyUp` dieser Tasten-Belegung aus. Ist keine Drück-Belegung
+  vorhanden, bekommt die Dreh-Belegung wie bisher `dialDown`/`dialUp`.
+
+Die Oberfläche bildet das als zwei Modi ab: **Drehregler** (nur Dreh-Belegungen, Tasten gesperrt, Bibliothek
+zeigt nur Aktionen mit `Encoder`) und **Tasten** (alle 9 Tasten + die 3 Regler als Taste, alle Aktionen mit `Keypad`).
+
 ## Eingebaute Aktionen
 
 Plugin-UUID `opendeckn3.builtin`, Aktions-UUIDs `opendeckn3.builtin.<name>`:
 
 | Aktion | Einstellungen | Taste | Drehregler |
 | --- | --- | --- | --- |
-| `hotkey` | `shortcut`, `clockwise`, `anticlockwise` (z. B. `Ctrl+Shift+M`, mehrere mit Leerzeichen) | drückt `shortcut` | drehen = `clockwise`/`anticlockwise` je Raste, drücken = `shortcut` |
-| `volume` | `mode` (`mute`/`up`/`down`), `step` (1–10) | Funktion aus `mode` | drehen = lauter/leiser, drücken = stumm |
-| `media` | `mode` (`playpause`/`next`/`previous`/`stop`) | Funktion aus `mode` | drehen = Titel vor/zurück, drücken = Play/Pause |
-| `launch` | `path`, `args` | Programm/Datei/Ordner öffnen | drücken |
-| `url` | `url` (http/https) | im Standardbrowser öffnen | drücken |
-| `command` | `command`, `clockwise`, `anticlockwise` (`%d` = Rasten) | Shell-Befehl (`cmd /C` bzw. `sh -c`) | drehen/drücken |
-| `text` | `text` | Text tippen | drücken |
+| `hotkey` | `shortcut`, `clockwise`, `anticlockwise` (z. B. `Ctrl+Shift+M`, mehrere mit Leerzeichen) | drückt `shortcut` | drehen = `clockwise`/`anticlockwise` je Raste |
+| `volume` | `mode` (`mute`/`up`/`down`), `step` (1–10) | Funktion aus `mode` | drehen = lauter/leiser |
+| `media` | `mode` (`playpause`/`next`/`previous`/`stop`) | Funktion aus `mode` | drehen = Titel vor/zurück |
+| `launch` | `path`, `args` | Programm/Datei/Ordner öffnen | – |
+| `url` | `url` (http/https) | im Standardbrowser öffnen | – |
+| `command` | `command`, `clockwise`, `anticlockwise` (`%d` = Rasten) | Shell-Befehl (`cmd /C` bzw. `sh -c`) | drehen = `clockwise`/`anticlockwise` |
+| `text` | `text` | Text tippen | – |
 | `profile` | `profile` | Profil wechseln | – |
 | `brightness` | – | Helligkeitsstufen | stufenlos |
 

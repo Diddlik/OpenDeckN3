@@ -103,6 +103,18 @@ ws.addEventListener("open", async () => {
     assert(existsSync(marker) && readFileSync(marker, "utf8").includes("smoke"), "command action runs a shell command");
     rmSync(marker, { force: true });
 
+    // Pressing a knob runs its key binding (Keypad 9 + encoder), independent of the rotation binding.
+    const knobMarker = join(tmpdir(), `opendeckn3-smoke-knob-${Date.now()}.txt`);
+    await call("setAction", { device: DEVICE, controller: "Keypad", position: 10,
+      plugin: "opendeckn3.builtin", action: "opendeckn3.builtin.command",
+      settings: { command: `echo knob> "${knobMarker}"` } });
+    await call("simulateInput", { device: DEVICE, input: { type: "encoderDown", encoder: 1 } });
+    await call("simulateInput", { device: DEVICE, input: { type: "encoderUp", encoder: 1 } });
+    for (let i = 0; i < 50 && !existsSync(knobMarker); i++) await sleep(100);
+    assert(existsSync(knobMarker), "knob press runs the knob's key binding");
+    rmSync(knobMarker, { force: true });
+    await waitForDevice((d) => d.profile.encoders["1"]?.action === "opendeckn3.builtin.brightness", "knob keeps its rotation binding");
+
     await call("setAction", { device: DEVICE, controller: "Keypad", position: 5,
       plugin: "opendeckn3.builtin", action: "opendeckn3.builtin.hotkey", settings: { shortcut: "Ctrl+Nope" } });
     events.length = 0;

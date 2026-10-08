@@ -52,6 +52,8 @@ Jeder Input-Report beginnt mit `ACK` (`0x41 0x43 0x4B`); Byte 9 ist der Code, By
 | `0x35` | Drehregler mitte drücken | `Encoder` 1 |
 | `0x34` | Drehregler rechts drücken | `Encoder` 2 |
 
+Drücken eines Drehreglers wird im Dienst auf die Tasten-Belegung `Keypad` 9 + Regler (9/10/11) gelegt, falls vorhanden.
+
 ## Ausgabe-Kommandos (über `mirajazz`)
 
 Alle Kommandos beginnen mit `CRT\0\0` (`0x43 0x52 0x54 0x00 0x00`):
