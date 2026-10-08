@@ -192,6 +192,8 @@ pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5
 .replace::after{border-color:rgba(53,224,208,.3);border-style:dashed}
 .over::after{border-color:#35E0D0;background:rgba(53,224,208,.14);box-shadow:0 0 32px rgba(53,224,208,.5)}
 .disabled{opacity:.28}
+.dim{opacity:.4;transition:opacity .15s}.dim:hover{opacity:.75}
+.libmode{width:100%}.libmode button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px}
 .press{box-shadow:0 0 0 2px #35E0D0,0 0 30px rgba(53,224,208,.55)!important}
 .device-outline{width:700px;height:404px;border-radius:30px;border:2px dashed var(--line);padding:34px 36px;display:flex;gap:56px;flex:none}
 .device-outline span{border:2px dashed var(--line);display:block}
@@ -354,6 +356,7 @@ const ICONS = {
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   edit: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>',
   duplicate: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/>',
+  dial: '<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V9"/><path d="M5.5 19.5l-1.5 1.5M18.5 19.5l1.5 1.5"/>',
   keyboard: '<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M6.5 14h.01M17 14h.01M9.5 14h5"/>',
   text: '<path d="M5 7.5V5h14v2.5M12 5v14M9 19h6"/>',
   volumeDown: '<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/>',
@@ -641,6 +644,7 @@ function deviceHTML(v, o = {}) {
   const st = (x) => {
     const c = [];
     if (o.sel === x.id && !o.dragCtl) c.push('sel');
+    if (o.mode && !o.dragCtl && (x.id[0] === 'k' ? 'Keypad' : 'Encoder') !== o.mode) c.push('dim');
     if (o.pressed === x.id) c.push('press');
     if (o.dragCtl) {
       const ok = o.dragCtl.includes(x.id[0] === 'k' ? 'Keypad' : 'Encoder');
@@ -752,11 +756,16 @@ function barHTML() {
 /* =====================================================================
    Editor
    ===================================================================== */
+// Bibliotheks-Modus folgt dem gewählten Slot: Taste → Tasten-Aktionen, Drehregler → Drehregler-Aktionen.
+const libMode = () => parseId(S.sel).ctl;
+const lastSel = { Keypad: 'k0', Encoder: 'e1' };
+
 function libListHTML() {
   const q = S.q.trim().toLowerCase();
   let hits = 0;
   const html = S.catalog.map((p) => {
-    const items = p.actions.filter((a) => !q || a.name.toLowerCase().includes(q) || (a.tooltip || '').toLowerCase().includes(q));
+    const mode = libMode();
+    const items = p.actions.filter((a) => ctlOf(a).includes(mode) && (!q || a.name.toLowerCase().includes(q) || (a.tooltip || '').toLowerCase().includes(q)));
     if (!items.length) return '';
     hits += items.length;
     const open = !S.closed[p.uuid] || !!q;
@@ -774,15 +783,19 @@ function libListHTML() {
       }).join('') : ''}
     </div>`;
   }).join('');
-  return html + (hits ? '' : `<div style="padding:16px 8px;font-size:13px;color:var(--faint)">${S.catalog.length ? 'Keine Aktion gefunden.' : 'Noch keine Aktionen geladen.'}</div>`);
+  return html + (hits ? '' : `<div style="padding:16px 8px;font-size:13px;color:var(--faint)">${!S.catalog.length ? 'Noch keine Aktionen geladen.' : S.q.trim() ? 'Keine Aktion gefunden.' : libMode() === 'Encoder' ? 'Keine Aktionen für Drehregler.' : 'Keine Aktionen für Tasten.'}</div>`);
 }
 
 function libraryHTML() {
+  const mode = libMode();
+  lastSel[mode] = S.sel;
+  const modeBtn = (m, icon, label) => `<button type="button" role="radio" aria-checked="${mode === m}" data-act="libMode" data-arg="${m}">${ic(icon, 15)}${label}</button>`;
   return `<aside class="lib" aria-label="Aktionsbibliothek">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:0 6px">
       <span class="label">Aktionen</span>
       <span style="font-size:12px;color:var(--muted)">Ziel <span class="mono" style="color:var(--accent-text)">${S.sel.toUpperCase()}</span></span>
     </div>
+    <div class="seg libmode" role="radiogroup" aria-label="Aktionen anzeigen für">${modeBtn('Keypad', 'key', 'Tasten')}${modeBtn('Encoder', 'dial', 'Drehregler')}</div>
     <label class="search">${ic('search', 16)}<input type="search" placeholder="Aktion suchen" aria-label="Aktion suchen" value="${esc(S.q)}" data-in="q"></label>
     <div id="liblist" style="flex:1;display:flex;flex-direction:column;gap:6px">${libListHTML()}</div>
     <button type="button" class="btn" data-act="nav" data-arg="plugins" style="border-style:dashed;background:transparent;color:var(--muted)">${ic('plug', 16)}Plugins verwalten</button>
@@ -802,7 +815,7 @@ function stageInner() {
     top = `<div class="hint rise"><span class="tile">${ic('grip', 20)}</span><span style="display:flex;flex-direction:column;gap:3px"><b style="font-size:15px;font-weight:600">Ziehe eine Aktion auf eine Taste</b><span style="font-size:13px;color:var(--muted);line-height:1.45">Oder wähle einen Slot und klicke links auf eine Aktion.</span></span></div>`;
   }
   return top + deviceHTML(viewSlots(d), {
-    interactive: true, sel: S.sel, pressed: S.pressed, dragCtl: dragAct ? ctlOf(dragAct.a) : null, over: S.over,
+    interactive: true, sel: S.sel, mode: libMode(), pressed: S.pressed, dragCtl: dragAct ? ctlOf(dragAct.a) : null, over: S.over,
     offline: devState() === 'disconnected', flip: S.flip, brightness: d.brightness
   });
 }
@@ -835,12 +848,13 @@ function schemaFormHTML(s, schema) {
         const rec = S.rec === f.key;
         const caps = rec
           ? (S.recPreview ? capsHTML(S.recPreview) + '<span class="ph">+ …</span>' : '<span class="ph pulse">Drücke jetzt die Tastenkombination …</span>')
-          : v ? capsHTML(String(v)) : '<span class="ph">Noch keine Taste festgelegt</span>';
+          : v ? capsHTML(String(v)) : '<span class="ph">Hier klicken und Tasten drücken</span>';
         const buttons = rec
           ? `<button type="button" class="btn ghost" data-act="cancelRec">Abbrechen</button>`
           : `<button type="button" class="btn" data-act="startRec" data-arg="${esc(f.key)}">${ic('keyboard', 16)}${v ? 'Neu aufnehmen' : 'Aufnehmen'}</button>${v
             ? `<button type="button" class="btn icon" data-act="clearField" data-arg="${esc(f.key)}" aria-label="Leeren" title="Leeren">${ic('x', 16)}</button>` : ''}`;
-        return `<div class="fieldwrap">${esc(f.label)}<div class="hotkey ${rec ? 'rec' : ''}" role="group" aria-label="${esc(f.label)}">
+        // Das ganze Feld ist der Recorder: anklicken (oder per Tab fokussieren) und Tasten drücken.
+        return `<div class="fieldwrap">${esc(f.label)}<div class="hotkey ${rec ? 'rec' : ''}" tabindex="0" role="button" data-act="startRec" data-arg="${esc(f.key)}" aria-label="${esc(f.label)} – klicken und Tasten drücken">
           <div class="caps" aria-live="polite">${caps}</div><div class="hk-actions">${buttons}</div></div>${f.help ? `<span class="help">${esc(f.help)}</span>` : ''}</div>`;
       }
       case 'file':
@@ -1258,9 +1272,16 @@ function assign(key, id) {
   const { ctl } = parseId(id);
   if (!ctlOf(f.a).includes(ctl)) { toast('err', `${f.a.name} unterstützt keine ${ctl === 'Encoder' ? 'Drehregler' : 'Tasten'}`); return; }
   if (!isLive()) { toast('warn', 'Gerät ist nicht verbunden'); return; }
-  S.sel = id; S.json = false;
+  S.sel = id; S.json = false; S.rec = null;
   api.run('setAction', { ...slotParams(id), plugin: f.p.uuid, action: f.a.uuid })
-    .then(() => toast('ok', `${f.a.name} → ${id.toUpperCase()}`)).catch(() => {});
+    .then(async () => {
+      toast('ok', `${f.a.name} → ${id.toUpperCase()}`);
+      // Tastenkürzel: Aufnahme sofort starten – die nächste Tastenkombination wird übernommen.
+      if (f.p.uuid === BUILTIN && f.a.uuid.endsWith('.hotkey')) {
+        await refresh();
+        if (S.sel === id && !S.modal) startRec('shortcut');
+      }
+    }).catch(() => {});
   render();
 }
 function clearSlot(id) {
@@ -1326,6 +1347,11 @@ const ACTS = {
   clear() { clearSlot(S.sel); },
   jsonMode() { S.json = !S.json; S.rec = null; render(); },
   startRec(key) { startRec(key); },
+  libMode(mode) {
+    if (libMode() === mode) return;
+    S.sel = lastSel[mode] || (mode === 'Encoder' ? 'e1' : 'k0');
+    S.json = false; S.rec = null; render();
+  },
   cancelRec() { stopRec(); },
   clearField(key) {
     const s = slot(S.sel); if (!s) return;
@@ -1425,6 +1451,10 @@ const ACTS = {
 };
 
 /* ---------- Ereignisse ---------- */
+document.addEventListener('focusin', (e) => {
+  const box = e.target.closest && e.target.closest('.hotkey[data-act="startRec"]');
+  if (box && !S.rec && e.target === box) startRec(box.dataset.arg);
+});
 document.addEventListener('keyup', (e) => {
   // Die Windows-Taste allein (Startmenü) ist auch ein gültiges Kürzel.
   if (S.rec && (e.key === 'Meta' || e.key === 'OS') && S.recPreview === 'Win') { e.preventDefault(); commitRec('Win'); }
