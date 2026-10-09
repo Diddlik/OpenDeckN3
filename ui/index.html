@@ -68,6 +68,7 @@ pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5
 /* ============ Titelleiste ============ */
 .bar{min-height:64px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line2);display:flex;flex-wrap:wrap;align-items:center;gap:12px 14px;position:sticky;top:0;z-index:20}
 .brand{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:-.01em}
+.ctx .kb{margin-left:auto;padding-left:16px;font-size:11px;color:var(--faint)}
 .brand b{color:var(--accent-text);font-weight:600}
 .nav{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--panel2);border:1px solid var(--line2)}
 .nav button{height:32px;padding:0 12px;border-radius:9px;border:0;background:transparent;color:var(--muted);display:flex;align-items:center;gap:7px;font-size:13px;font-weight:500}
@@ -380,6 +381,8 @@ const ICONS = {
   alert: '<path d="M12 6v7M12 17.5v.01"/>',
   usb: '<path d="M12 3v14M12 3l-2.5 3h5L12 3zM7 10v2.5l5 3M17 9.5V12l-5 3"/><circle cx="12" cy="19" r="2"/><circle cx="7" cy="9" r="1.3"/><rect x="15.6" y="7" width="2.8" height="2.5"/>',
   refresh: '<path d="M20 11a8 8 0 0 0-14.8-4M4 3v4h4M4 13a8 8 0 0 0 14.8 4M20 21v-4h-4"/>',
+  undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+  redo: '<path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/>',
   copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
   chevron: '<path d="M6 9l6 6 6-6"/>',
   chevronRight: '<path d="M9 6l6 6-6 6"/>',
@@ -453,6 +456,9 @@ function findAction(plugin, action) {
   const a = p && p.actions.find((x) => x.uuid === action);
   return a ? { p, a } : null;
 }
+const clone = (v) => v == null ? null : JSON.parse(JSON.stringify(v));
+// Gerätestand vom Dienst übernehmen; S.saved behält eine unveränderte Kopie der Seite fürs Rückgängigmachen.
+function adopt(d) { S.devices[d.info.id] = d; S.saved[d.info.id] = clone(d.profile); }
 function actionByKey(key) {
   const i = key.indexOf('::');
   return findAction(key.slice(0, i), key.slice(i + 2));
@@ -466,6 +472,7 @@ function tileHTML(plugin, action, iconUrl, size, iconSize, radius = 9, kind = ki
 
 /* ---------- Zustand ---------- */
 const S = {
+  saved: {}, hist: {}, clip: null,
   route: local.get('onboarded', false) ? 'editor' : 'onboarding',
   conn: 'connecting',          // connecting | online | offline
   devices: {},                 // id → DeviceSnapshot (verbunden)
@@ -582,7 +589,7 @@ async function refresh() {
   try {
     const st = await api.call('getState');
     S.devices = {};
-    for (const d of st.devices) { S.devices[d.info.id] = d; delete S.lost[d.info.id]; }
+    for (const d of st.devices) { adopt(d); delete S.lost[d.info.id]; }
     S.catalog = st.catalog;
     S.appVersion = S.appVersion || st.version;
     api.call('getAppSettings').then((v) => { S.appSettings = v; if (S.route === 'settings') render(); }).catch(() => {});
@@ -597,7 +604,7 @@ function onEvent(ev) {
   const mine = ev.device === S.devId || (ev.device && ev.device.info && ev.device.info.id === S.devId);
   switch (ev.event) {
     case 'deviceConnected': {
-      const d = ev.device; S.devices[d.info.id] = d;
+      const d = ev.device; adopt(d);
       const back = !!S.lost[d.info.id]; delete S.lost[d.info.id];
       const first = !S.devId; pickDevice();
       if (first || back) toast('ok', `${d.info.name} verbunden`);
@@ -611,13 +618,13 @@ function onEvent(ev) {
     }
     case 'profileChanged': {
       const d = ev.device; const old = S.devices[d.info.id];
-      S.devices[d.info.id] = d;
+      adopt(d);
       if (mine && old && old.activeProfile !== d.activeProfile) flipAnim(); else render();
       break;
     }
     case 'pageChanged': {
       const d = ev.device; const old = S.devices[d.info.id];
-      S.devices[d.info.id] = d;
+      adopt(d);
       if (mine && old && old.page !== d.page) flipAnim(); else render();
       break;
     }
@@ -746,7 +753,7 @@ function deviceHTML(v, o = {}) {
     }
     return c.join(' ');
   };
-  const at = (x) => o.interactive ? `data-slot="${x.id}" aria-pressed="${o.sel === x.id}"` : 'tabindex="-1"';
+  const at = (x) => o.interactive ? `data-slot="${x.id}" aria-pressed="${o.sel === x.id}"${x.empty ? '' : ' draggable="true"'}` : 'tabindex="-1"';
   const aria = (x, what) => `${what} ${slotShort(x.id)}${x.empty ? ', frei' : ', ' + (x.title || x.label)}`;
 
   const dk = (x) => {
@@ -901,7 +908,7 @@ function stageInner() {
   const d = cur(); if (!d) return '';
   const P = d.profile;
   const emptyProfile = !Object.keys(P.keys).length && !Object.keys(P.encoders).length;
-  const dragAct = S.drag && actionByKey(S.drag);
+  const dragAct = S.drag && !S.drag.startsWith('slot:') && actionByKey(S.drag);
   let top = '';
   if (dragAct) {
     const c = ctlOf(dragAct.a);
@@ -1108,6 +1115,10 @@ function editorHTML() {
       <div class="head">
         <div><div class="label">Profil</div><h1>${esc(d.activeProfile)}</h1></div>
         <div style="display:flex;align-items:center;gap:12px">
+          <span style="display:flex;gap:4px">
+            <button type="button" class="btn icon" data-act="undo" aria-label="Rückgängig" title="Rückgängig (Strg+Z)" ${hist().undo.length ? '' : 'disabled'} style="background:var(--panel2)">${ic('undo', 17)}</button>
+            <button type="button" class="btn icon" data-act="redo" aria-label="Wiederholen" title="Wiederholen (Strg+Y)" ${hist().redo.length ? '' : 'disabled'} style="background:var(--panel2)">${ic('redo', 17)}</button>
+          </span>
           <span style="font-size:13px;color:var(--muted)">${nK} ${nK === 1 ? 'Taste' : 'Tasten'} · ${nE} Drehregler belegt</span>
           ${virt ? `<button type="button" class="toggle" data-act="test" aria-pressed="${S.test}"><span class="switch"><span></span></span>Test-Modus</button>` : ''}
         </div>
@@ -1544,7 +1555,9 @@ function renderOverlay() {
     html += `<div class="ctx" role="menu" style="left:${S.menu.x}px;top:${S.menu.y}px">
       <div class="mono" style="font-size:11px;color:var(--faint);padding:6px 10px 4px">${slotName(S.menu.id)}</div>
       <button type="button" role="menuitem" data-act="menuEdit" ${s ? '' : 'disabled'}>${ic('edit', 16)}Bearbeiten</button>
-      <button type="button" role="menuitem" disabled>${ic('duplicate', 16)}Duplizieren <span style="margin-left:auto;font-size:11px">später</span></button>
+      <button type="button" role="menuitem" data-act="menuCopy" ${s ? '' : 'disabled'}>${ic('copy', 16)}Kopieren <span class="kb">Strg+C</span></button>
+      <button type="button" role="menuitem" data-act="menuCut" ${s ? '' : 'disabled'}><span style="width:16px"></span>Ausschneiden <span class="kb">Strg+X</span></button>
+      <button type="button" role="menuitem" data-act="menuPaste" ${S.clip && S.clip.ctl === parseId(S.menu.id).ctl ? '' : 'disabled'}>${ic('duplicate', 16)}Einfügen <span class="kb">Strg+V</span></button>
       <hr><button type="button" role="menuitem" class="red" data-act="menuClear" ${s ? '' : 'disabled'}>${ic('trash', 16)}Entfernen</button>
     </div>`;
   }
@@ -1669,6 +1682,7 @@ function assign(key, id) {
   if (!ctlOf(f.a).includes(ctl)) { toast('err', `${f.a.name} unterstützt keine ${ctl === 'Encoder' ? 'Drehregler' : 'Tasten'}`); return; }
   if (!isLive()) { toast('warn', 'Gerät ist nicht verbunden'); return; }
   S.sel = id; S.json = false; S.rec = null;
+  remember([id]);
   api.run('setAction', { ...slotParams(id), plugin: f.p.uuid, action: f.a.uuid })
     .then(async () => {
       toast('ok', `${f.a.name} → ${slotShort(id)}`);
@@ -1682,11 +1696,82 @@ function assign(key, id) {
 }
 function clearSlot(id) {
   if (!slot(id)) return;
+  remember([id]);
   api.run('clearAction', slotParams(id)).then(() => toast('ok', 'Belegung entfernt')).catch(() => {});
 }
 // Änderungen sofort lokal zeigen, Senden gebündelt.
-const sendSettings = debounce((id, settings) => api.run('setActionSettings', { ...slotParams(id), settings }).catch(() => {}), 350);
-const sendAppearance = debounce((id, s) => api.run('setActionAppearance', { ...slotParams(id), title: s.title, image: s.image }).catch(() => {}), 350);
+const postSettings = debounce((id, settings) => api.run('setActionSettings', { ...slotParams(id), settings }).catch(() => {}), 350);
+const postAppearance = debounce((id, s) => api.run('setActionAppearance', { ...slotParams(id), title: s.title, image: s.image }).catch(() => {}), 350);
+const sendSettings = (id, settings) => { remember([id], true); postSettings(id, settings); };
+const sendAppearance = (id, s) => { remember([id], true); postAppearance(id, s); };
+
+// Rückgängig/Wiederholen je Gerät, Profil und Seite. Tippen in einem Feld wird zu einem Schritt zusammengefasst.
+const histKey = () => { const d = cur(); return d ? `${S.devId}|${d.activeProfile}|${d.page}` : ''; };
+const hist = () => (S.hist[histKey()] ||= { undo: [], redo: [] });
+const savedSlot = (id) => { const d = S.saved[S.devId]; const { c, p } = parseId(id); return d ? clone(d[c][p]) : null; };
+function syncHistButtons() {
+  const h = hist();
+  document.querySelectorAll('[data-act="undo"]').forEach((b) => { b.disabled = !h.undo.length; });
+  document.querySelectorAll('[data-act="redo"]').forEach((b) => { b.disabled = !h.redo.length; });
+}
+function remember(ids, merge) {
+  const h = hist(), last = h.undo[h.undo.length - 1], now = Date.now();
+  if (merge && last && last.merge === ids[0] && now - last.at < 2000) { last.at = now; return; }
+  h.undo.push({ ids, before: ids.map(savedSlot), at: now, merge: merge ? ids[0] : null });
+  if (h.undo.length > 100) h.undo.shift();
+  h.redo = [];
+  syncHistButtons();
+}
+async function putSlots(ids, instances) {
+  for (const [i, id] of ids.entries()) await api.call('setSlot', { ...slotParams(id), instance: instances[i] });
+}
+async function stepHistory(redo) {
+  const h = hist(), from = redo ? h.redo : h.undo;
+  if (!from.length) { toast('warn', redo ? 'Nichts zum Wiederholen' : 'Nichts zum Rückgängigmachen'); return; }
+  // Noch gebündelte Eingaben erst senden lassen und den Stand des Dienstes holen.
+  const last = h.undo[h.undo.length - 1];
+  if (last) await new Promise((r) => setTimeout(r, Math.max(0, 400 - (Date.now() - last.at))));
+  await refresh();
+  const e = from.pop();
+  (redo ? h.undo : h.redo).push({ ids: e.ids, before: e.ids.map(savedSlot), at: 0, merge: null });
+  syncHistButtons();
+  try { await putSlots(e.ids, e.before); toast('ok', redo ? 'Wiederholt' : 'Rückgängig gemacht'); } catch (err) { toast('err', err.message); }
+}
+
+// Kopieren, Ausschneiden, Einfügen und Verschieben: nur zwischen Plätzen derselben Art (Taste ↔ Taste, Regler ↔ Regler).
+function copySlot(id, cut) {
+  const s = slot(id); if (!s) return;
+  S.clip = { ctl: parseId(id).ctl, inst: clone(s) };
+  if (!cut) { toast('ok', `${slotShort(id)} kopiert`); return; }
+  remember([id]);
+  api.run('setSlot', { ...slotParams(id), instance: null }).then(() => toast('ok', `${slotShort(id)} ausgeschnitten`)).catch(() => {});
+}
+function pasteSlot(id) {
+  if (!S.clip) { toast('warn', 'Nichts zum Einfügen – erst eine Belegung kopieren'); return; }
+  if (S.clip.ctl !== parseId(id).ctl) { toast('err', S.clip.ctl === 'Encoder' ? 'Lässt sich nur auf einen Drehregler einfügen' : 'Lässt sich nur auf eine Taste einfügen'); return; }
+  if (!isLive()) { toast('warn', 'Gerät ist nicht verbunden'); return; }
+  remember([id]);
+  api.run('setSlot', { ...slotParams(id), instance: clone(S.clip.inst) }).then(() => toast('ok', `In ${slotShort(id)} eingefügt`)).catch(() => {});
+}
+function moveSlot(from, to) {
+  if (from === to || parseId(from).ctl !== parseId(to).ctl) { render(); return; }
+  const a = savedSlot(from), b = savedSlot(to);
+  remember([from, to]);
+  S.sel = to; render();
+  putSlots([to, from], [a, b])
+    .then(() => toast('ok', b ? `${slotShort(from)} und ${slotShort(to)} getauscht` : `${slotShort(from)} → ${slotShort(to)} verschoben`))
+    .catch((e) => toast('err', e.message));
+}
+// Ziehen einer Taste: Ziele nur per Klasse markieren – ersetzt man die Quelle, bricht der Browser das Ziehen ab.
+function markDragTargets(from) {
+  const ctl = parseId(from).ctl;
+  $('#stage').classList.add('dragmode');
+  document.querySelectorAll('#stage [data-slot]').forEach((el) => {
+    const id = el.dataset.slot; if (id === from) return;
+    el.classList.remove('sel');
+    el.classList.add(parseId(id).ctl !== ctl || el.classList.contains('locked') ? 'disabled' : slot(id) ? 'replace' : 'target');
+  });
+}
 const sendBrightness = debounce((value) => api.run('setBrightness', { device: S.devId, value }).catch(() => {}), 60);
 
 function syncBrightness(except) {
@@ -1819,6 +1904,7 @@ const ACTS = {
       const file = i.files[0]; const s = slot(S.sel); if (!file || !s) return;
       try {
         s.image = await imageToDataUrl(file);
+        remember([S.sel]);
         await api.run('setActionAppearance', { ...slotParams(S.sel), title: s.title, image: s.image });
         toast('ok', `Bild „${file.name}“ übernommen`);
       } catch (e) { toast('err', e.message); }
@@ -1827,6 +1913,7 @@ const ACTS = {
   },
   resetImage() {
     const s = slot(S.sel); if (!s) return; s.image = null;
+    remember([S.sel]);
     api.run('setActionAppearance', { ...slotParams(S.sel), title: s.title, image: null }).then(() => toast('ok', 'Standardbild wiederhergestellt')).catch(() => {});
   },
   newProfile() { S.modal = { kind: 'new', value: '', error: '' }; renderOverlay(); },
@@ -1884,6 +1971,11 @@ const ACTS = {
     renderOverlay();
   },
   menuEdit() { S.menu = null; renderOverlay(); const i = $('[data-in="title"]'); if (i) i.focus(); },
+  menuCopy() { const id = S.menu.id; S.menu = null; renderOverlay(); copySlot(id); },
+  menuCut() { const id = S.menu.id; S.menu = null; renderOverlay(); copySlot(id, true); },
+  menuPaste() { const id = S.menu.id; S.menu = null; S.sel = id; renderOverlay(); pasteSlot(id); },
+  undo() { stepHistory(false); },
+  redo() { stepHistory(true); },
   menuClear() { const id = S.menu.id; S.menu = null; S.sel = id; renderOverlay(); clearSlot(id); },
   plugin(arg) { S.pluginSel = arg; render(); },
   pluginTab(arg) { S.pluginTab = arg; if (arg === 'store' && !S.store) loadStore(false); render(); },
@@ -2097,6 +2189,7 @@ function commitRec(combo) {
   const key = S.rec; const s = slot(S.sel);
   S.rec = null; S.recPreview = '';
   if (!s || !key) { render(); return; }
+  remember([S.sel]);
   s.settings = { ...s.settings, [key]: combo };
   render(); renderStage();
   api.run('setActionSettings', { ...slotParams(S.sel), settings: s.settings }).catch(() => {});
@@ -2144,6 +2237,15 @@ document.addEventListener('keydown', (e) => {
     if (S.menu || S.pmenu) { S.menu = null; S.pmenu = null; renderOverlay(); return; }
     if (S.popover) { S.popover = null; render(); return; }
   }
+  const typing = e.target.closest && e.target.closest('input,textarea,select,[contenteditable]');
+  if (S.route === 'editor' && !S.modal && !typing && (e.ctrlKey || e.metaKey) && !e.altKey && !String(getSelection())) {
+    const k = e.key.toLowerCase();
+    if (k === 'z') { e.preventDefault(); stepHistory(e.shiftKey); return; }
+    if (k === 'y') { e.preventDefault(); stepHistory(true); return; }
+    if (k === 'c' && slot(S.sel)) { e.preventDefault(); copySlot(S.sel); return; }
+    if (k === 'x' && slot(S.sel)) { e.preventDefault(); copySlot(S.sel, true); return; }
+    if (k === 'v') { e.preventDefault(); pasteSlot(S.sel); return; }
+  }
   const pick = e.target.closest && e.target.closest('[data-pick],[data-obdrag]');
   if (pick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); pick.click(); return; }
   if (!(e.target.closest && e.target.closest('.device [data-slot]'))) return;
@@ -2164,6 +2266,14 @@ document.addEventListener('wheel', (e) => {
 document.addEventListener('dragstart', (e) => {
   const ob = e.target.closest && e.target.closest('[data-obdrag]');
   if (ob) { e.dataTransfer.setData('text/plain', 'ob'); return; }
+  const src = e.target.closest && e.target.closest('#stage [data-slot][draggable="true"]');
+  if (src) {
+    S.drag = 'slot:' + src.dataset.slot; S.menu = null;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', S.drag);
+    markDragTargets(src.dataset.slot);
+    return;
+  }
   const it = e.target.closest && e.target.closest('[data-pick]'); if (!it) return;
   S.drag = it.dataset.pick;
   e.dataTransfer.effectAllowed = 'copy';
@@ -2176,10 +2286,12 @@ document.addEventListener('dragover', (e) => {
   if (isFileDrag(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; const m = $('#pluginsMain'); if (m) m.classList.add('dropzone'); return; }
   if (S.route === 'onboarding') { if (e.target.closest('#obdev')) e.preventDefault(); return; }
   if (!S.drag) return;
-  const f = actionByKey(S.drag);
+  const moving = S.drag.startsWith('slot:');
+  const f = !moving && actionByKey(S.drag);
+  const ctls = moving ? [parseId(S.drag.slice(5)).ctl] : f && ctlOf(f.a);
   const el = e.target.closest('[data-slot]');
   let over = null;
-  if (el && f && !el.classList.contains('locked') && ctlOf(f.a).includes(parseId(el.dataset.slot).ctl)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; over = el.dataset.slot; }
+  if (el && ctls && !el.classList.contains('locked') && ctls.includes(parseId(el.dataset.slot).ctl)) { e.preventDefault(); e.dataTransfer.dropEffect = moving ? 'move' : 'copy'; over = el.dataset.slot; }
   if (over !== S.over) { setOver(over); }
 });
 // Hover-Ziel nur per Klasse markieren – den DOM unter dem Zeiger nicht ersetzen.
@@ -2206,7 +2318,9 @@ document.addEventListener('drop', (e) => {
   e.preventDefault();
   const el = e.target.closest('[data-slot]');
   const key = S.drag; S.drag = null; S.over = null;
-  if (el) assign(key, el.dataset.slot); else render();
+  if (!el) render();
+  else if (key.startsWith('slot:')) moveSlot(key.slice(5), el.dataset.slot);
+  else assign(key, el.dataset.slot);
 });
 document.addEventListener('dragend', () => { if (S.drag) { S.drag = null; S.over = null; render(); } });
 

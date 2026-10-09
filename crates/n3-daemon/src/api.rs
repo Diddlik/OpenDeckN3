@@ -8,7 +8,7 @@ use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Context;
 use futures_util::{SinkExt, StreamExt};
-use n3_core::{Controller, InputEvent};
+use n3_core::{ActionInstance, Controller, InputEvent};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::{
@@ -80,6 +80,14 @@ pub enum ApiCommand {
         action: String,
         #[serde(default)]
         settings: Option<Value>,
+    },
+    /// Puts a complete assignment (settings, title, image) on a slot, or clears
+    /// it with `null`. Used for moving, pasting and undo.
+    SetSlot {
+        device: String,
+        controller: Controller,
+        position: u8,
+        instance: Option<ActionInstance>,
     },
     ClearAction {
         device: String,

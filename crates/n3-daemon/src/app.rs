@@ -972,17 +972,36 @@ impl App {
                 if let Some(settings) = settings {
                     instance.settings = settings;
                 }
-                let state = self.device_mut(&device)?;
-                state
-                    .page_mut()
-                    .slots_mut(controller)
-                    .insert(position, instance);
-                let profile = state.profile.clone();
-                self.store.save_profile(&device, &profile)?;
-                self.send_slot_event(&device, controller, position, |s| s.simple("willAppear"))
-                    .await;
-                if controller == Controller::Keypad {
-                    self.redraw_key(&device, position).await;
+                self.put_slot(&device, controller, position, instance)
+                    .await?;
+                self.emit(json!({ "event": "slotChanged", "device": device }));
+                Ok(Value::Null)
+            }
+            ApiCommand::SetSlot {
+                device,
+                controller,
+                position,
+                instance,
+            } => {
+                match instance {
+                    Some(instance) => {
+                        if instance.plugin == BUILTIN_PLUGIN {
+                            anyhow::ensure!(
+                                builtin::exists(&instance.action),
+                                "unknown built-in action {}",
+                                instance.action
+                            );
+                        }
+                        self.clear_slot(&device, controller, position).await?;
+                        self.put_slot(&device, controller, position, instance)
+                            .await?;
+                    }
+                    None => {
+                        self.clear_slot(&device, controller, position).await?;
+                        if controller == Controller::Keypad {
+                            self.set_key_image(&device, position, None).await;
+                        }
+                    }
                 }
                 self.emit(json!({ "event": "slotChanged", "device": device }));
                 Ok(Value::Null)
@@ -1111,6 +1130,29 @@ impl App {
                 bail!("handled outside on_api_command")
             }
         }
+    }
+
+    /// Places `instance` on an empty slot, saves and shows it.
+    async fn put_slot(
+        &mut self,
+        device: &str,
+        controller: Controller,
+        position: u8,
+        instance: ActionInstance,
+    ) -> anyhow::Result<()> {
+        let state = self.device_mut(device)?;
+        state
+            .page_mut()
+            .slots_mut(controller)
+            .insert(position, instance);
+        let profile = state.profile.clone();
+        self.store.save_profile(device, &profile)?;
+        self.send_slot_event(device, controller, position, |s| s.simple("willAppear"))
+            .await;
+        if controller == Controller::Keypad {
+            self.redraw_key(device, position).await;
+        }
+        Ok(())
     }
 
     async fn clear_slot(

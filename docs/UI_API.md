@@ -132,6 +132,7 @@ type InputEvent =
 | `renamePage` | `device`, `page`, `name` | `null` – leerer Name = „Seite <n>“ |
 | `movePage` | `device`, `page`, `to` | `null` – verschiebt eine Seite; die angezeigte bleibt angezeigt |
 | `deletePage` | `device`, `page` | `null` – die letzte Seite kann nicht gelöscht werden |
+| `setSlot` | `device`, `controller`, `position`, `instance` (`{ plugin, action, settings, state, title, image }` oder `null`) | `null` – setzt eine komplette Belegung bzw. leert den Platz (Verschieben, Einfügen, Rückgängig) |
 | `copyPage` | `device`, `page` | `{ page }` – fügt eine Kopie direkt hinter der Seite ein und zeigt sie (höchstens 50) |
 | `setAction` | `device`, `controller`, `position`, `plugin`, `action`, `settings?` | `null` – ersetzt eine vorhandene Belegung; ohne `settings` gelten bei eingebauten Aktionen die Schema-Standardwerte |
 | `clearAction` | `device`, `controller`, `position` | `null` |
