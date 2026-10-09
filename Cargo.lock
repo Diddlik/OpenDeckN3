@@ -2409,7 +2409,7 @@ dependencies = [
 
 [[package]]
 name = "n3-core"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "image",
  "serde",
@@ -2419,7 +2419,7 @@ dependencies = [
 
 [[package]]
 name = "n3-daemon"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "ab_glyph",
  "anyhow",
@@ -2452,7 +2452,7 @@ dependencies = [
 
 [[package]]
 name = "n3-desktop"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "n3-daemon",
@@ -2476,7 +2476,7 @@ dependencies = [
 
 [[package]]
 name = "n3-driver"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "futures-lite",
  "image",
@@ -2489,7 +2489,7 @@ dependencies = [
 
 [[package]]
 name = "n3-plugin"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "futures-util",

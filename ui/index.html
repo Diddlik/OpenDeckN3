@@ -582,6 +582,7 @@ async function refresh() {
     S.devices = {};
     for (const d of st.devices) { S.devices[d.info.id] = d; delete S.lost[d.info.id]; }
     S.catalog = st.catalog;
+    S.appVersion = S.appVersion || st.version;
     api.call('getAppSettings').then((v) => { S.appSettings = v; if (S.route === 'settings') render(); }).catch(() => {});
     if (!S.pluginSel || !S.catalog.some((p) => p.uuid === S.pluginSel)) S.pluginSel = S.catalog[0] && S.catalog[0].uuid;
     pickDevice();
@@ -808,7 +809,7 @@ function barHTML() {
   const bri = d ? d.brightness : 0;
   const profiles = d ? d.profiles : [];
   return `<header class="bar">
-    <div class="brand">${LOGO()}<span>OpenDeck<b>N3</b></span></div>
+    <div class="brand">${LOGO()}<span>OpenDeck<b>N3</b></span>${S.appVersion ? `<span class="mono" style="font-size:12px;font-weight:400;color:var(--muted)">v${esc(S.appVersion)}</span>` : ''}</div>
     <nav class="nav" aria-label="Bereiche">${nav('editor', 'grid', 'Editor')}${nav('plugins', 'plug', 'Plugins')}</nav>
     <div class="grow"></div>
     <div style="position:relative">
@@ -1388,7 +1389,7 @@ function settingsHTML() {
         <div class="srow"><div class="t"><b>Gehäusefarbe in der Vorschau</b><span>Passend zu deinem Gerät</span></div>${seg('finish', S.finish, [['dunkel', 'Dunkel'], ['weiss', 'Weiß']])}</div>
       </section>
       <section class="scard" id="updates"><h2>Updates</h2>
-        ${desktop ? `<div class="srow"><div class="t"><b>OpenDeckN3 ${esc(S.appVersion || '…')} ${esc(S.appVersion || '…')}</b><span>${S.update ? `Neu verfügbar: <b style="color:var(--accent-text)">${esc(S.update.version)}</b>` : S.updLast ? 'Zuletzt geprüft: ' + esc(new Date(S.updLast).toLocaleString('de-DE')) : 'Noch nicht geprüft'}</span></div>
+        ${desktop ? `<div class="srow"><div class="t"><b>OpenDeckN3 ${esc(S.appVersion || '…')}</b><span>${S.update ? `Neu verfügbar: <b style="color:var(--accent-text)">${esc(S.update.version)}</b>` : S.updLast ? 'Zuletzt geprüft: ' + esc(new Date(S.updLast).toLocaleString('de-DE')) : 'Noch nicht geprüft'}</span></div>
           ${S.update ? `<button type="button" class="btn primary" data-act="showUpdate">${ic('arrow', 16)}Update anzeigen</button>` : `<button type="button" class="btn" data-act="checkUpdates">${ic('refresh', 16)}Nach Updates suchen</button>`}</div>
         <div class="srow"><div class="t"><b>Automatisch nach Updates suchen</b><span>Beim Start und alle 6 Stunden${S.updInstall && S.updCanInstall ? '' : ' – du wirst gefragt'}</span></div>
           <button type="button" class="switch" role="switch" aria-checked="${S.updAuto}" aria-label="Automatisch nach Updates suchen" data-act="toggleUpdAuto"><span></span></button></div>
@@ -1416,7 +1417,7 @@ function settingsHTML() {
       <section class="scard" id="ueber" style="padding:20px;display:flex;flex-wrap:wrap;gap:20px;align-items:center">
         ${LOGO(56)}
         <div style="flex:1 1 300px;display:flex;flex-direction:column;gap:6px">
-          <b style="font-size:16px;font-weight:600">OpenDeckN3 <span class="mono" style="font-size:13px;font-weight:400;color:var(--muted)">v${esc(S.appVersion || '0.1.0')}</span></b>
+          <b style="font-size:16px;font-weight:600">OpenDeckN3 <span class="mono" style="font-size:13px;font-weight:400;color:var(--muted)">v${esc(S.appVersion || '…')}</span></b>
           <span style="font-size:13px;color:var(--muted);line-height:1.6">Lizenz GPL-3.0-or-later. Mit Dank an <a href="https://github.com/nekename/OpenDeck" target="_blank" rel="noopener">OpenDeck</a> und <a href="https://github.com/4ndv/opendeck-akp03" target="_blank" rel="noopener">opendeck-akp03</a>; HID über <span class="mono">mirajazz</span> (MPL-2.0).</span>
         </div>
       </section>
@@ -1434,7 +1435,7 @@ function onboardingHTML() {
   if (o.step === 0) {
     const demo = d ? viewSlots(d) : emptySlots();
     body = `<div class="ob-body rise"><div class="txt">
-      <span class="label" style="color:var(--accent-text)">Willkommen</span>
+      <span class="label" style="color:var(--accent-text)">Willkommen${S.appVersion ? ` <span class="mono" style="text-transform:none;letter-spacing:0;color:var(--muted)">· v${esc(S.appVersion)}</span>` : ''}</span>
       <h1>Neun Tasten. Drei Regler. Deine Regeln.</h1>
       <p>OpenDeckN3 belegt deinen TreasLin N3 per Drag &amp; Drop mit Aktionen – Szenen, Lautstärke, Profile, Plugins. Alles wird live auf dem Gerät gespiegelt.</p>
       <div><button type="button" class="btn primary lg" data-act="obNext">Los geht’s ${ic('arrow', 16)}</button></div>

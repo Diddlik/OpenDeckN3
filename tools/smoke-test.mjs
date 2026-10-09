@@ -91,6 +91,7 @@ ws.addEventListener("open", async () => {
   try {
     await sleep(1000); // give the plugin time to connect
     let state = await call("getState");
+    assert(typeof state.version === "string" && state.version, "service reports its version");
     assert(state.devices.some((d) => d.info.id === DEVICE), "virtual device present");
     const counter = state.catalog.find((p) => p.uuid === "de.opendeckn3.counter");
     assert(counter?.connected, "counter plugin connected");

@@ -795,7 +795,11 @@ impl App {
                     .iter()
                     .map(|id| self.device_snapshot(id))
                     .collect::<anyhow::Result<Vec<_>>>()?;
-                Ok(json!({ "devices": devices, "catalog": self.catalog().await }))
+                Ok(json!({
+                    "version": env!("CARGO_PKG_VERSION"),
+                    "devices": devices,
+                    "catalog": self.catalog().await,
+                }))
             }
             ApiCommand::GetCatalog => Ok(self.catalog().await),
             ApiCommand::SwitchProfile { device, profile } => {

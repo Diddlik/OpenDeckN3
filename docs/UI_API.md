@@ -122,7 +122,7 @@ type InputEvent =
 
 | Kommando | Parameter | Ergebnis |
 | --- | --- | --- |
-| `getState` | – | `{ devices: DeviceSnapshot[], catalog: CatalogPlugin[] }` |
+| `getState` | – | `{ version: string, devices: DeviceSnapshot[], catalog: CatalogPlugin[] }` – `version`: Version des Dienstes |
 | `getCatalog` | – | `CatalogPlugin[]` |
 | `switchProfile` | `device`, `profile` | `null` – legt das Profil an, falls es fehlt |
 | `deleteProfile` | `device`, `profile` | `null` – aktives Profil kann nicht gelöscht werden |
