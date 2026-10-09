@@ -4,6 +4,7 @@
 //! <config>/devices/<device-id>/device.json
 //! <config>/devices/<device-id>/profiles/<profile-id>.json
 //! <config>/plugin-settings/<plugin-uuid>.json
+//! <config>/settings.json
 //! ```
 
 use std::path::{Path, PathBuf};
@@ -27,6 +28,22 @@ impl Default for DeviceConfig {
         Self {
             active_profile: DEFAULT_PROFILE.to_owned(),
             brightness: 50,
+        }
+    }
+}
+
+/// Settings of the service itself (not per device).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct AppSettings {
+    /// Install newer plugin versions from the catalog automatically.
+    pub auto_update_plugins: bool,
+}
+
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            auto_update_plugins: true,
         }
     }
 }
@@ -106,6 +123,14 @@ impl Store {
         Ok(ids)
     }
 
+    pub fn load_app_settings(&self) -> anyhow::Result<AppSettings> {
+        Ok(read_json(&self.root.join("settings.json"))?.unwrap_or_default())
+    }
+
+    pub fn save_app_settings(&self, settings: &AppSettings) -> anyhow::Result<()> {
+        write_json(&self.root.join("settings.json"), settings)
+    }
+
     pub fn load_global_settings(&self, plugin: &str) -> anyhow::Result<Value> {
         let path = self
             .root
@@ -156,14 +181,29 @@ mod tests {
         let store = Store::new(dir.path());
 
         let mut profile = store.load_profile("n3-1", "work").unwrap();
-        assert!(profile.keys.is_empty());
-        profile.keys.insert(0, ActionInstance::new("p", "p.a"));
+        assert!(profile.pages[0].keys.is_empty());
+        profile.pages[0]
+            .keys
+            .insert(0, ActionInstance::new("p", "p.a"));
         store.save_profile("n3-1", &profile).unwrap();
 
         assert_eq!(store.load_profile("n3-1", "work").unwrap(), profile);
         assert_eq!(store.list_profiles("n3-1").unwrap(), vec!["work"]);
         store.delete_profile("n3-1", "work").unwrap();
         assert!(store.list_profiles("n3-1").unwrap().is_empty());
+    }
+
+    #[test]
+    fn app_settings_default_and_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Store::new(dir.path());
+        assert!(store.load_app_settings().unwrap().auto_update_plugins);
+        store
+            .save_app_settings(&AppSettings {
+                auto_update_plugins: false,
+            })
+            .unwrap();
+        assert!(!store.load_app_settings().unwrap().auto_update_plugins);
     }
 
     #[test]

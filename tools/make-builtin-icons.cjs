@@ -19,7 +19,7 @@ const KCOL = grab('KCOL');
 
 // device image name → UI icon kind
 const MAP = {
-  brightness: 'brightness', profile: 'profile', hotkey: 'keyboard', text: 'text',
+  brightness: 'brightness', profile: 'profile', 'page-next': 'pageNext', 'page-previous': 'pagePrev', 'page-goto': 'pages', hotkey: 'keyboard', text: 'text',
   'volume-up': 'volume', 'volume-down': 'volumeDown', 'volume-mute': 'mute',
   'media-playpause': 'media', 'media-next': 'next', 'media-previous': 'previous', 'media-stop': 'stop',
   launch: 'app', url: 'globe', command: 'terminal',

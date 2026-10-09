@@ -64,11 +64,15 @@ interface DeviceSnapshot {
   brightness: number;        // 0..100
   activeProfile: string;
   profiles: string[];        // alle Profil-Ids des Geräts
-  profile: Profile;          // das aktive Profil
+  profile: Profile;          // die angezeigte Seite des aktiven Profils
+  page: number;              // Index der angezeigten Seite (ab 0)
+  pages: { name: string; keys: number; encoders: number }[]; // alle Seiten mit Anzahl Belegungen
   previews: Record<string, string>; // Taste → PNG-Data-URL (aktuelles Bild auf dem Gerät)
   titles: Record<string, string>;   // Taste → Titel, von Plugins zur Laufzeit gesetzt
 }
 
+// Ein Profil hat eine oder mehrere Seiten; der Snapshot enthält nur die angezeigte
+// (auf der Platte: `pages: [{ name, keys, encoders }]`).
 interface Profile {
   id: string; name: string;
   keys: Record<string, ActionInstance>;      // "0".."8" Tasten, "9".."11" = Drehregler 0..2 drücken
@@ -100,7 +104,7 @@ interface CatalogPlugin {
 interface SettingsField {
   key: string;               // Schlüssel in ActionInstance.settings
   label: string;
-  type: "text" | "textarea" | "number" | "select" | "shortcut" | "file" | "profile";
+  type: "text" | "textarea" | "number" | "select" | "shortcut" | "file" | "profile" | "page";
   controllers?: Controller[]; // nur für diese Slot-Arten anzeigen
   default?: unknown;         // Startwert bei setAction ohne settings
   options?: [string, string][]; // select: [Wert, Beschriftung]
@@ -122,6 +126,11 @@ type InputEvent =
 | `getCatalog` | – | `CatalogPlugin[]` |
 | `switchProfile` | `device`, `profile` | `null` – legt das Profil an, falls es fehlt |
 | `deleteProfile` | `device`, `profile` | `null` – aktives Profil kann nicht gelöscht werden |
+| `switchPage` | `device`, `page` (Index ab 0) | `null` – zeigt eine Seite des aktiven Profils |
+| `addPage` | `device`, `name?` | `{ page }` – hängt eine leere Seite an und zeigt sie (höchstens 50) |
+| `renamePage` | `device`, `page`, `name` | `null` – leerer Name = „Seite <n>“ |
+| `movePage` | `device`, `page`, `to` | `null` – verschiebt eine Seite; die angezeigte bleibt angezeigt |
+| `deletePage` | `device`, `page` | `null` – die letzte Seite kann nicht gelöscht werden |
 | `setAction` | `device`, `controller`, `position`, `plugin`, `action`, `settings?` | `null` – ersetzt eine vorhandene Belegung; ohne `settings` gelten bei eingebauten Aktionen die Schema-Standardwerte |
 | `clearAction` | `device`, `controller`, `position` | `null` |
 | `setActionSettings` | `device`, `controller`, `position`, `settings` | `null` – Plugin erhält `didReceiveSettings` |
@@ -134,6 +143,9 @@ type InputEvent =
 | `pluginStore` | `refresh?` (Cache von 10 min umgehen) | `{ plugins: StoreEntry[], registries: string[], errors: string[] }` |
 | `getGlobalSettings` | `plugin` | globale Einstellungen des Plugins (Objekt) |
 | `pluginRequest` | `plugin`, `payload` (z. B. `{ request: "guilds" }`; für `opendeckn3.builtin` beantwortet der Dienst `{ request: "apps" }` selbst: installierte Programme – Windows: Startmenü-Verknüpfungen, Linux: `.desktop`-Einträge, macOS: `.app`) | Antwort des Plugins (`sendToPropertyInspector`), z. B. `{ options: [[wert, text], …] }`; Fehler, wenn das Plugin `error` liefert oder nicht läuft |
+| `updatePlugins` | – | `{ updated: [{ uuid, name, from, to }], failed: [{ uuid, name, error }] }` – installiert alle neueren Versionen aus dem Katalog |
+| `getAppSettings` | – | `AppSettings` – `{ autoUpdatePlugins: boolean }` (Standard `true`) |
+| `setAppSettings` | `settings` (Teilobjekt) | zusammengeführte `AppSettings`; gespeichert in `<config>/settings.json` |
 | `setGlobalSettings` | `plugin`, `settings` | zusammengeführte Einstellungen – `settings` wird in die vorhandenen gemischt (vom Plugin gespeicherte Werte wie Tokens bleiben); Plugin erhält `didReceiveGlobalSettings` |
 
 Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.
@@ -145,6 +157,7 @@ Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.
 | `deviceConnected` | `device: DeviceSnapshot` | Gerät erscheint |
 | `deviceDisconnected` | `device: string` | Gerät verschwindet |
 | `profileChanged` | `device: DeviceSnapshot` | aktives Profil oder Profilliste geändert |
+| `pageChanged` | `device: DeviceSnapshot` | andere Seite angezeigt oder Seiten angelegt/umbenannt/verschoben/gelöscht |
 | `slotChanged` | `device: string` | Belegung/Einstellungen geändert → `getState` neu laden |
 | `keyImage` | `device`, `key`, `image: string \| null` | Vorschau einer Taste aktualisieren |
 | `keyTitle` | `device`, `controller`, `position`, `title` | Titel aktualisieren |
@@ -153,6 +166,8 @@ Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.
 | `feedback` | `device`, `controller`, `position` | Plugin meldet OK/Fehler (Animation) |
 | `pluginStatus` | `plugin`, `connected` | Plugin-Status im Katalog |
 | `pluginsChanged` | `plugin` | Plugin installiert/aktualisiert/entfernt → `getCatalog` neu laden |
+| `pluginsUpdated` | `plugins: [{ uuid, name, from, to }]` | Plugins wurden im Hintergrund automatisch aktualisiert → Hinweis zeigen |
+| `appSettingsChanged` | `settings: AppSettings` | Einstellungen des Dienstes geändert |
 | `globalSettingsChanged` | `plugin` | globale Plugin-Einstellungen geändert (z. B. Verbindungsstatus) → `getGlobalSettings` |
 | `actionError` | `device`, `controller`, `position`, `message` | Eingebaute Aktion fehlgeschlagen (z. B. ungültiges Tastenkürzel, Programm nicht gefunden) → Fehlermeldung zeigen |
 | `lagged` | `missed` | Client war zu langsam → `getState` neu laden |

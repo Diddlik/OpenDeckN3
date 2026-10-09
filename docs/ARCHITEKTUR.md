@@ -78,6 +78,13 @@ dem Plugin gehört und zum aktiven Profil passt → dekodiert Bild → `DeviceCo
 **Profilwechsel:** `willDisappear` für alle alten Instanzen → Profil laden → `willAppear` für alle
 neuen Instanzen → alle Display-Tasten mit Standardbild neu zeichnen → UI erhält `profileChanged`.
 
+**Seitenwechsel:** wie der Profilwechsel, nur innerhalb des Profils (UI erhält `pageChanged`). Ein Profil
+öffnet immer auf Seite 1. Wer eine Taste noch hält, während die Seite wechselt, löst beim Loslassen nichts auf
+der neuen Seite aus (`keyUp` wird verworfen).
+
+**Plugin-Updates:** Der `Installer` prüft 60 s nach dem Start und dann alle 6 Stunden den Katalog und
+installiert neuere Versionen, solange `autoUpdatePlugins` in `settings.json` gesetzt ist (Standard).
+
 ## Eingebaute Aktionen & Tastenbilder
 
 - `n3-daemon/src/builtin.rs`: Katalog mit `settingsSchema`, Standardwerte, Beschriftung und Icon je Aktion, Auswertung der
@@ -115,7 +122,9 @@ Konfigurationsverzeichnis (Standard `~/.config/opendeckn3`, per `--config-dir` �
 
 ```text
 devices/<geräte-id>/device.json            { activeProfile, brightness }
-devices/<geräte-id>/profiles/<profil>.json Profil mit keys/encoders → ActionInstance
+devices/<geräte-id>/profiles/<profil>.json Profil mit pages: [{ name, keys, encoders }] → ActionInstance
+                                           (alte Dateien mit keys/encoders oben werden zu Seite 1)
+settings.json                              { autoUpdatePlugins } – Einstellungen des Dienstes
 plugin-settings/<plugin-uuid>.json         globale Plugin-Einstellungen
 plugins/<plugin>.sdPlugin/                 installierte Plugins (Standard-Plugin-Verzeichnis)
 ```

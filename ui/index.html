@@ -66,7 +66,7 @@ pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5
 .codebox-head{display:flex;align-items:center;justify-content:space-between;padding:8px 10px 8px 14px;border-bottom:1px solid var(--line2);font-size:13px;color:var(--muted)}
 
 /* ============ Titelleiste ============ */
-.bar{min-height:64px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line2);display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;position:relative;z-index:20}
+.bar{min-height:64px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line2);display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;position:sticky;top:0;z-index:20}
 .brand{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:-.01em}
 .brand b{color:var(--accent-text);font-weight:600}
 .nav{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--panel2);border:1px solid var(--line2)}
@@ -109,10 +109,20 @@ pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5
 
 /* Bühne */
 .center{padding:24px 28px;display:flex;flex-direction:column;gap:16px;min-width:0}
-/* Gerät bleibt oben im Bild: die Mitte ist so hoch wie das Fenster und scrollt nicht mit,
-   wenn die Bibliothek links (aufgeklappte Plugins) die Seite verlängert. */
-@media (min-width:1181px){.center{position:sticky;top:0;align-self:start;height:calc(100vh - 64px);min-height:620px}}
+/* Gerät bleibt oben im Bild: die Mitte klebt unter der (ebenfalls festen) Leiste, ist so hoch
+   wie der Rest des Fensters und scrollt nicht mit, wenn die Bibliothek links die Seite verlängert. */
+@media (min-width:1181px){.center{position:sticky;top:var(--bar-h,64px);align-self:start;height:calc(100vh - var(--bar-h,64px));min-height:620px}}
 .head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+/* Seiten des Profils */
+.pages{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:-4px}
+.pg{height:34px;display:inline-flex;align-items:center;gap:8px;padding:0 12px 0 6px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);font-size:13px;font-weight:500;max-width:220px}
+.pg:hover{background:var(--hover);color:var(--text)}
+.pg .n{min-width:22px;height:22px;padding:0 5px;border-radius:7px;background:var(--input);display:inline-flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:11px}
+.pg .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pg .c{font-family:'Geist Mono',monospace;font-size:10px;color:var(--faint)}
+.pg[aria-selected="true"]{border-color:var(--accent);color:var(--text);background:color-mix(in srgb,var(--accent) 10%,var(--panel2))}
+.pg[aria-selected="true"] .n{background:var(--accent);color:var(--accent-ink)}
+.pgadd{height:34px;font-size:13px}
 .head h1{margin:2px 0 0;font-size:22px;font-weight:600;letter-spacing:-.01em}
 .toggle{display:flex;align-items:center;gap:10px;height:36px;padding:0 12px 0 8px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);font-size:13px;font-weight:500}
 .toggle .switch{width:34px;height:20px;padding:2px}
@@ -242,11 +252,11 @@ section.danger h3{color:var(--err)!important}
 .detail dt{color:var(--faint)} .detail dd{margin:0;overflow-wrap:anywhere}
 .arow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--panel2);border:1px solid var(--line2)}
 .settings{flex:1;width:100%;max-width:1120px;margin:0 auto;padding:32px;display:flex;flex-wrap:wrap;align-items:flex-start;gap:32px}
-.snav{flex:1 1 200px;display:flex;flex-direction:column;gap:4px;position:sticky;top:16px}
+.snav{flex:1 1 200px;display:flex;flex-direction:column;gap:4px;position:sticky;top:calc(var(--bar-h,64px) + 16px)}
 .snav a{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:14px;font-weight:500}
 .snav a:hover{background:var(--raised);color:var(--text)}
 .sbody{flex:999 1 520px;min-width:0;display:flex;flex-direction:column;gap:20px}
-.scard{border-radius:16px;border:1px solid var(--line2);background:var(--panel);scroll-margin-top:16px}
+.scard{border-radius:16px;border:1px solid var(--line2);background:var(--panel);scroll-margin-top:calc(var(--bar-h,64px) + 16px)}
 .scard h2{margin:0;padding:18px 20px;font-size:16px;font-weight:600;border-bottom:1px solid var(--line2)}
 .srow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line2)}
 .srow:last-child{border-bottom:0}
@@ -388,6 +398,9 @@ const ICONS = {
   mute: '<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/>',
   media: '<path d="M4.5 5.5l8 6.5-8 6.5v-13z"/><path d="M16 6v12M20 6v12"/>',
   next: '<path d="M5 5.5l9 6.5-9 6.5v-13z"/><path d="M18.5 5.5v13"/>',
+  pageNext: '<rect x="3" y="5" width="11" height="14" rx="2"/><path d="M17 5.5a2 2 0 0 1 1.5 1.9v9.2a2 2 0 0 1-1.5 1.9"/><path d="M7 12h4M9.5 9.5L12 12l-2.5 2.5"/>',
+  pagePrev: '<rect x="10" y="5" width="11" height="14" rx="2"/><path d="M7 5.5a2 2 0 0 0-1.5 1.9v9.2A2 2 0 0 0 7 18.5"/><path d="M17 12h-4M14.5 9.5L12 12l2.5 2.5"/>',
+  pages: '<rect x="7" y="3" width="13" height="15" rx="2"/><path d="M4 7v11a3 3 0 0 0 3 3h9"/><path d="M12.5 8.5l1.5-1v6.5"/>',
   previous: '<path d="M19 5.5l-9 6.5 9 6.5v-13z"/><path d="M5.5 5.5v13"/>',
   stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
   app: '<path d="M13 15l-4-4c1.2-4.5 4.5-7.6 10.5-8.5C18.6 8.5 15.5 11.8 13 15z"/><path d="M9 11l-4.5.5 2.5-4h4M13 15l-.5 4.5 4-2.5v-4M5 19c.5-2 1.5-3 3-3.2"/><circle cx="15.5" cy="8.5" r="1.2"/>',
@@ -405,7 +418,8 @@ const KCOL = {
   brightness: ['#2C240E', '#F7D886'], volume: ['#10202D', '#9DD6FF'], grid: ['#1C2A2A', '#5FF0E2'], key: ['#1C2230', '#C9D3E3'],
   keyboard: ['#1E2235', '#A5B4FC'], text: ['#231F30', '#C4B5FD'], volumeDown: ['#10202D', '#9DD6FF'], mute: ['#2A1416', '#F7A0A0'],
   media: ['#0E2A20', '#6EE7B7'], next: ['#0E2A20', '#6EE7B7'], previous: ['#0E2A20', '#6EE7B7'], stop: ['#0E2A20', '#6EE7B7'],
-  app: ['#2B1B0F', '#FDBA74'], globe: ['#0F2236', '#7DD3FC']
+  app: ['#2B1B0F', '#FDBA74'], globe: ['#0F2236', '#7DD3FC'],
+  pages: ['#14243A', '#93C5FD'], pageNext: ['#14243A', '#93C5FD'], pagePrev: ['#14243A', '#93C5FD']
 };
 
 /* ---------- Katalog-Hilfen ---------- */
@@ -413,7 +427,7 @@ const KCOL = {
 function kindFor(pluginUuid, actionUuid) {
   const a = (actionUuid || '').toLowerCase();
   if (pluginUuid === BUILTIN) {
-    return { brightness: 'brightness', profile: 'profile', hotkey: 'keyboard', text: 'text', volume: 'volume',
+    return { brightness: 'brightness', profile: 'profile', page: 'pageNext', hotkey: 'keyboard', text: 'text', volume: 'volume',
       media: 'media', launch: 'app', url: 'globe', command: 'terminal' }[a.slice(BUILTIN.length + 1)] || 'key';
   }
   const rules = [['count', 'counter'], ['bright', 'brightness'], ['volume', 'volume'], ['audio', 'volume'], ['mute', 'mic'], ['mic', 'mic'],
@@ -428,6 +442,7 @@ function kindOf(s, ctl = 'Keypad') {
   const mode = s.settings && s.settings.mode;
   if (k === 'volume') return mode === 'up' ? 'volume' : mode === 'down' ? 'volumeDown' : 'mute';
   if (k === 'media') return { next: 'next', previous: 'previous', stop: 'stop' }[mode] || 'media';
+  if (k === 'pageNext') return { previous: 'pagePrev', goto: 'pages' }[mode] || 'pageNext';
   return k;
 }
 const actKey = (plugin, action) => plugin + '::' + action;
@@ -465,7 +480,7 @@ const S = {
   autostart: false,
   // Updates (nur Desktop-App)
   appVersion: null, update: null, updCanInstall: false, upd: { busy: false, error: '' },
-  updAuto: local.get('updAuto', true), updPre: local.get('updPre', true), updLast: local.get('updLast', null)
+  updAuto: local.get('updAuto', true), updInstall: local.get('updInstall', false), appSettings: null, pupdBusy: false, updPre: local.get('updPre', true), updLast: local.get('updLast', null)
 };
 
 const cur = () => S.devices[S.devId] || S.lost[S.devId] || null;
@@ -494,6 +509,7 @@ function builtinLabel(inst) {
   switch (inst.action.slice(BUILTIN.length + 1)) {
     case 'hotkey': return v('shortcut');
     case 'profile': return v('profile') ? '→ ' + v('profile') : '';
+    case 'page': return v('mode') === 'goto' ? 'Seite ' + Math.max(1, +v('page') || 1) : '';
     case 'launch': {
       // Name aus der Programmliste, sonst Dateiname ohne Endung.
       const apps = S.popts[BUILTIN + '|apps|'];
@@ -566,6 +582,7 @@ async function refresh() {
     S.devices = {};
     for (const d of st.devices) { S.devices[d.info.id] = d; delete S.lost[d.info.id]; }
     S.catalog = st.catalog;
+    api.call('getAppSettings').then((v) => { S.appSettings = v; if (S.route === 'settings') render(); }).catch(() => {});
     if (!S.pluginSel || !S.catalog.some((p) => p.uuid === S.pluginSel)) S.pluginSel = S.catalog[0] && S.catalog[0].uuid;
     pickDevice();
     render();
@@ -595,6 +612,18 @@ function onEvent(ev) {
       if (mine && old && old.activeProfile !== d.activeProfile) flipAnim(); else render();
       break;
     }
+    case 'pageChanged': {
+      const d = ev.device; const old = S.devices[d.info.id];
+      S.devices[d.info.id] = d;
+      if (mine && old && old.page !== d.page) flipAnim(); else render();
+      break;
+    }
+    case 'pluginsUpdated': {
+      const list = (ev.plugins || []).map((p) => `${p.name} ${p.to ? 'v' + p.to : ''}`.trim()).join(', ');
+      if (list) toast('ok', 'Automatisch aktualisiert: ' + list);
+      break;
+    }
+    case 'appSettingsChanged': S.appSettings = ev.settings; if (S.route === 'settings') render(); break;
     case 'slotChanged': refreshSoon(); break;
     case 'keyImage': {
       const d = S.devices[ev.device]; if (!d) break;
@@ -945,6 +974,13 @@ function schemaFormHTML(s, schema) {
         input = `<select class="field" ${at}><option value="" ${v ? '' : 'selected'} disabled>Profil wählen …</option>${list.map((id) => `<option ${id === v ? 'selected' : ''}>${esc(id)}</option>`).join('')}</select>`;
         break;
       }
+      case 'page': {
+        const pages = d.pages || [];
+        const n = Math.max(1, +v || 1);
+        input = `<select class="field" ${at}>${pages.map((p, i) => `<option value="${i + 1}" ${i + 1 === n ? 'selected' : ''}>${i + 1} · ${esc(pageName(d, i))}</option>`).join('')}
+          ${n > pages.length ? `<option value="${n}" selected>${n} · (gibt es nicht)</option>` : ''}</select>`;
+        break;
+      }
       case 'number':
         input = `<input class="field" type="number" ${at} value="${esc(v)}" min="${f.min ?? ''}" max="${f.max ?? ''}">`;
         break;
@@ -1071,6 +1107,7 @@ function editorHTML() {
           ${virt ? `<button type="button" class="toggle" data-act="test" aria-pressed="${S.test}"><span class="switch"><span></span></span>Test-Modus</button>` : ''}
         </div>
       </div>
+      ${pagesHTML(d)}
       <div class="stage ${S.drag ? 'dragmode' : ''}" id="stage">${stageInner()}</div>
       <div class="status">
         <span style="display:flex;align-items:center;gap:8px"><span class="dot" style="background:${statusCol};box-shadow:0 0 10px ${statusCol}"></span><span style="color:var(--text)">${disc ? 'Getrennt – Änderungen erst nach dem Anstecken möglich' : 'Verbunden'}</span></span>
@@ -1079,6 +1116,19 @@ function editorHTML() {
       </div>
     </main>
     ${inspectorHTML()}
+  </div>`;
+}
+
+// Reiter für die Seiten des aktiven Profils. Rechtsklick: umbenennen, verschieben, löschen.
+const pageName = (d, i) => (d.pages && d.pages[i] && d.pages[i].name) || 'Seite ' + (i + 1);
+function pagesHTML(d) {
+  const pages = d.pages || [{ name: '', keys: 0, encoders: 0 }];
+  const off = !isLive();
+  return `<div class="pages" role="tablist" aria-label="Seiten">
+    ${pages.map((p, i) => `<button type="button" class="pg" role="tab" aria-selected="${i === (d.page || 0)}" data-act="switchPage" data-arg="${i}" data-page="${i}"
+        title="${esc(pageName(d, i))} – ${p.keys + p.encoders} belegt · Rechtsklick für Menü" ${off ? 'disabled' : ''}>
+        <span class="n">${i + 1}</span><span class="nm">${esc(pageName(d, i))}</span>${p.keys + p.encoders ? `<span class="c">${p.keys + p.encoders}</span>` : ''}</button>`).join('')}
+    <button type="button" class="btn ghost pgadd" data-act="addPage" title="Neue, leere Seite anlegen" ${off ? 'disabled' : ''}>${ic('plus', 15)}Seite</button>
   </div>`;
 }
 
@@ -1317,7 +1367,7 @@ function settingsHTML() {
   const soon = '<span class="soon">folgt</span>';
   return `<div class="settings">
     <nav class="snav" aria-label="Einstellungsbereiche"><h1 style="margin:0 0 14px 10px">Einstellungen</h1>
-      ${nav('allgemein', 'gear', 'Allgemein')}${nav('geraete', 'usb', 'Geräte')}${desktop ? nav('updates', 'refresh', 'Updates') : ''}${nav('erweitert', 'terminal', 'Erweitert')}${nav('ueber', 'info', 'Über')}
+      ${nav('allgemein', 'gear', 'Allgemein')}${nav('geraete', 'usb', 'Geräte')}${nav('updates', 'refresh', 'Updates')}${nav('erweitert', 'terminal', 'Erweitert')}${nav('ueber', 'info', 'Über')}
     </nav>
     <div class="sbody">
       <section class="scard" id="allgemein"><h2>Allgemein</h2>
@@ -1337,14 +1387,22 @@ function settingsHTML() {
           <select class="field" disabled style="min-width:180px"><option>Nie</option></select></div>
         <div class="srow"><div class="t"><b>Gehäusefarbe in der Vorschau</b><span>Passend zu deinem Gerät</span></div>${seg('finish', S.finish, [['dunkel', 'Dunkel'], ['weiss', 'Weiß']])}</div>
       </section>
-      ${desktop ? `<section class="scard" id="updates"><h2>Updates</h2>
-        <div class="srow"><div class="t"><b>Version ${esc(S.appVersion || '…')}</b><span>${S.update ? `Neu verfügbar: <b style="color:var(--accent-text)">${esc(S.update.version)}</b>` : S.updLast ? 'Zuletzt geprüft: ' + esc(new Date(S.updLast).toLocaleString('de-DE')) : 'Noch nicht geprüft'}</span></div>
+      <section class="scard" id="updates"><h2>Updates</h2>
+        ${desktop ? `<div class="srow"><div class="t"><b>OpenDeckN3 ${esc(S.appVersion || '…')} ${esc(S.appVersion || '…')}</b><span>${S.update ? `Neu verfügbar: <b style="color:var(--accent-text)">${esc(S.update.version)}</b>` : S.updLast ? 'Zuletzt geprüft: ' + esc(new Date(S.updLast).toLocaleString('de-DE')) : 'Noch nicht geprüft'}</span></div>
           ${S.update ? `<button type="button" class="btn primary" data-act="showUpdate">${ic('arrow', 16)}Update anzeigen</button>` : `<button type="button" class="btn" data-act="checkUpdates">${ic('refresh', 16)}Nach Updates suchen</button>`}</div>
-        <div class="srow"><div class="t"><b>Automatisch nach Updates suchen</b><span>Beim Start und alle 6 Stunden – du wirst immer gefragt</span></div>
+        <div class="srow"><div class="t"><b>Automatisch nach Updates suchen</b><span>Beim Start und alle 6 Stunden${S.updInstall && S.updCanInstall ? '' : ' – du wirst gefragt'}</span></div>
           <button type="button" class="switch" role="switch" aria-checked="${S.updAuto}" aria-label="Automatisch nach Updates suchen" data-act="toggleUpdAuto"><span></span></button></div>
+        <div class="srow"><div class="t"><b>App automatisch aktualisieren</b><span>${S.updCanInstall
+            ? 'Neue Versionen ohne Nachfrage laden, prüfen und installieren – OpenDeckN3 startet danach kurz neu'
+            : 'Nur unter Windows: hier öffnet sich die Download-Seite'}</span></div>
+          <button type="button" class="switch" role="switch" aria-checked="${S.updInstall && S.updCanInstall}" aria-label="App automatisch aktualisieren" data-act="toggleUpdInstall" ${S.updCanInstall ? '' : 'disabled style="opacity:.45"'}><span></span></button></div>
         <div class="srow"><div class="t"><b>Vorabversionen einbeziehen</b><span>Alpha- und Beta-Versionen mit den neuesten Funktionen</span></div>
-          <button type="button" class="switch" role="switch" aria-checked="${S.updPre}" aria-label="Vorabversionen einbeziehen" data-act="toggleUpdPre"><span></span></button></div>
-      </section>` : ''}
+          <button type="button" class="switch" role="switch" aria-checked="${S.updPre}" aria-label="Vorabversionen einbeziehen" data-act="toggleUpdPre"><span></span></button></div>` : ''}
+        <div class="srow"><div class="t"><b>Plugins automatisch aktualisieren</b><span>Plugins aus dem Katalog: kurz nach dem Start und alle 6 Stunden auf neue Versionen prüfen und installieren</span></div>
+          <button type="button" class="switch" role="switch" aria-checked="${!!(S.appSettings && S.appSettings.autoUpdatePlugins)}" aria-label="Plugins automatisch aktualisieren" data-act="toggleAutoPlugins" ${S.appSettings ? '' : 'disabled'}><span></span></button></div>
+        <div class="srow"><div class="t"><b>Plugins jetzt aktualisieren</b><span>Installiert alle neueren Versionen aus dem Katalog</span></div>
+          <button type="button" class="btn" data-act="updatePluginsNow" ${S.pupdBusy ? 'disabled' : ''}>${S.pupdBusy ? '<span class="spin"></span>Läuft …' : ic('refresh', 16) + 'Aktualisieren'}</button></div>
+      </section>
       <section class="scard" id="erweitert"><h2>Erweitert</h2>
         <div class="srow"><label class="t" for="port"><b>UI-API-Port</b><span>Bindet nur an 127.0.0.1 · Standard ${DEFAULT_API_PORT}</span></label>
           <input id="port" class="field mono" inputmode="numeric" value="${esc(S.port)}" data-in="port" style="width:120px"></div>
@@ -1422,6 +1480,13 @@ function onboardingHTML() {
 /* =====================================================================
    Rendern
    ===================================================================== */
+// The top bar is sticky; sticky content below it needs its real height (it wraps on narrow windows).
+function syncBarHeight() {
+  const bar = $('.bar');
+  document.documentElement.style.setProperty('--bar-h', (bar ? bar.offsetHeight : 0) + 'px');
+}
+addEventListener('resize', syncBarHeight);
+
 function render() {
   const keepFocus = document.activeElement && document.activeElement.closest && document.activeElement.closest('.device');
   const dev = devState();
@@ -1434,6 +1499,7 @@ function render() {
   else view = editorHTML();
   $('#app').innerHTML = (S.route === 'onboarding' ? '' : barHTML()) + view;
   renderOverlay();
+  syncBarHeight();
   if (keepFocus) { const b = document.querySelector(`[data-slot="${S.sel}"]`); if (b) b.focus(); }
 }
 function renderStage() {
@@ -1453,6 +1519,32 @@ function renderOverlay() {
       <button type="button" role="menuitem" disabled>${ic('duplicate', 16)}Duplizieren <span style="margin-left:auto;font-size:11px">später</span></button>
       <hr><button type="button" role="menuitem" class="red" data-act="menuClear" ${s ? '' : 'disabled'}>${ic('trash', 16)}Entfernen</button>
     </div>`;
+  }
+  if (S.pmenu) {
+    const d = cur(), i = S.pmenu.page, n = d ? d.pages.length : 1;
+    html += `<div class="ctx" role="menu" style="left:${S.pmenu.x}px;top:${S.pmenu.y}px">
+      <div class="mono" style="font-size:11px;color:var(--faint);padding:6px 10px 4px">${esc(d ? pageName(d, i) : '')}</div>
+      <button type="button" role="menuitem" data-act="pageRename">${ic('edit', 16)}Umbenennen</button>
+      <button type="button" role="menuitem" data-act="pageMove" data-arg="-1" ${i > 0 ? '' : 'disabled'}><span style="width:16px;text-align:center">←</span>Nach links</button>
+      <button type="button" role="menuitem" data-act="pageMove" data-arg="1" ${i < n - 1 ? '' : 'disabled'}><span style="width:16px;text-align:center">→</span>Nach rechts</button>
+      <hr><button type="button" role="menuitem" class="red" data-act="pageDelete" ${n > 1 ? '' : 'disabled'}>${ic('trash', 16)}Seite löschen</button>
+    </div>`;
+  }
+  if (S.modal && S.modal.kind === 'pageName') {
+    html += `<div class="scrim" data-act="closeModal"><form class="dialog" id="pageNameForm" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+      <h2 id="dlgT">Seite ${S.modal.page + 1} umbenennen</h2>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)">Name
+        <input class="field" id="pageNameInput" value="${esc(S.modal.value)}" placeholder="Seite ${S.modal.page + 1}" maxlength="40" autocomplete="off"></label>
+      <div style="font-size:12px;color:var(--faint)">Leer lassen für „Seite ${S.modal.page + 1}“.</div>
+      <div style="display:flex;justify-content:flex-end;gap:10px"><button type="button" class="btn ghost" data-act="closeModal">Abbrechen</button><button type="submit" class="btn primary">Speichern</button></div>
+    </form></div>`;
+  }
+  if (S.modal && S.modal.kind === 'pageDelete') {
+    html += `<div class="scrim" data-act="closeModal"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlgT">
+      <h2 id="dlgT">„${esc(S.modal.name)}“ löschen?</h2>
+      <p style="margin:0;font-size:14px;line-height:1.55;color:var(--muted)">${S.modal.count === 1 ? 'Die Belegung dieser Seite geht' : `Die ${S.modal.count} Belegungen dieser Seite gehen`} verloren.</p>
+      <div style="display:flex;justify-content:flex-end;gap:10px"><button type="button" class="btn ghost" data-act="closeModal">Abbrechen</button><button type="button" class="btn danger" data-act="confirmPageDelete" id="confirmPageDelete">${ic('trash', 16)}Löschen</button></div>
+    </div></div>`;
   }
   if (S.modal && S.modal.kind === 'new') {
     html += `<div class="scrim" data-act="closeModal"><form class="dialog" id="newProfileForm" role="dialog" aria-modal="true" aria-labelledby="dlgT">
@@ -1511,9 +1603,11 @@ function renderOverlay() {
   if (S.modal && S.modal.kind === 'update' && $('#updGo')) $('#updGo').focus();
   if (S.modal && S.modal.kind === 'new') { const i = $('#newProfileName'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
   if (S.modal && S.modal.kind === 'delete') $('#confirmDelete').focus();
+  if (S.modal && S.modal.kind === 'pageName') { const i = $('#pageNameInput'); i.focus(); i.select(); }
+  if (S.modal && S.modal.kind === 'pageDelete') $('#confirmPageDelete').focus();
   if (S.modal && S.modal.kind === 'github') $('#confirmGithub').focus();
   if (S.modal && S.modal.kind === 'uninstall') $('#confirmUninstall').focus();
-  if (S.menu) { const m = $('.ctx'); const r = m.getBoundingClientRect(); if (r.right > innerWidth - 8) m.style.left = (innerWidth - r.width - 8) + 'px'; if (r.bottom > innerHeight - 8) m.style.top = (innerHeight - r.height - 8) + 'px'; }
+  if (S.menu || S.pmenu) { const m = $('.ctx'); const r = m.getBoundingClientRect(); if (r.right > innerWidth - 8) m.style.left = (innerWidth - r.width - 8) + 'px'; if (r.bottom > innerHeight - 8) m.style.top = (innerHeight - r.height - 8) + 'px'; }
 }
 
 /* =====================================================================
@@ -1648,6 +1742,22 @@ const ACTS = {
   device(arg) { S.devId = arg; local.set('device', arg); S.popover = null; S.sel = 'k0'; render(); },
   startVirtual() { S.popover = null; startVirtual(); },
   test() { S.test = !S.test; render(); },
+  switchPage(i) { const d = cur(); if (!d || +i === d.page) return; api.run('switchPage', { device: S.devId, page: +i }).catch(() => {}); },
+  async addPage() {
+    try { const r = await api.call('addPage', { device: S.devId }); toast('ok', `Seite ${r.page + 1} angelegt`); } catch (e) { toast('err', e.message); }
+  },
+  pageRename() { const i = S.pmenu.page; S.pmenu = null; S.modal = { kind: 'pageName', page: i, value: (cur().pages[i] || {}).name || '' }; renderOverlay(); },
+  pageMove(dir) { const i = S.pmenu.page; S.pmenu = null; renderOverlay(); api.run('movePage', { device: S.devId, page: i, to: i + +dir }).catch(() => {}); },
+  pageDelete() {
+    const d = cur(), i = S.pmenu.page, p = d.pages[i]; S.pmenu = null;
+    const count = p.keys + p.encoders;
+    if (!count) { renderOverlay(); api.run('deletePage', { device: S.devId, page: i }).then(() => toast('ok', `${pageName(d, i)} gelöscht`)).catch(() => {}); return; }
+    S.modal = { kind: 'pageDelete', page: i, name: pageName(d, i), count }; renderOverlay();
+  },
+  confirmPageDelete() {
+    const { page, name } = S.modal; S.modal = null; renderOverlay();
+    api.run('deletePage', { device: S.devId, page }).then(() => toast('ok', `${name} gelöscht`)).catch(() => {});
+  },
   group(arg) { S.closed[arg] = !S.closed[arg]; $('#liblist').innerHTML = libListHTML(); },
   clear() { clearSlot(S.sel); },
   jsonMode() { S.json = !S.json; S.rec = null; render(); },
@@ -1703,7 +1813,29 @@ const ACTS = {
   },
   showUpdate() { S.upd = { busy: false, error: '' }; S.modal = { kind: 'update' }; renderOverlay(); },
   checkUpdates() { checkUpdates(true); },
-  toggleUpdAuto() { S.updAuto = !S.updAuto; local.set('updAuto', S.updAuto); render(); },
+  toggleUpdAuto() { S.updAuto = !S.updAuto; local.set('updAuto', S.updAuto); if (!S.updAuto) { S.updInstall = false; local.set('updInstall', false); } render(); },
+  toggleUpdInstall() {
+    S.updInstall = !S.updInstall; local.set('updInstall', S.updInstall);
+    // Automatisch installieren setzt automatisches Suchen voraus.
+    if (S.updInstall && !S.updAuto) { S.updAuto = true; local.set('updAuto', true); }
+    render();
+  },
+  async toggleAutoPlugins() {
+    try { S.appSettings = await api.call('setAppSettings', { settings: { autoUpdatePlugins: !S.appSettings.autoUpdatePlugins } }); }
+    catch (e) { toast('err', e.message); }
+    render();
+  },
+  async updatePluginsNow() {
+    S.pupdBusy = true; render();
+    try {
+      const r = await api.call('updatePlugins');
+      const names = r.updated.map((p) => `${p.name} v${p.to}`).join(', ');
+      if (r.failed.length) toast('err', 'Fehlgeschlagen: ' + r.failed.map((p) => `${p.name} (${p.error})`).join(', '));
+      else toast('ok', names ? 'Aktualisiert: ' + names : 'Alle Plugins sind aktuell');
+      S.store = null;
+    } catch (e) { toast('err', e.message); }
+    S.pupdBusy = false; render();
+  },
   toggleUpdPre() { S.updPre = !S.updPre; local.set('updPre', S.updPre); S.update = null; render(); },
   updateSkip() { local.set('updSkip', S.update.version); S.update = null; S.modal = null; renderOverlay(); render(); },
   updateOpenPage() { desktop('plugin:opener|open_url', { url: S.update.htmlUrl }).catch((e) => toast('err', String(e))); },
@@ -1802,6 +1934,7 @@ document.addEventListener('keyup', (e) => {
 document.addEventListener('click', (e) => {
   if (S.rec && !e.target.closest('.hotkey')) { stopRec(); }
   if (S.menu && !e.target.closest('.ctx')) { S.menu = null; renderOverlay(); }
+  if (S.pmenu && !e.target.closest('.ctx')) { S.pmenu = null; renderOverlay(); }
   if (S.popover && !e.target.closest('.popover') && !e.target.closest('[data-act="popover"]')) { S.popover = null; render(); }
   const slotEl = e.target.closest('[data-slot]');
   if (slotEl && slotEl.classList.contains('locked')) {
@@ -1822,6 +1955,8 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('contextmenu', (e) => {
+  const pg = e.target.closest('[data-page]');
+  if (pg && !pg.disabled) { e.preventDefault(); S.menu = null; S.pmenu = { page: +pg.dataset.page, x: e.clientX, y: e.clientY }; renderOverlay(); return; }
   const slotEl = e.target.closest('[data-slot]');
   if (!slotEl || slotEl.classList.contains('locked')) return;
   e.preventDefault();
@@ -1848,7 +1983,7 @@ document.addEventListener('input', (e) => {
   else if (k === 'title') { const s = slot(S.sel); if (!s) return; s.title = t.value || null; renderStage(); sendAppearance(S.sel, s); }
   else if (k === 'sfield' && t.dataset.type !== 'shortcut') {
     let v = t.value;
-    if (t.dataset.type === 'number') { if (v.trim() === '' || isNaN(+v)) return; v = +v; }
+    if (t.dataset.type === 'number' || t.dataset.type === 'page') { if (v.trim() === '' || isNaN(+v)) return; v = +v; }
     setSlotSetting(t.dataset.key, v, t.dataset.type);
   }
   else if (k === 'combo') {
@@ -1893,6 +2028,13 @@ document.addEventListener('submit', (e) => {
     const repo = $('#ghRepo').value.trim(); S.gh = repo;
     if (!repo) { toast('warn', 'GitHub-Repository angeben, z. B. besitzer/mein-plugin'); return; }
     S.modal = { kind: 'github', repo }; renderOverlay();
+    return;
+  }
+  if (e.target.id === 'pageNameForm') {
+    e.preventDefault();
+    const { page } = S.modal; const name = $('#pageNameInput').value.trim();
+    S.modal = null; renderOverlay();
+    api.run('renamePage', { device: S.devId, page, name }).catch(() => {});
     return;
   }
   if (e.target.id !== 'newProfileForm') return;
@@ -1963,7 +2105,7 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Escape') {
     if (S.modal) { if (!S.upd.busy && !S.upd.done) { S.modal = null; renderOverlay(); } return; }
-    if (S.menu) { S.menu = null; renderOverlay(); return; }
+    if (S.menu || S.pmenu) { S.menu = null; S.pmenu = null; renderOverlay(); return; }
     if (S.popover) { S.popover = null; render(); return; }
   }
   const pick = e.target.closest && e.target.closest('[data-pick],[data-obdrag]');
@@ -2070,7 +2212,11 @@ async function checkUpdates(manual) {
       const isNew = !S.update || S.update.version !== u.version;
       S.update = u;
       // Nicht mitten ins Onboarding oder einen anderen Dialog platzen.
-      if ((manual || isNew) && !S.modal && S.route !== 'onboarding') ACTS.showUpdate();
+      if ((manual || isNew) && !S.modal && S.route !== 'onboarding') {
+        ACTS.showUpdate();
+        // Ohne Nachfrage installieren, wenn so eingestellt (der Dialog zeigt den Fortschritt).
+        if (!manual && S.updInstall && r.canInstall && u.installerUrl) ACTS.updateInstall();
+      }
     } else if (manual) {
       toast('ok', `Du hast die neueste Version (${r.current})`);
     }

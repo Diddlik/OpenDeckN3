@@ -36,6 +36,10 @@ ws.onopen = async () => {
     }
     // settings arrive at the plugin via didReceiveSettings → it redraws the keys
     for (const s of slots.filter((s) => s.plugin === C)) await call("setActionSettings", { device: D, controller: s.controller, position: s.position, settings: s.settings });
+    // a few named pages so the page tabs show up
+    await call("renamePage", { device: D, page: 0, name: "Start" });
+    for (const name of ["Szenen", "Sound"]) await call("addPage", { device: D, name });
+    await call("switchPage", { device: D, page: 0 });
     await call("setBrightness", { device: D, value: 80 });
     await sleep(800);
     console.log("populated");

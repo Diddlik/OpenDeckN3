@@ -116,7 +116,9 @@ im aktiven Profil.
 
 ## Kontext
 
-Jede Instanz hat einen `context`-String (`<gerät>|<profil>|key|<pos>` bzw. `…|enc|<pos>`).
+Jede Instanz hat einen `context`-String (`<gerät>|<profil>|<seite>|key|<pos>` bzw. `…|enc|<pos>`).
+Beim Seitenwechsel erhalten die Aktionen der alten Seite `willDisappear`, die der neuen `willAppear` – wie
+beim Profilwechsel.
 Plugins sollen ihn als **opak** behandeln und nur zurückschicken. Der Dienst akzeptiert
 Änderungen nur für Kontexte, die dem sendenden Plugin gehören und im aktiven Profil liegen.
 
