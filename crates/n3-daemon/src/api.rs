@@ -34,6 +34,35 @@ pub enum ApiCommand {
         device: String,
         profile: String,
     },
+    /// Pages of the active profile (index from 0).
+    SwitchPage {
+        device: String,
+        page: usize,
+    },
+    AddPage {
+        device: String,
+        #[serde(default)]
+        name: Option<String>,
+    },
+    RenamePage {
+        device: String,
+        page: usize,
+        name: String,
+    },
+    MovePage {
+        device: String,
+        page: usize,
+        to: usize,
+    },
+    DeletePage {
+        device: String,
+        page: usize,
+    },
+    GetAppSettings,
+    /// Partial update, e.g. `{"autoUpdatePlugins": false}`.
+    SetAppSettings {
+        settings: Value,
+    },
     SetAction {
         device: String,
         controller: Controller,
@@ -108,10 +137,17 @@ pub enum ApiCommand {
         plugin: String,
         payload: Value,
     },
+    /// Installs every catalog plugin that has a newer release.
+    UpdatePlugins,
     /// Internal: moves an unpacked plugin into place and starts it.
     #[serde(skip_deserializing)]
     ActivatePlugin {
         staged: std::path::PathBuf,
+    },
+    /// Internal: tells the UIs which plugins were updated in the background.
+    #[serde(skip_deserializing)]
+    ReportPluginUpdates {
+        plugins: Value,
     },
 }
 

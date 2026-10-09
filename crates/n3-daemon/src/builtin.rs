@@ -1,7 +1,7 @@
 //! Actions implemented directly in the service (no plugin process needed).
 //!
 //! The set follows OpenDeck's starter pack (run command, open URL, simulate
-//! input, switch profile, brightness) plus volume, media keys, launching
+//! input, switch profile, brightness, switch page) plus volume, media keys, launching
 //! programs and typing text. Each action describes its settings with a small
 //! schema (`settingsSchema` in the catalog) that the UI renders as a form.
 
@@ -25,6 +25,7 @@ use crate::{
 const PREFIX: &str = "opendeckn3.builtin.";
 pub const BRIGHTNESS: &str = "opendeckn3.builtin.brightness";
 pub const SWITCH_PROFILE: &str = "opendeckn3.builtin.profile";
+pub const SWITCH_PAGE: &str = "opendeckn3.builtin.page";
 pub const HOTKEY: &str = "opendeckn3.builtin.hotkey";
 pub const TEXT: &str = "opendeckn3.builtin.text";
 pub const VOLUME: &str = "opendeckn3.builtin.volume";
@@ -178,6 +179,25 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
             vec![field("profile", "Profil", "profile", KEYPAD)],
         ),
         action(
+            SWITCH_PAGE,
+            "Seite wechseln",
+            "Taste: nächste, vorige oder eine bestimmte Seite · Drehregler: durch die Seiten blättern",
+            BOTH,
+            vec![
+                with(
+                    field("mode", "Funktion", "select", KEYPAD),
+                    json!({
+                        "default": "next",
+                        "options": [["next", "Nächste Seite"], ["previous", "Vorige Seite"], ["goto", "Bestimmte Seite"]],
+                    }),
+                ),
+                with(
+                    field("page", "Seite", "page", KEYPAD),
+                    json!({ "default": 1, "showIf": { "mode": "goto" } }),
+                ),
+            ],
+        ),
+        action(
             BRIGHTNESS,
             "Helligkeit",
             "Taste: Helligkeitsstufen durchschalten, Drehregler: stufenlos",
@@ -231,6 +251,16 @@ fn setting<'a>(instance: &'a ActionInstance, key: &str) -> &'a str {
         .trim()
 }
 
+/// Target page of "Bestimmte Seite", counted from 1.
+fn page_number(instance: &ActionInstance) -> usize {
+    instance
+        .settings
+        .get("page")
+        .and_then(|v| v.as_u64().or_else(|| v.as_str()?.trim().parse().ok()))
+        .unwrap_or(1)
+        .max(1) as usize
+}
+
 fn step(instance: &ActionInstance) -> u32 {
     instance
         .settings
@@ -245,6 +275,10 @@ pub fn default_label(instance: &ActionInstance) -> Option<String> {
     let label = match instance.action.as_str() {
         HOTKEY => setting(instance, "shortcut").to_owned(),
         SWITCH_PROFILE => format!("→ {}", setting(instance, "profile")),
+        SWITCH_PAGE => match setting(instance, "mode") {
+            "goto" => format!("Seite {}", page_number(instance)),
+            _ => return None,
+        },
         LAUNCH => {
             let path = setting(instance, "path").trim_matches('"');
             // Application-menu entries carry their display name.
@@ -288,6 +322,9 @@ macro_rules! icons {
 icons!(
     "brightness",
     "profile",
+    "page-next",
+    "page-previous",
+    "page-goto",
     "hotkey",
     "text",
     "volume-up",
@@ -309,6 +346,11 @@ pub fn icon(instance: &ActionInstance) -> Option<DynamicImage> {
             "up" => "volume-up",
             "down" => "volume-down",
             _ => "volume-mute",
+        },
+        SWITCH_PAGE => match setting(instance, "mode") {
+            "previous" => "page-previous",
+            "goto" => "page-goto",
+            _ => "page-next",
         },
         MEDIA => match setting(instance, "mode") {
             "next" => "media-next",
@@ -333,11 +375,18 @@ fn next_preset(current: u8) -> u8 {
 enum Effect {
     None,
     Input(InputJob),
-    Launch { path: String, args: String },
+    Launch {
+        path: String,
+        args: String,
+    },
     Url(String),
     Command(String),
     Brightness(u8),
     Profile(String),
+    /// Pages forward (negative: back), wrapping around.
+    PageStep(i64),
+    /// Page index (from 0).
+    Page(usize),
 }
 
 fn effect(instance: &ActionInstance, input: &InputEvent, brightness: u8) -> anyhow::Result<Effect> {
@@ -432,6 +481,12 @@ fn effect(instance: &ActionInstance, input: &InputEvent, brightness: u8) -> anyh
             }
             _ => Effect::None,
         },
+        SWITCH_PAGE if pressed => match setting(instance, "mode") {
+            "previous" => Effect::PageStep(-1),
+            "goto" => Effect::Page(page_number(instance) - 1),
+            _ => Effect::PageStep(1),
+        },
+        SWITCH_PAGE if twist != 0 => Effect::PageStep(i64::from(twist)),
         SWITCH_PROFILE if pressed => match setting(instance, "profile") {
             "" => anyhow::bail!("kein Profil gewählt"),
             profile => Effect::Profile(profile.to_owned()),
@@ -465,7 +520,7 @@ pub async fn on_input(app: &mut App, device: &str, input: InputEvent) {
     let Some(state) = app.devices.get(device) else {
         return;
     };
-    let Some(instance) = state.profile.slots(controller).get(&position) else {
+    let Some(instance) = state.page().slots(controller).get(&position) else {
         return;
     };
     let effect = match effect(instance, &input, state.config.brightness) {
@@ -490,6 +545,8 @@ pub async fn on_input(app: &mut App, device: &str, input: InputEvent) {
         Effect::Command(cmd) => run_command(&cmd),
         Effect::Brightness(value) => app.set_brightness(device, value).await,
         Effect::Profile(profile) => app.switch_profile(device, &profile).await,
+        Effect::PageStep(steps) => app.step_page(device, steps).await,
+        Effect::Page(index) => app.switch_page(device, index).await,
     };
     if let Err(err) = result {
         report(format!("{err:#}"));
@@ -612,5 +669,31 @@ mod tests {
             effect(&instance(BRIGHTNESS, json!({})), &twist(-2), 50).unwrap(),
             Effect::Brightness(40)
         ));
+
+        let page = |s| instance(SWITCH_PAGE, s);
+        assert!(matches!(
+            effect(&page(json!({ "mode": "next" })), &down, 50).unwrap(),
+            Effect::PageStep(1)
+        ));
+        assert!(matches!(
+            effect(&page(json!({ "mode": "previous" })), &down, 50).unwrap(),
+            Effect::PageStep(-1)
+        ));
+        assert!(matches!(
+            effect(&page(json!({ "mode": "goto", "page": "3" })), &down, 50).unwrap(),
+            Effect::Page(2)
+        ));
+        assert!(matches!(
+            effect(&page(json!({ "mode": "goto", "page": 0 })), &down, 50).unwrap(),
+            Effect::Page(0)
+        ));
+        assert!(matches!(
+            effect(&page(json!({})), &twist(-2), 50).unwrap(),
+            Effect::PageStep(-2)
+        ));
+        assert_eq!(
+            default_label(&page(json!({ "mode": "goto", "page": 2 }))).as_deref(),
+            Some("Seite 2")
+        );
     }
 }

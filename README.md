@@ -39,8 +39,8 @@ siehst du genauso in der Vorschau. Keine Überraschungen, kein Rätselraten.
       Aktion aus der Bibliothek greifen, auf eine Taste ziehen, fertig. Passt eine Aktion nicht auf einen Drehregler, sagt dir die App das schon beim Ziehen.
     </td>
     <td width="33%" valign="top">
-      <h3>🗂️ Profile für alles</h3>
-      Streaming, Gaming, Office – jedes Profil hat seine eigene Belegung. Umschalten per Klick oder direkt mit einer Taste am Gerät.
+      <h3>🗂️ Profile und Seiten</h3>
+      Streaming, Gaming, Office – jedes Profil hat seine eigene Belegung, auf so vielen Seiten wie du brauchst. Umschalten und Blättern per Klick, Taste oder Drehregler.
     </td>
     <td width="33%" valign="top">
       <h3>🎨 Dein Look</h3>
@@ -77,6 +77,7 @@ Kein Plugin-Gebastel für die Basics – diese Aktionen sind direkt eingebaut un
 | 💻 | **Befehl ausführen** | Für Power-User: jede Kommandozeile | Eigener Befehl je Drehrichtung |
 | 📝 | **Text eingeben** | Signaturen, E-Mail-Adressen, Textbausteine | ✓ |
 | 🗂️ | **Profil wechseln** · ☀️ **Helligkeit** | Ein Knopf, ein neues Layout | Helligkeit stufenlos |
+| 📑 | **Seite wechseln** | Nächste, vorige oder eine bestimmte Seite | Durch die Seiten blättern |
 
 Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit Symbol und Beschriftung.
 
@@ -116,6 +117,8 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit Symbol und 
 
 - [x] Desktop-App mit Tray, Autostart, Installer und automatischen Updates
 - [x] Profile, eigene Bilder, Plugins, virtuelles Testgerät
+- [x] Mehrere Seiten pro Profil – wechseln per Taste oder Drehregler
+- [x] Plugins aktualisieren sich automatisch (abschaltbar)
 - [x] Titel direkt auf den Tasten-Displays
 - [x] Eingebaut: Tastenkürzel, Lautstärke, Medien, Programme, Websites, Befehle, Text
 - [x] Plugins per Klick installieren – aus Datei oder direkt aus GitHub-Releases
@@ -156,7 +159,9 @@ Wie das geht, steht in der <a href="docs/ENTWICKLUNG.md">Entwickler-Doku</a>.
 
 Automatisch: OpenDeckN3 schaut beim Start und alle paar Stunden nach einer neuen Version und fragt dich, bevor etwas passiert.
 Ein Klick auf <i>„Jetzt aktualisieren“</i> lädt das Update, prüft es und startet die App neu – deine Profile bleiben erhalten.
-In den <i>Einstellungen → Updates</i> kannst du auch selbst suchen oder Vorabversionen ausschalten.
+In den <i>Einstellungen → Updates</i> kannst du auch selbst suchen, Vorabversionen ausschalten oder <i>„App automatisch
+aktualisieren“</i> einschalten – dann wird ohne Nachfrage installiert.
+Plugins aus dem Katalog halten sich von selbst aktuell; das lässt sich dort mit <i>„Plugins automatisch aktualisieren“</i> abschalten.
 </details>
 
 <details>

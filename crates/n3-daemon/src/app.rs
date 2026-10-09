@@ -5,7 +5,7 @@
 //! keeps the logic single-threaded and free of locks.
 
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -14,7 +14,7 @@ use anyhow::{Context, anyhow, bail};
 use image::DynamicImage;
 use n3_core::{
     ActionInstance, Controller, Coordinates, DeviceCommand, DeviceEvent, DeviceHandle, InputEvent,
-    Profile, SlotContext,
+    Page, Profile, SlotContext,
 };
 use n3_plugin::{
     BUILTIN_PLUGIN, InboundEvent, PluginEvent, PluginHost, PluginMessage, protocol,
@@ -35,6 +35,12 @@ pub struct DeviceState {
     pub handle: DeviceHandle,
     pub config: DeviceConfig,
     pub profile: Profile,
+    /// Index of the page shown (not persisted: a profile always opens on page 1).
+    pub page: usize,
+    /// Keys held down right now, and keys whose release must not reach the
+    /// action that appeared under the finger after a page/profile switch.
+    held_keys: BTreeSet<u8>,
+    swallow_release: BTreeSet<u8>,
     /// Image currently shown per key (PNG data URL), mirrored for the UI.
     pub previews: BTreeMap<u8, String>,
     /// Titles set at runtime by plugins (not persisted, like Stream Deck).
@@ -45,6 +51,14 @@ pub struct DeviceState {
 }
 
 impl DeviceState {
+    pub fn page(&self) -> &Page {
+        self.profile.page(self.page)
+    }
+
+    fn page_mut(&mut self) -> &mut Page {
+        self.profile.page_mut(self.page)
+    }
+
     fn coordinates(&self, controller: Controller, position: u8) -> Coordinates {
         match controller {
             Controller::Keypad => self.handle.info.layout.key_coordinates(position),
@@ -59,6 +73,7 @@ impl DeviceState {
         SlotContext {
             device: self.handle.info.id.clone(),
             profile: self.profile.id.clone(),
+            page: self.page as u8,
             controller,
             position,
         }
@@ -72,7 +87,7 @@ impl DeviceState {
         position: u8,
         build: impl FnOnce(&SlotRef) -> Value,
     ) -> Option<(String, Value)> {
-        let instance = self.profile.slots(controller).get(&position)?;
+        let instance = self.page().slots(controller).get(&position)?;
         let context = self.context(controller, position);
         let slot = SlotRef {
             action: &instance.action,
@@ -90,7 +105,7 @@ impl DeviceState {
     fn bound_slots(&self) -> Vec<(Controller, u8)> {
         [Controller::Keypad, Controller::Encoder]
             .into_iter()
-            .flat_map(|c| self.profile.slots(c).keys().map(move |p| (c, *p)))
+            .flat_map(|c| self.page().slots(c).keys().map(move |p| (c, *p)))
             .collect()
     }
 }
@@ -274,6 +289,9 @@ impl App {
                 handle,
                 config,
                 profile,
+                page: 0,
+                held_keys: BTreeSet::new(),
+                swallow_release: BTreeSet::new(),
                 previews: BTreeMap::new(),
                 titles: BTreeMap::new(),
                 runtime_images: BTreeMap::new(),
@@ -320,7 +338,7 @@ impl App {
             Some((encoder, down)) => {
                 self.set_encoder_pressed(device, encoder, down)?;
                 let key = self.knob_press_key(device, encoder)?;
-                let has_button = self.device(device)?.profile.keys.contains_key(&key);
+                let has_button = self.device(device)?.page().keys.contains_key(&key);
                 match (has_button, down) {
                     (true, true) => InputEvent::KeyDown { key },
                     (true, false) => InputEvent::KeyUp { key },
@@ -329,6 +347,21 @@ impl App {
             }
             None => input,
         };
+
+        // A release after a page/profile switch belongs to the old action.
+        let state = self.device_mut(device)?;
+        match input {
+            InputEvent::KeyDown { key } => {
+                state.held_keys.insert(key);
+            }
+            InputEvent::KeyUp { key } => {
+                state.held_keys.remove(&key);
+                if state.swallow_release.remove(&key) {
+                    return Ok(());
+                }
+            }
+            _ => {}
+        }
 
         let (controller, position, event) = match input {
             InputEvent::KeyDown { key } => (Controller::Keypad, key, "keyDown"),
@@ -381,7 +414,7 @@ impl App {
     ) -> anyhow::Result<bool> {
         Ok(self
             .device(device)?
-            .profile
+            .page()
             .slots(controller)
             .get(&position)
             .is_some_and(|i| i.plugin == BUILTIN_PLUGIN))
@@ -417,6 +450,8 @@ impl App {
         if let Some(state) = self.devices.get_mut(device) {
             state.titles.clear();
             state.runtime_images.clear();
+            let held = std::mem::take(&mut state.held_keys);
+            state.swallow_release.extend(held);
         }
     }
 
@@ -427,6 +462,7 @@ impl App {
 
         let state = self.device_mut(device)?;
         state.profile = profile;
+        state.page = 0;
         state.config.active_profile = profile_id.to_owned();
         let config = state.config.clone();
         self.store.save_device_config(device, &config)?;
@@ -436,10 +472,38 @@ impl App {
         Ok(())
     }
 
+    /// Shows page `index` of the active profile.
+    pub async fn switch_page(&mut self, device: &str, index: usize) -> anyhow::Result<()> {
+        let state = self.device(device)?;
+        let count = state.profile.pages.len();
+        anyhow::ensure!(index < count, "Seite {} gibt es nicht", index + 1);
+        if index == state.page {
+            return Ok(());
+        }
+        self.deactivate_profile(device).await;
+        self.device_mut(device)?.page = index;
+        self.activate_profile(device).await;
+        self.emit(json!({ "event": "pageChanged", "device": self.device_snapshot(device)? }));
+        Ok(())
+    }
+
+    /// Moves `steps` pages forward (negative: back), wrapping around.
+    pub async fn step_page(&mut self, device: &str, steps: i64) -> anyhow::Result<()> {
+        let state = self.device(device)?;
+        let count = state.profile.pages.len() as i64;
+        let index = (state.page as i64 + steps).rem_euclid(count);
+        self.switch_page(device, index as usize).await
+    }
+
+    fn save_active_profile(&mut self, device: &str) -> anyhow::Result<()> {
+        let profile = self.device(device)?.profile.clone();
+        self.store.save_profile(device, &profile)
+    }
+
     /// Image a key shows when no plugin has overridden it at runtime:
     /// user image → built-in icon / manifest state image → manifest action icon → blank.
     async fn default_image(&self, device: &str, key: u8) -> Option<DynamicImage> {
-        let instance = self.devices.get(device)?.profile.keys.get(&key)?;
+        let instance = self.devices.get(device)?.page().keys.get(&key)?;
         if let Some(url) = &instance.image {
             match render::decode_data_url(url) {
                 Ok(image) => return Some(image),
@@ -472,7 +536,7 @@ impl App {
     /// Title drawn on a key: user title → plugin title → built-in label.
     fn key_title(&self, device: &str, key: u8) -> Option<String> {
         let state = self.devices.get(device)?;
-        let instance = state.profile.keys.get(&key)?;
+        let instance = state.page().keys.get(&key)?;
         instance
             .title
             .clone()
@@ -543,7 +607,7 @@ impl App {
     ) -> anyhow::Result<()> {
         let state = self.device_mut(device)?;
         let instance = state
-            .profile
+            .page_mut()
             .slots_mut(controller)
             .get_mut(&position)
             .context("slot is empty")?;
@@ -597,11 +661,11 @@ impl App {
     fn resolve_context(&self, plugin: &str, context: &str) -> anyhow::Result<SlotContext> {
         let slot = SlotContext::decode(context).context("malformed context")?;
         let state = self.device(&slot.device)?;
-        if state.profile.id != slot.profile {
-            bail!("context belongs to an inactive profile");
+        if state.profile.id != slot.profile || state.page != usize::from(slot.page) {
+            bail!("context belongs to an inactive profile or page");
         }
         let instance = state
-            .profile
+            .page()
             .slots(slot.controller)
             .get(&slot.position)
             .context("slot is empty")?;
@@ -738,6 +802,81 @@ impl App {
                 self.switch_profile(&device, &profile).await?;
                 Ok(Value::Null)
             }
+            ApiCommand::SwitchPage { device, page } => {
+                self.switch_page(&device, page).await?;
+                Ok(Value::Null)
+            }
+            ApiCommand::AddPage { device, name } => {
+                let state = self.device_mut(&device)?;
+                anyhow::ensure!(state.profile.pages.len() < 50, "höchstens 50 Seiten");
+                state.profile.pages.push(Page {
+                    name: name.unwrap_or_default().trim().to_owned(),
+                    ..Default::default()
+                });
+                let index = state.profile.pages.len() - 1;
+                self.save_active_profile(&device)?;
+                self.switch_page(&device, index).await?;
+                Ok(json!({ "page": index }))
+            }
+            ApiCommand::RenamePage { device, page, name } => {
+                let state = self.device_mut(&device)?;
+                state
+                    .profile
+                    .pages
+                    .get_mut(page)
+                    .context("Seite gibt es nicht")?
+                    .name = name.trim().to_owned();
+                self.save_active_profile(&device)?;
+                self.emit(
+                    json!({ "event": "pageChanged", "device": self.device_snapshot(&device)? }),
+                );
+                Ok(Value::Null)
+            }
+            ApiCommand::MovePage { device, page, to } => {
+                let state = self.device(&device)?;
+                let count = state.profile.pages.len();
+                anyhow::ensure!(page < count && to < count, "Seite gibt es nicht");
+                let shown = state.page;
+                // Contexts carry the page index: hide, reorder, show again.
+                self.deactivate_profile(&device).await;
+                let state = self.device_mut(&device)?;
+                let moved = state.profile.pages.remove(page);
+                state.profile.pages.insert(to, moved);
+                state.page = if shown == page {
+                    to
+                } else if page < shown && to >= shown {
+                    shown - 1
+                } else if page > shown && to <= shown {
+                    shown + 1
+                } else {
+                    shown
+                };
+                self.save_active_profile(&device)?;
+                self.activate_profile(&device).await;
+                self.emit(
+                    json!({ "event": "pageChanged", "device": self.device_snapshot(&device)? }),
+                );
+                Ok(Value::Null)
+            }
+            ApiCommand::DeletePage { device, page } => {
+                let state = self.device(&device)?;
+                let count = state.profile.pages.len();
+                anyhow::ensure!(page < count, "Seite gibt es nicht");
+                anyhow::ensure!(count > 1, "die letzte Seite kann nicht gelöscht werden");
+                let shown = state.page;
+                self.deactivate_profile(&device).await;
+                let state = self.device_mut(&device)?;
+                state.profile.pages.remove(page);
+                if shown > page || shown == count - 1 {
+                    state.page = shown.saturating_sub(1);
+                }
+                self.save_active_profile(&device)?;
+                self.activate_profile(&device).await;
+                self.emit(
+                    json!({ "event": "pageChanged", "device": self.device_snapshot(&device)? }),
+                );
+                Ok(Value::Null)
+            }
             ApiCommand::DeleteProfile { device, profile } => {
                 anyhow::ensure!(
                     self.device(&device)?.profile.id != profile,
@@ -781,7 +920,7 @@ impl App {
                 }
                 let state = self.device_mut(&device)?;
                 state
-                    .profile
+                    .page_mut()
                     .slots_mut(controller)
                     .insert(position, instance);
                 let profile = state.profile.clone();
@@ -868,6 +1007,23 @@ impl App {
                 }
                 Ok(json!({ "device": n3_driver::virtual_deck::VIRTUAL_DEVICE_ID }))
             }
+            ApiCommand::GetAppSettings => {
+                Ok(serde_json::to_value(self.store.load_app_settings()?)?)
+            }
+            ApiCommand::SetAppSettings { settings } => {
+                let mut current = serde_json::to_value(self.store.load_app_settings()?)?;
+                if let (Some(target), Value::Object(patch)) = (current.as_object_mut(), settings) {
+                    for (key, value) in patch {
+                        target.insert(key, value);
+                    }
+                }
+                let settings: crate::store::AppSettings =
+                    serde_json::from_value(current).context("ungültige Einstellungen")?;
+                self.store.save_app_settings(&settings)?;
+                let value = serde_json::to_value(&settings)?;
+                self.emit(json!({ "event": "appSettingsChanged", "settings": value }));
+                Ok(value)
+            }
             ApiCommand::GetGlobalSettings { plugin } => self.store.load_global_settings(&plugin),
             ApiCommand::SetGlobalSettings { plugin, settings } => {
                 anyhow::ensure!(
@@ -889,9 +1045,14 @@ impl App {
                 Ok(merged)
             }
             ApiCommand::ActivatePlugin { staged } => self.activate_plugin(&staged).await,
+            ApiCommand::ReportPluginUpdates { plugins } => {
+                self.emit(json!({ "event": "pluginsUpdated", "plugins": plugins }));
+                Ok(Value::Null)
+            }
             ApiCommand::UninstallPlugin { plugin } => self.uninstall_plugin(&plugin).await,
             ApiCommand::InstallPlugin { .. }
             | ApiCommand::PluginStore { .. }
+            | ApiCommand::UpdatePlugins
             | ApiCommand::PluginRequest { .. } => {
                 bail!("handled outside on_api_command")
             }
@@ -908,7 +1069,7 @@ impl App {
             .await;
         let state = self.device_mut(device)?;
         if state
-            .profile
+            .page_mut()
             .slots_mut(controller)
             .remove(&position)
             .is_some()
@@ -930,7 +1091,19 @@ impl App {
             "brightness": state.config.brightness,
             "activeProfile": state.profile.id,
             "profiles": self.store.list_profiles(id)?,
-            "profile": state.profile,
+            // The page shown, in the shape of a single-page profile.
+            "profile": {
+                "id": state.profile.id,
+                "name": state.profile.name,
+                "keys": state.page().keys,
+                "encoders": state.page().encoders,
+            },
+            "page": state.page,
+            "pages": state.profile.pages.iter().map(|p| json!({
+                "name": p.name,
+                "keys": p.keys.len(),
+                "encoders": p.encoders.len(),
+            })).collect::<Vec<_>>(),
             "previews": state.previews,
             "titles": state.titles,
         }))

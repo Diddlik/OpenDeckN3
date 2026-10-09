@@ -156,6 +156,7 @@ pub async fn run(opts: Options, shutdown: CancellationToken) -> anyhow::Result<(
         ));
     }
     drop(device_tx);
+    installer.spawn_auto_update(token.clone());
 
     plugins
         .launch_all(&json!({

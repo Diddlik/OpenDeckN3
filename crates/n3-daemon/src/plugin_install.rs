@@ -19,6 +19,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use tokio::sync::{Mutex, mpsc, oneshot};
+use tokio_util::sync::CancellationToken;
 
 use crate::api::{ApiCommand, ApiRequest};
 
@@ -145,7 +146,9 @@ impl Installer {
     pub fn handles(command: &ApiCommand) -> bool {
         matches!(
             command,
-            ApiCommand::InstallPlugin { .. } | ApiCommand::PluginStore { .. }
+            ApiCommand::InstallPlugin { .. }
+                | ApiCommand::PluginStore { .. }
+                | ApiCommand::UpdatePlugins
         )
     }
 
@@ -163,6 +166,7 @@ impl Installer {
     async fn handle(&self, command: ApiCommand) -> anyhow::Result<Value> {
         match command {
             ApiCommand::PluginStore { refresh } => self.store(refresh).await,
+            ApiCommand::UpdatePlugins => self.update_all().await,
             ApiCommand::InstallPlugin {
                 path,
                 data,
@@ -198,6 +202,79 @@ impl Installer {
             }
             _ => bail!("not an installer command"),
         }
+    }
+
+    /// Installs every catalog plugin with a newer release; reports
+    /// `{updated: [{uuid, name, from, to}], failed: [{uuid, name, error}]}`.
+    async fn update_all(&self) -> anyhow::Result<Value> {
+        let store = self.store(true).await?;
+        let (mut updated, mut failed) = (Vec::new(), Vec::new());
+        let due = store["plugins"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|p| p["update"] == true);
+        for plugin in due {
+            let info = json!({ "uuid": plugin["uuid"], "name": plugin["name"] });
+            let result = async {
+                let repo = parse_repo(plugin["repo"].as_str().unwrap_or_default())?;
+                let release = self.latest_release(&repo, plugin["asset"].as_str()).await?;
+                let bytes = self.download(&repo, &release.asset).await?;
+                self.install_archive(bytes).await
+            };
+            match result.await {
+                Ok(_) => {
+                    tracing::info!(plugin = %plugin["uuid"], to = %plugin["latest"]["version"], "plugin updated");
+                    let mut info = info;
+                    info["from"] = plugin["installed"].clone();
+                    info["to"] = plugin["latest"]["version"].clone();
+                    updated.push(info);
+                }
+                Err(err) => {
+                    tracing::warn!(plugin = %plugin["uuid"], "plugin update failed: {err:#}");
+                    let mut info = info;
+                    info["error"] = json!(format!("{err:#}"));
+                    failed.push(info);
+                }
+            }
+        }
+        Ok(json!({ "updated": updated, "failed": failed }))
+    }
+
+    /// Background job: shortly after start and then every few hours, update
+    /// plugins if the user enabled it (`autoUpdatePlugins`).
+    pub fn spawn_auto_update(&self, shutdown: CancellationToken) {
+        const FIRST_CHECK: Duration = Duration::from_secs(60);
+        const INTERVAL: Duration = Duration::from_secs(6 * 3600);
+        let this = self.clone();
+        tokio::spawn(async move {
+            let mut wait = FIRST_CHECK;
+            loop {
+                tokio::select! {
+                    _ = tokio::time::sleep(wait) => {}
+                    _ = shutdown.cancelled() => return,
+                }
+                wait = INTERVAL;
+                let enabled = this
+                    .call(ApiCommand::GetAppSettings)
+                    .await
+                    .is_ok_and(|s| s["autoUpdatePlugins"] != false);
+                if !enabled {
+                    continue;
+                }
+                match this.update_all().await {
+                    Ok(report) if report["updated"].as_array().is_some_and(|u| !u.is_empty()) => {
+                        this.call(ApiCommand::ReportPluginUpdates {
+                            plugins: report["updated"].clone(),
+                        })
+                        .await
+                        .ok();
+                    }
+                    Ok(_) => {}
+                    Err(err) => tracing::warn!("automatic plugin update failed: {err:#}"),
+                }
+            }
+        });
     }
 
     /// Unpacks into a staging directory and lets the main loop activate it.
