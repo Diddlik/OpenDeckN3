@@ -132,6 +132,8 @@ type InputEvent =
 | `renamePage` | `device`, `page`, `name` | `null` – leerer Name = „Seite <n>“ |
 | `movePage` | `device`, `page`, `to` | `null` – verschiebt eine Seite; die angezeigte bleibt angezeigt |
 | `deletePage` | `device`, `page` | `null` – die letzte Seite kann nicht gelöscht werden |
+| `exportProfiles` | `device`, `path?` | ohne `path`: `{ format: "opendeckn3-profiles", version, profiles: Profile[] }` · mit `path` (endet auf `.json`): schreibt diese Datei, Ergebnis `{ count }`. Logins/Tokens der Plugins sind nicht enthalten |
+| `importProfiles` | `device`, `data` (Inhalt einer Exportdatei) | `{ imported: string[] }` – fügt die Profile hinzu; vorhandene bleiben, bei gleichem Namen kommt `-2`, `-3` … dazu |
 | `setSlot` | `device`, `controller`, `position`, `instance` (`{ plugin, action, settings, state, title, image }` oder `null`) | `null` – setzt eine komplette Belegung bzw. leert den Platz (Verschieben, Einfügen, Rückgängig) |
 | `copyPage` | `device`, `page` | `{ page }` – fügt eine Kopie direkt hinter der Seite ein und zeigt sie (höchstens 50) |
 | `setAction` | `device`, `controller`, `position`, `plugin`, `action`, `settings?` | `null` – ersetzt eine vorhandene Belegung; ohne `settings` gelten bei eingebauten Aktionen die Schema-Standardwerte |

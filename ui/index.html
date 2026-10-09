@@ -1383,7 +1383,7 @@ function settingsHTML() {
   const soon = '<span class="soon">folgt</span>';
   return `<div class="settings">
     <nav class="snav" aria-label="Einstellungsbereiche"><h1 style="margin:0 0 14px 10px">Einstellungen</h1>
-      ${nav('allgemein', 'gear', 'Allgemein')}${nav('geraete', 'usb', 'Geräte')}${nav('updates', 'refresh', 'Updates')}${nav('erweitert', 'terminal', 'Erweitert')}${nav('ueber', 'info', 'Über')}
+      ${nav('allgemein', 'gear', 'Allgemein')}${nav('geraete', 'usb', 'Geräte')}${nav('sichern', 'download', 'Sichern')}${nav('updates', 'refresh', 'Updates')}${nav('erweitert', 'terminal', 'Erweitert')}${nav('ueber', 'info', 'Über')}
     </nav>
     <div class="sbody">
       <section class="scard" id="allgemein"><h2>Allgemein</h2>
@@ -1402,6 +1402,12 @@ function settingsHTML() {
         <div class="srow"><div class="t"><b>Schlafmodus nach ${soon}</b><span>Displays aus, Tasten bleiben aktiv</span></div>
           <select class="field" disabled style="min-width:180px"><option>Nie</option></select></div>
         <div class="srow"><div class="t"><b>Gehäusefarbe in der Vorschau</b><span>Passend zu deinem Gerät</span></div>${seg('finish', S.finish, [['dunkel', 'Dunkel'], ['weiss', 'Weiß']])}</div>
+      </section>
+      <section class="scard" id="sichern"><h2>Sichern</h2>
+        <div class="srow"><div class="t"><b>Profile exportieren</b><span>Alle Profile ${d ? 'von ' + esc(d.info.name) + ' ' : ''}mit Seiten, Belegungen, Titeln und Bildern als Datei. Logins der Plugins (z. B. Discord) bleiben draußen.</span></div>
+          <button type="button" class="btn" data-act="exportProfiles" ${d ? '' : 'disabled'}>${ic('download', 16)}Exportieren</button></div>
+        <div class="srow"><div class="t"><b>Profile importieren</b><span>Profile aus einer Exportdatei hinzufügen. Vorhandene Profile bleiben unverändert, gleiche Namen bekommen eine Nummer.</span></div>
+          <button type="button" class="btn" data-act="importProfiles" ${d ? '' : 'disabled'}>${ic('folder', 16)}Importieren</button></div>
       </section>
       <section class="scard" id="updates"><h2>Updates</h2>
         ${desktop ? `<div class="srow"><div class="t"><b>OpenDeckN3 ${esc(S.appVersion || '…')}</b><span>${S.update ? `Neu verfügbar: <b style="color:var(--accent-text)">${esc(S.update.version)}</b>` : S.updLast ? 'Zuletzt geprüft: ' + esc(new Date(S.updLast).toLocaleString('de-DE')) : 'Noch nicht geprüft'}</span></div>
@@ -1974,6 +1980,36 @@ const ACTS = {
   menuCopy() { const id = S.menu.id; S.menu = null; renderOverlay(); copySlot(id); },
   menuCut() { const id = S.menu.id; S.menu = null; renderOverlay(); copySlot(id, true); },
   menuPaste() { const id = S.menu.id; S.menu = null; S.sel = id; renderOverlay(); pasteSlot(id); },
+  async exportProfiles() {
+    const name = `opendeckn3-profile-${new Date().toISOString().slice(0, 10)}.json`;
+    try {
+      if (desktop) {
+        const path = await desktop('plugin:dialog|save', { options: { title: 'Profile exportieren', defaultPath: name, filters: [{ name: 'OpenDeckN3-Profile', extensions: ['json'] }] } });
+        if (!path) return;
+        const r = await api.call('exportProfiles', { device: S.devId, path: String(path) });
+        toast('ok', `${r.count} ${r.count === 1 ? 'Profil' : 'Profile'} exportiert`);
+        return;
+      }
+      const data = await api.call('exportProfiles', { device: S.devId });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+      a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      toast('ok', `${data.profiles.length} ${data.profiles.length === 1 ? 'Profil' : 'Profile'} exportiert`);
+    } catch (e) { toast('err', e.message || String(e)); }
+  },
+  importProfiles() {
+    const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json';
+    i.onchange = async () => {
+      const file = i.files[0]; if (!file) return;
+      try {
+        let data;
+        try { data = JSON.parse(await file.text()); } catch { throw new Error('Die Datei ist keine Exportdatei von OpenDeckN3'); }
+        const r = await api.call('importProfiles', { device: S.devId, data });
+        toast('ok', r.imported.length ? `Importiert: ${r.imported.join(', ')}` : 'Die Datei enthält keine Profile');
+      } catch (e) { toast('err', e.message); }
+    };
+    i.click();
+  },
   undo() { stepHistory(false); },
   redo() { stepHistory(true); },
   menuClear() { const id = S.menu.id; S.menu = null; S.sel = id; renderOverlay(); clearSlot(id); },

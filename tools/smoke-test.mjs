@@ -133,6 +133,18 @@ ws.addEventListener("open", async () => {
     await call("switchProfile", { device: DEVICE, profile: "default" });
     await call("deleteProfile", { device: DEVICE, profile: "default-copy" });
 
+    const exported = await call("exportProfiles", { device: DEVICE });
+    assert(exported.format === "opendeckn3-profiles" && exported.profiles.some((p) => p.id === "default"), "profiles export");
+    const { imported } = await call("importProfiles", { device: DEVICE, data: exported });
+    assert(imported.includes("default-2"), "import keeps existing profiles and renames clashes");
+    for (const id of imported) await call("deleteProfile", { device: DEVICE, profile: id });
+
+    await call("setSlot", { device: DEVICE, controller: "Keypad", position: 7,
+      instance: { plugin: "opendeckn3.builtin", action: "opendeckn3.builtin.url", settings: { url: "https://example.com" }, title: "Web" } });
+    await waitForDevice((d) => d.profile.keys["7"]?.title === "Web", "setSlot places a complete assignment");
+    await call("setSlot", { device: DEVICE, controller: "Keypad", position: 7, instance: null });
+    await waitForDevice((d) => !d.profile.keys["7"], "setSlot null clears the slot");
+
     // Built-in actions: catalog with settings schema, defaults, real command, error reporting.
     await call("switchProfile", { device: DEVICE, profile: "default" });
     state = await call("getState");

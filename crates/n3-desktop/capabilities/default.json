@@ -9,6 +9,7 @@
     "autostart:allow-disable",
     "autostart:allow-is-enabled",
     "opener:allow-open-url",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "dialog:allow-save"
   ]
 }

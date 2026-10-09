@@ -81,6 +81,19 @@ pub enum ApiCommand {
         #[serde(default)]
         settings: Option<Value>,
     },
+    /// All profiles of a device as one backup document; with `path` it is
+    /// written to that `.json` file instead of returned.
+    ExportProfiles {
+        device: String,
+        #[serde(default)]
+        path: Option<String>,
+    },
+    /// Adds the profiles of an export document; existing profiles are never
+    /// overwritten, a clashing name gets a suffix.
+    ImportProfiles {
+        device: String,
+        data: Value,
+    },
     /// Puts a complete assignment (settings, title, image) on a slot, or clears
     /// it with `null`. Used for moving, pasting and undo.
     SetSlot {

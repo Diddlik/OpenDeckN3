@@ -16,6 +16,9 @@ use n3_core::{
     ActionInstance, Controller, Coordinates, DeviceCommand, DeviceEvent, DeviceHandle, InputEvent,
     Page, Profile, SlotContext,
 };
+/// Marks an OpenDeckN3 profile export file.
+const PROFILE_EXPORT_FORMAT: &str = "opendeckn3-profiles";
+
 use n3_plugin::{
     BUILTIN_PLUGIN, InboundEvent, PluginEvent, PluginHost, PluginMessage, protocol,
     protocol::SlotRef,
@@ -976,6 +979,63 @@ impl App {
                     .await?;
                 self.emit(json!({ "event": "slotChanged", "device": device }));
                 Ok(Value::Null)
+            }
+            ApiCommand::ExportProfiles { device, path } => {
+                let profiles = self
+                    .store
+                    .list_profiles(&device)?
+                    .iter()
+                    .map(|id| self.store.load_profile(&device, id))
+                    .collect::<anyhow::Result<Vec<_>>>()?;
+                let count = profiles.len();
+                // Plugin logins and tokens live in the global plugin settings and stay out.
+                let export = json!({
+                    "format": PROFILE_EXPORT_FORMAT,
+                    "version": env!("CARGO_PKG_VERSION"),
+                    "profiles": profiles,
+                });
+                let Some(path) = path else {
+                    return Ok(export);
+                };
+                anyhow::ensure!(
+                    path.to_lowercase().ends_with(".json"),
+                    "Exportdatei muss auf .json enden"
+                );
+                std::fs::write(&path, serde_json::to_vec_pretty(&export)?)
+                    .with_context(|| format!("„{path}“ lässt sich nicht schreiben"))?;
+                Ok(json!({ "count": count }))
+            }
+            ApiCommand::ImportProfiles { device, data } => {
+                anyhow::ensure!(
+                    data["format"] == PROFILE_EXPORT_FORMAT,
+                    "keine OpenDeckN3-Profildatei"
+                );
+                let profiles: Vec<Profile> = serde_json::from_value(data["profiles"].clone())
+                    .context("Profildatei ist beschädigt")?;
+                let mut existing = self.store.list_profiles(&device)?;
+                let mut imported = Vec::new();
+                for mut profile in profiles {
+                    let base = profile.id.clone();
+                    let mut id = base.clone();
+                    for n in 2.. {
+                        if !existing.contains(&id) {
+                            break;
+                        }
+                        id = format!("{base}-{n}");
+                    }
+                    if profile.name == base {
+                        profile.name = id.clone();
+                    }
+                    profile.id = id.clone();
+                    // Saving validates the id, so a crafted file cannot write elsewhere.
+                    self.store.save_profile(&device, &profile)?;
+                    existing.push(id.clone());
+                    imported.push(id);
+                }
+                self.emit(
+                    json!({ "event": "profileChanged", "device": self.device_snapshot(&device)? }),
+                );
+                Ok(json!({ "imported": imported }))
             }
             ApiCommand::SetSlot {
                 device,
