@@ -81,7 +81,7 @@ Kein Plugin-Gebastel für die Basics – diese Aktionen sind direkt eingebaut un
 | 🗂️ | **Profil wechseln** · ☀️ **Helligkeit** | Ein Knopf, ein neues Layout | Helligkeit stufenlos |
 | 📑 | **Seite wechseln** | Nächste, vorige oder eine bestimmte Seite | Durch die Seiten blättern |
 
-Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit Symbol und Beschriftung.
+Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit dem echten App-Icon oder Spiele-Cover und auf Wunsch einem eigenen Titel.
 
 ## 🖼️ Einblicke
 

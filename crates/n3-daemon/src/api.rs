@@ -34,6 +34,11 @@ pub enum ApiCommand {
         device: String,
         profile: String,
     },
+    CopyProfile {
+        device: String,
+        profile: String,
+        to: String,
+    },
     /// Pages of the active profile (index from 0).
     SwitchPage {
         device: String,
@@ -55,6 +60,10 @@ pub enum ApiCommand {
         to: usize,
     },
     DeletePage {
+        device: String,
+        page: usize,
+    },
+    CopyPage {
         device: String,
         page: usize,
     },

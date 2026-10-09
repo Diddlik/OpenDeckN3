@@ -126,11 +126,13 @@ type InputEvent =
 | `getCatalog` | – | `CatalogPlugin[]` |
 | `switchProfile` | `device`, `profile` | `null` – legt das Profil an, falls es fehlt |
 | `deleteProfile` | `device`, `profile` | `null` – aktives Profil kann nicht gelöscht werden |
+| `copyProfile` | `device`, `profile`, `to` | `null` – legt `to` als Kopie von `profile` an (alle Seiten und Belegungen); `to` darf es noch nicht geben |
 | `switchPage` | `device`, `page` (Index ab 0) | `null` – zeigt eine Seite des aktiven Profils |
 | `addPage` | `device`, `name?` | `{ page }` – hängt eine leere Seite an und zeigt sie (höchstens 50) |
 | `renamePage` | `device`, `page`, `name` | `null` – leerer Name = „Seite <n>“ |
 | `movePage` | `device`, `page`, `to` | `null` – verschiebt eine Seite; die angezeigte bleibt angezeigt |
 | `deletePage` | `device`, `page` | `null` – die letzte Seite kann nicht gelöscht werden |
+| `copyPage` | `device`, `page` | `{ page }` – fügt eine Kopie direkt hinter der Seite ein und zeigt sie (höchstens 50) |
 | `setAction` | `device`, `controller`, `position`, `plugin`, `action`, `settings?` | `null` – ersetzt eine vorhandene Belegung; ohne `settings` gelten bei eingebauten Aktionen die Schema-Standardwerte |
 | `clearAction` | `device`, `controller`, `position` | `null` |
 | `setActionSettings` | `device`, `controller`, `position`, `settings` | `null` – Plugin erhält `didReceiveSettings` |

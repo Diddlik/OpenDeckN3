@@ -124,6 +124,15 @@ ws.addEventListener("open", async () => {
     await waitForDevice((d) => d.activeProfile === "gaming", "next-profile key switches to the next profile");
     await call("switchProfile", { device: DEVICE, profile: "default" });
 
+    await call("copyProfile", { device: DEVICE, profile: "default", to: "default-copy" });
+    await call("switchProfile", { device: DEVICE, profile: "default-copy" });
+    await waitForDevice((d) => d.profile.keys["2"]?.action === "opendeckn3.builtin.profile", "copied profile keeps its keys");
+    const { page: copied } = await call("copyPage", { device: DEVICE, page: 0 });
+    await waitForDevice((d) => d.page === copied && d.profile.keys["2"]?.action === "opendeckn3.builtin.profile",
+      "copied page is shown with the same keys");
+    await call("switchProfile", { device: DEVICE, profile: "default" });
+    await call("deleteProfile", { device: DEVICE, profile: "default-copy" });
+
     // Built-in actions: catalog with settings schema, defaults, real command, error reporting.
     await call("switchProfile", { device: DEVICE, profile: "default" });
     state = await call("getState");

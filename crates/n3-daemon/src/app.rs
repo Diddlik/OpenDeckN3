@@ -547,7 +547,8 @@ impl App {
             .or_else(|| render::load_icon(&plugin.path, &action.icon))
     }
 
-    /// Title drawn on a key: user title → plugin title → built-in label.
+    /// Title drawn on a key: user title, else the title a plugin set at runtime.
+    /// Without either the key shows only its image.
     fn key_title(&self, device: &str, key: u8) -> Option<String> {
         let state = self.devices.get(device)?;
         let instance = state.page().keys.get(&key)?;
@@ -556,11 +557,6 @@ impl App {
             .clone()
             .filter(|t| !t.trim().is_empty())
             .or_else(|| state.titles.get(&key).cloned())
-            .or_else(|| {
-                (instance.plugin == BUILTIN_PLUGIN)
-                    .then(|| builtin::default_label(instance))
-                    .flatten()
-            })
     }
 
     /// Recomposes a display key from its image and title and sends it out.
@@ -836,6 +832,26 @@ impl App {
                 self.switch_page(&device, index).await?;
                 Ok(json!({ "page": index }))
             }
+            ApiCommand::CopyPage { device, page } => {
+                let pages = &self.device(&device)?.profile.pages;
+                anyhow::ensure!(pages.len() < 50, "höchstens 50 Seiten");
+                let mut copy = pages.get(page).context("Seite gibt es nicht")?.clone();
+                copy.name = match copy.name.as_str() {
+                    "" => format!("Seite {} (Kopie)", page + 1),
+                    name => format!("{name} (Kopie)"),
+                };
+                // Contexts carry the page index: hide, insert after the original, show the copy.
+                self.deactivate_profile(&device).await;
+                let state = self.device_mut(&device)?;
+                state.profile.pages.insert(page + 1, copy);
+                state.page = page + 1;
+                self.save_active_profile(&device)?;
+                self.activate_profile(&device).await;
+                self.emit(
+                    json!({ "event": "pageChanged", "device": self.device_snapshot(&device)? }),
+                );
+                Ok(json!({ "page": page + 1 }))
+            }
             ApiCommand::RenamePage { device, page, name } => {
                 let state = self.device_mut(&device)?;
                 state
@@ -892,6 +908,26 @@ impl App {
                 self.activate_profile(&device).await;
                 self.emit(
                     json!({ "event": "pageChanged", "device": self.device_snapshot(&device)? }),
+                );
+                Ok(Value::Null)
+            }
+            ApiCommand::CopyProfile {
+                device,
+                profile,
+                to,
+            } => {
+                let existing = self.store.list_profiles(&device)?;
+                anyhow::ensure!(
+                    existing.contains(&profile),
+                    "Profil „{profile}“ gibt es nicht"
+                );
+                anyhow::ensure!(!existing.contains(&to), "Profil „{to}“ gibt es schon");
+                let mut copy = self.store.load_profile(&device, &profile)?;
+                copy.id = to.clone();
+                copy.name = to;
+                self.store.save_profile(&device, &copy)?;
+                self.emit(
+                    json!({ "event": "profileChanged", "device": self.device_snapshot(&device)? }),
                 );
                 Ok(Value::Null)
             }

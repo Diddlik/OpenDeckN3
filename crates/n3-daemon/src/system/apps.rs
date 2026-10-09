@@ -219,6 +219,7 @@ fn desktop_name(path: &Path) -> Option<String> {
     (entry.kind == "Application" && !entry.hidden && !entry.exec.is_empty()).then_some(entry.name)
 }
 
+#[cfg(any(test, all(unix, not(target_os = "macos"))))]
 #[derive(Debug, Default)]
 pub struct DesktopEntry {
     pub name: String,
@@ -227,7 +228,9 @@ pub struct DesktopEntry {
     pub hidden: bool,
 }
 
+#[cfg(any(test, all(unix, not(target_os = "macos"))))]
 impl DesktopEntry {
+    #[cfg(all(unix, not(target_os = "macos")))]
     pub fn read(path: &Path) -> Option<Self> {
         Some(Self::parse(&std::fs::read_to_string(path).ok()?))
     }
@@ -268,7 +271,6 @@ impl DesktopEntry {
     }
 
     /// `Exec` without field codes (`%U`, `%f` …), split into program + args.
-    #[cfg(any(test, all(unix, not(target_os = "macos"))))]
     pub fn command(&self) -> anyhow::Result<Vec<String>> {
         let words = shell_words::split(&self.exec)?;
         let words: Vec<String> = words

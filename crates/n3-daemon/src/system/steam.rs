@@ -42,13 +42,6 @@ fn game(manifest: &str) -> Option<(String, String)> {
     (flags & 4 != 0 && !tool).then(|| (format!("{RUN_PREFIX}{id}"), name))
 }
 
-pub fn name(id: &str) -> Option<String> {
-    libraries().into_iter().find_map(|library| {
-        let manifest = library.join(format!("steamapps/appmanifest_{id}.acf"));
-        value(&std::fs::read_to_string(manifest).ok()?, "name")
-    })
-}
-
 /// Square crop of the game's cover from Steam's library cache, else its small icon.
 pub fn icon(id: &str) -> Option<DynamicImage> {
     let dir = root()?.join("appcache/librarycache").join(id);

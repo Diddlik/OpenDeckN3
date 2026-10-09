@@ -282,51 +282,6 @@ fn step(instance: &ActionInstance) -> u32 {
         .clamp(1, 10) as u32
 }
 
-/// Short label drawn on the key when the user set no title.
-pub fn default_label(instance: &ActionInstance) -> Option<String> {
-    let label = match instance.action.as_str() {
-        HOTKEY => setting(instance, "shortcut").to_owned(),
-        SWITCH_PROFILE => match setting(instance, "mode") {
-            "next" => "Profil →".to_owned(),
-            _ => format!("→ {}", setting(instance, "profile")),
-        },
-        SWITCH_PAGE => match setting(instance, "mode") {
-            "goto" => format!("Seite {}", page_number(instance)),
-            _ => return None,
-        },
-        LAUNCH => {
-            let path = setting(instance, "path").trim_matches('"');
-            if let Some(id) = path.strip_prefix(steam::RUN_PREFIX) {
-                return steam::name(id);
-            }
-            // Application-menu entries carry their display name.
-            if path.ends_with(".desktop")
-                && let Some(entry) =
-                    crate::system::apps::DesktopEntry::read(std::path::Path::new(path))
-                && !entry.name.is_empty()
-            {
-                return Some(entry.name);
-            }
-            let name = path.rsplit(['/', '\\']).next().unwrap_or(path);
-            name.rsplit_once('.')
-                .map(|(stem, _)| stem)
-                .unwrap_or(name)
-                .to_owned()
-        }
-        URL => {
-            let url = setting(instance, "url");
-            let host = url.split("://").nth(1).unwrap_or(url);
-            host.split(['/', '?', '#'])
-                .next()
-                .unwrap_or(host)
-                .trim_start_matches("www.")
-                .to_owned()
-        }
-        _ => return None,
-    };
-    (!label.is_empty() && label != "→ ").then_some(label)
-}
-
 macro_rules! icons {
     ($($name:literal),* $(,)?) => {
         fn icon_bytes(name: &str) -> Option<&'static [u8]> {
@@ -630,25 +585,6 @@ mod tests {
     }
 
     #[test]
-    fn labels() {
-        let l = |a, s| default_label(&instance(a, s));
-        assert_eq!(
-            l(HOTKEY, json!({ "shortcut": "Ctrl+C" })).as_deref(),
-            Some("Ctrl+C")
-        );
-        assert_eq!(
-            l(LAUNCH, json!({ "path": "C:\\Programs\\Spotify.exe" })).as_deref(),
-            Some("Spotify")
-        );
-        assert_eq!(
-            l(URL, json!({ "url": "https://www.github.com/x" })).as_deref(),
-            Some("github.com")
-        );
-        assert_eq!(l(SWITCH_PROFILE, json!({})), None);
-        assert_eq!(l(VOLUME, json!({ "mode": "up" })), None);
-    }
-
-    #[test]
     fn effects() {
         let down = InputEvent::KeyDown { key: 0 };
         let twist = |ticks| InputEvent::EncoderTwist { encoder: 1, ticks };
@@ -728,10 +664,6 @@ mod tests {
             effect(&page(json!({})), &twist(-2), 50).unwrap(),
             Effect::PageStep(-2)
         ));
-        assert_eq!(
-            default_label(&page(json!({ "mode": "goto", "page": 2 }))).as_deref(),
-            Some("Seite 2")
-        );
 
         // Profiles saved before "mode" existed have none and keep switching to their profile.
         let profile = |s| instance(SWITCH_PROFILE, s);
@@ -749,9 +681,5 @@ mod tests {
             Effect::NextProfile
         ));
         assert!(effect(&profile(json!({ "mode": "goto" })), &down, 50).is_err());
-        assert_eq!(
-            default_label(&profile(json!({ "mode": "next" }))).as_deref(),
-            Some("Profil →")
-        );
     }
 }

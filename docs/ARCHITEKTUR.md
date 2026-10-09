@@ -87,13 +87,13 @@ installiert neuere Versionen, solange `autoUpdatePlugins` in `settings.json` ges
 
 ## Eingebaute Aktionen & Tastenbilder
 
-- `n3-daemon/src/builtin.rs`: Katalog mit `settingsSchema`, Standardwerte, Beschriftung und Icon je Aktion, Auswertung der
+- `n3-daemon/src/builtin.rs`: Katalog mit `settingsSchema`, Standardwerte und Icon je Aktion, Auswertung der
   Eingaben (`effect`) – getrennt von der Ausführung, damit die Logik ohne Desktop testbar ist.
 - `n3-daemon/src/system/`: Seiteneffekte auf dem Rechner – `shortcut` (Parser für `Ctrl+Shift+M`), `input` (eigener Thread mit
   `enigo`: SendInput unter Windows, X11 unter Linux), `launch` (Programme, Dateien, Shell-Befehle ohne Konsolenfenster).
   Fehler landen als UI-Event `actionError` beim Nutzer.
 - Tastenbilder werden in `render::compose_key` zusammengesetzt (144 px): Bild (Nutzer → Plugin zur Laufzeit → Zustandsbild →
-  Icon) plus Titel (Nutzer → Plugin → automatische Beschriftung eingebauter Aktionen), gezeichnet mit eingebetteter Schrift
+  Icon) plus Titel (Nutzer → Plugin; ohne Titel nur das Bild), gezeichnet mit eingebetteter Schrift
   Geist (OFL, `assets/fonts/`). Icons der eingebauten Aktionen: `assets/builtin/`, erzeugt mit `tools/make-builtin-icons.cjs`
   aus den Icons der Oberfläche.
 

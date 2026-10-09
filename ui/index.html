@@ -66,7 +66,7 @@ pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5
 .codebox-head{display:flex;align-items:center;justify-content:space-between;padding:8px 10px 8px 14px;border-bottom:1px solid var(--line2);font-size:13px;color:var(--muted)}
 
 /* ============ Titelleiste ============ */
-.bar{min-height:64px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line2);display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;position:sticky;top:0;z-index:20}
+.bar{min-height:64px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line2);display:flex;flex-wrap:wrap;align-items:center;gap:12px 14px;position:sticky;top:0;z-index:20}
 .brand{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;letter-spacing:-.01em}
 .brand b{color:var(--accent-text);font-weight:600}
 .nav{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--panel2);border:1px solid var(--line2)}
@@ -79,7 +79,7 @@ pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5
 [data-theme="light"] .badge.virt{color:#6D4BD8}
 .badge.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
 .bright{height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);display:flex;align-items:center;gap:10px;color:#E3B341}
-.bright input{width:120px;accent-color:var(--accent)}
+.bright input{width:100px;accent-color:var(--accent)}
 .bright output{font-family:'Geist Mono',monospace;font-size:12px;color:var(--text);width:40px;text-align:right}
 .popover{position:absolute;top:calc(100% + 6px);right:0;min-width:280px;padding:6px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);box-shadow:var(--shadow);z-index:50}
 .popover button{width:100%;display:flex;align-items:center;gap:10px;padding:10px;border:0;border-radius:8px;background:transparent;text-align:left}
@@ -503,7 +503,7 @@ const slotName = (id) => {
   if (isKnobKey(id)) return 'E' + (p - KNOB_KEY) + ' · Drücken';
   return id[0] === 'k' ? 'K' + p + (p < 6 ? ' · Display' : ' · Taste') : 'E' + p + (p === 1 ? ' · großer Regler' : ' · Drehen');
 };
-// Entspricht builtin::default_label im Dienst (Beschriftung auf dem Gerät).
+// Name einer eingebauten Belegung im Editor (Regler, Tasten ohne Display); aufs Gerät kommt nur ein eigener Titel.
 function builtinLabel(inst) {
   const v = (k) => String((inst.settings || {})[k] ?? '').trim();
   switch (inst.action.slice(BUILTIN.length + 1)) {
@@ -828,11 +828,12 @@ function barHTML() {
     </div>
     <div style="display:flex;align-items:center;gap:6px;${off ? 'opacity:.4' : ''}">
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">Profil
-        <select class="field" data-in="profile" ${off ? 'disabled' : ''} style="min-width:150px;font-weight:500;background:var(--panel2)">
+        <select class="field" data-in="profile" ${off ? 'disabled' : ''} style="min-width:140px;font-weight:500;background:var(--panel2)">
           ${profiles.map((id) => `<option value="${esc(id)}" ${d && id === d.activeProfile ? 'selected' : ''}>${esc(id)}</option>`).join('')}
         </select>
       </label>
       <button type="button" class="btn icon" data-act="newProfile" aria-label="Neues Profil" title="Neues Profil" ${off ? 'disabled' : ''} style="background:var(--panel2)">${ic('plus', 18)}</button>
+      <button type="button" class="btn icon" data-act="copyProfile" aria-label="Profil kopieren" title="Aktives Profil kopieren" ${off ? 'disabled' : ''} style="background:var(--panel2)">${ic('duplicate', 17)}</button>
       <button type="button" class="btn icon" data-act="deleteProfile" aria-label="Profil löschen" title="Aktives Profil löschen" ${off || profiles.length < 2 ? 'disabled style="background:var(--panel2);opacity:.45"' : 'style="background:var(--panel2)"'}>${ic('trash', 17)}</button>
     </div>
     <label class="bright" style="${off ? 'opacity:.4' : ''}">${ic('brightness', 17)}<span class="sr">Helligkeit</span>
@@ -1078,7 +1079,7 @@ function inspectorHTML() {
     ${warn ? `<div style="display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--warn) 10%,transparent);color:var(--warn);font-size:13px">${ic('alert', 16, 2)}${warn}</div>` : ''}
     ${p && p.connected && p.globalSettingsSchema ? pluginStatusHTML(p) : ''}
     <section><h3>Darstellung</h3>
-      <label>Titel<input class="field" data-in="title" value="${esc(s.title ?? '')}" placeholder="${esc(defaultTitle(s))}"></label>
+      <label>Titel<input class="field" data-in="title" value="${esc(s.title ?? '')}" placeholder="Kein Titel auf der Taste"></label>
       ${isDisplay ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px">
         ${preview ? `<span class="tile" style="width:56px;height:56px;border-radius:10px;overflow:hidden"><img src="${esc(preview)}" alt="Aktuelles Tastenbild"></span>` : tileHTML(s.plugin, s.action, f && f.a.icon, 56, 24, 10, kindOf(s))}
         <button type="button" class="btn" data-act="pickImage">${ic('image', 16)}Bild wählen</button>
@@ -1526,6 +1527,7 @@ function renderOverlay() {
     html += `<div class="ctx" role="menu" style="left:${S.pmenu.x}px;top:${S.pmenu.y}px">
       <div class="mono" style="font-size:11px;color:var(--faint);padding:6px 10px 4px">${esc(d ? pageName(d, i) : '')}</div>
       <button type="button" role="menuitem" data-act="pageRename">${ic('edit', 16)}Umbenennen</button>
+      <button type="button" role="menuitem" data-act="pageCopy" ${n < 50 ? '' : 'disabled'}>${ic('duplicate', 16)}Duplizieren</button>
       <button type="button" role="menuitem" data-act="pageMove" data-arg="-1" ${i > 0 ? '' : 'disabled'}><span style="width:16px;text-align:center">←</span>Nach links</button>
       <button type="button" role="menuitem" data-act="pageMove" data-arg="1" ${i < n - 1 ? '' : 'disabled'}><span style="width:16px;text-align:center">→</span>Nach rechts</button>
       <hr><button type="button" role="menuitem" class="red" data-act="pageDelete" ${n > 1 ? '' : 'disabled'}>${ic('trash', 16)}Seite löschen</button>
@@ -1549,12 +1551,12 @@ function renderOverlay() {
   }
   if (S.modal && S.modal.kind === 'new') {
     html += `<div class="scrim" data-act="closeModal"><form class="dialog" id="newProfileForm" role="dialog" aria-modal="true" aria-labelledby="dlgT">
-      <h2 id="dlgT">Neues Profil</h2>
+      <h2 id="dlgT">${S.modal.from ? `Profil „${esc(S.modal.from)}“ kopieren` : 'Neues Profil'}</h2>
       <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)">Name
         <input class="field mono" id="newProfileName" value="${esc(S.modal.value)}" placeholder="z. B. gaming" autocomplete="off"></label>
       <div class="err" id="dlgErr">${esc(S.modal.error || '')}</div>
       <div style="font-size:12px;color:var(--faint)">Erlaubt: A–Z a–z 0–9 - _ . (nicht mit „.“ beginnen)</div>
-      <div style="display:flex;justify-content:flex-end;gap:10px"><button type="button" class="btn ghost" data-act="closeModal">Abbrechen</button><button type="submit" class="btn primary">Anlegen</button></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px"><button type="button" class="btn ghost" data-act="closeModal">Abbrechen</button><button type="submit" class="btn primary">${S.modal.from ? 'Kopieren' : 'Anlegen'}</button></div>
     </form></div>`;
   }
   if (S.modal && S.modal.kind === 'delete') {
@@ -1748,6 +1750,10 @@ const ACTS = {
     try { const r = await api.call('addPage', { device: S.devId }); toast('ok', `Seite ${r.page + 1} angelegt`); } catch (e) { toast('err', e.message); }
   },
   pageRename() { const i = S.pmenu.page; S.pmenu = null; S.modal = { kind: 'pageName', page: i, value: (cur().pages[i] || {}).name || '' }; renderOverlay(); },
+  pageCopy() {
+    const i = S.pmenu.page; S.pmenu = null; renderOverlay();
+    api.run('copyPage', { device: S.devId, page: i }).then((r) => toast('ok', `Kopie als Seite ${r.page + 1} angelegt`)).catch(() => {});
+  },
   pageMove(dir) { const i = S.pmenu.page; S.pmenu = null; renderOverlay(); api.run('movePage', { device: S.devId, page: i, to: i + +dir }).catch(() => {}); },
   pageDelete() {
     const d = cur(), i = S.pmenu.page, p = d.pages[i]; S.pmenu = null;
@@ -1798,6 +1804,7 @@ const ACTS = {
     api.run('setActionAppearance', { ...slotParams(S.sel), title: s.title, image: null }).then(() => toast('ok', 'Standardbild wiederhergestellt')).catch(() => {});
   },
   newProfile() { S.modal = { kind: 'new', value: '', error: '' }; renderOverlay(); },
+  copyProfile() { const d = cur(); if (!d) return; S.modal = { kind: 'new', from: d.activeProfile, value: `${d.activeProfile}-kopie`, error: '' }; renderOverlay(); },
   deleteProfile() {
     const d = cur(); if (!d || d.profiles.length < 2) return;
     const next = d.profiles.includes('default') && d.activeProfile !== 'default' ? 'default' : d.profiles.find((p) => p !== d.activeProfile);
@@ -2046,9 +2053,11 @@ document.addEventListener('submit', (e) => {
   if (!v) err = 'Bitte einen Namen eingeben.';
   else if (!PROFILE_ID.test(v)) err = 'Nur A–Z a–z 0–9 - _ . erlaubt, nicht mit „.“ am Anfang.';
   else if (d && d.profiles.includes(v)) err = 'Ein Profil mit diesem Namen gibt es schon.';
-  if (err) { S.modal = { kind: 'new', value: v, error: err }; renderOverlay(); return; }
+  const from = S.modal.from;
+  if (err) { S.modal = { kind: 'new', from, value: v, error: err }; renderOverlay(); return; }
   S.modal = null; renderOverlay();
-  switchProfile(v).then(() => toast('ok', `Profil „${v}“ angelegt`)).catch(() => {});
+  const copied = from ? api.run('copyProfile', { device: S.devId, profile: from, to: v }) : Promise.resolve();
+  copied.then(() => switchProfile(v)).then(() => toast('ok', from ? `Profil „${from}“ als „${v}“ kopiert` : `Profil „${v}“ angelegt`)).catch(() => {});
 });
 
 // Anzeige mit deutschen Tastennamen; gespeichert wird „Ctrl+Shift+M“ (der Dienst versteht beides).

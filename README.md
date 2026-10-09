@@ -81,7 +81,7 @@ No plugin tinkering for the basics – these actions are built in and set up in 
 | 🗂️ | **Switch profile** · ☀️ **Brightness** | One button, a new layout | Smooth brightness |
 | 📑 | **Switch page** | Next, previous, or a specific page | Flip through pages |
 
-And the best part: every key shows on its display what it does – with an icon and a label.
+And the best part: every key shows on its display what it does – with the real app icon or game cover, plus your own title if you want one.
 
 ## 🖼️ A look inside
 
