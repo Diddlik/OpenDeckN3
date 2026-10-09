@@ -5,3 +5,4 @@ pub mod apps;
 pub mod input;
 pub mod launch;
 pub mod shortcut;
+pub mod steam;

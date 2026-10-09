@@ -4,6 +4,7 @@
 //!   game launcher links (`.url` with `steam://` etc.).
 //! - Linux: `.desktop` entries of the application menu.
 //! - macOS: `.app` bundles in `/Applications` and `~/Applications`.
+//! - All: installed Steam games (see `steam`).
 //!
 //! Each entry is `(path, name)`; `launch` can open every path.
 
@@ -15,7 +16,8 @@ use std::{
 /// Sorted by name, without duplicates and uninstallers.
 pub fn installed_apps() -> Vec<(String, String)> {
     let mut apps: BTreeMap<String, (String, String)> = BTreeMap::new();
-    for (path, name) in scan() {
+    // Shortcuts first: for a game in both, the shortcut carries the nicer icon.
+    for (path, name) in scan().into_iter().chain(super::steam::games()) {
         let lower = name.to_lowercase();
         if [
             "uninstall",
@@ -32,9 +34,13 @@ pub fn installed_apps() -> Vec<(String, String)> {
         {
             continue;
         }
-        apps.entry(lower).or_insert((path, name));
+        // File names cannot hold ":" etc., so "Game: Part 2.url" is "Game Part 2".
+        let key = lower.chars().filter(|c| c.is_alphanumeric()).collect();
+        apps.entry(key).or_insert((path, name));
     }
-    apps.into_values().collect()
+    let mut apps: Vec<_> = apps.into_values().collect();
+    apps.sort_by_key(|(_, name)| name.to_lowercase());
+    apps
 }
 
 #[cfg(windows)]

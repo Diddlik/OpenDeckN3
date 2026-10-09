@@ -18,7 +18,7 @@ use crate::{
     system::{
         input::InputJob,
         launch::{launch, run_command},
-        shortcut,
+        shortcut, steam,
     },
 };
 
@@ -296,6 +296,9 @@ pub fn default_label(instance: &ActionInstance) -> Option<String> {
         },
         LAUNCH => {
             let path = setting(instance, "path").trim_matches('"');
+            if let Some(id) = path.strip_prefix(steam::RUN_PREFIX) {
+                return steam::name(id);
+            }
             // Application-menu entries carry their display name.
             if path.ends_with(".desktop")
                 && let Some(entry) =
@@ -373,10 +376,16 @@ pub fn icon(instance: &ActionInstance) -> Option<DynamicImage> {
             "stop" => "media-stop",
             _ => "media-playpause",
         },
-        #[cfg(windows)]
         LAUNCH => {
             let path = setting(instance, "path").trim_matches('"');
+            if let Some(id) = path.strip_prefix(steam::RUN_PREFIX) {
+                return steam::icon(id)
+                    .or_else(|| image::load_from_memory(icon_bytes("launch")?).ok());
+            }
+            // For URLs the shell only has a generic blank-page icon.
+            #[cfg(windows)]
             if !path.is_empty()
+                && !path.contains("://")
                 && let Some(icon) = crate::system::apps::shell_icon(path)
             {
                 return Some(DynamicImage::ImageRgba8(icon));

@@ -217,7 +217,7 @@ Plugin-UUID `opendeckn3.builtin`, Aktions-UUIDs `opendeckn3.builtin.<name>`:
 | `hotkey` | `shortcut`, `clockwise`, `anticlockwise` (z. B. `Ctrl+Shift+M`, mehrere mit Leerzeichen) | drückt `shortcut` | drehen = `clockwise`/`anticlockwise` je Raste |
 | `volume` | `mode` (`mute`/`up`/`down`), `step` (1–10) | Funktion aus `mode` | drehen = lauter/leiser |
 | `media` | `mode` (`playpause`/`next`/`previous`/`stop`) | Funktion aus `mode` | drehen = Titel vor/zurück |
-| `launch` | `path` (Auswahlliste installierter Programme inkl. Spiele-Verknüpfungen wie `steam://`, oder eigener Pfad), `args` | Programm/Datei/Ordner öffnen; Tastenbild unter Windows = Icon des Programms | – |
+| `launch` | `path` (Auswahlliste installierter Programme inkl. Spiele-Verknüpfungen und aller installierten Steam-Spiele als `steam://rungameid/<id>`, oder eigener Pfad), `args` | Programm/Datei/Ordner öffnen; Tastenbild = Cover des Steam-Spiels bzw. unter Windows das Icon des Programms | – |
 | `url` | `url` (http/https) | im Standardbrowser öffnen | – |
 | `command` | `command`, `clockwise`, `anticlockwise` (`%d` = Rasten) | Shell-Befehl (`cmd /C` bzw. `sh -c`) | drehen = `clockwise`/`anticlockwise` |
 | `text` | `text` | Text tippen | – |
