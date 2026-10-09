@@ -631,7 +631,8 @@ function onEvent(ev) {
     case 'keyImage': {
       const d = S.devices[ev.device]; if (!d) break;
       if (ev.image) d.previews[ev.key] = ev.image; else delete d.previews[ev.key];
-      if (mine) renderStage(); break;
+      if (mine && !updateKeyImage(ev.key, ev.image)) renderStage();
+      break;
     }
     case 'keyTitle': {
       const d = S.devices[ev.device]; if (!d || ev.controller !== 'Keypad') break;
@@ -1491,6 +1492,29 @@ function syncBarHeight() {
 }
 addEventListener('resize', syncBarHeight);
 
+// innerHTML creates every <img> anew, and the browser blanks it until it is decoded: the
+// device blinks on each update. Reuse the old element for an unchanged image instead.
+function setHTML(el, html) {
+  const old = new Map();
+  for (const img of el.querySelectorAll('img')) (old.get(img.src) || old.set(img.src, []).get(img.src)).push(img);
+  el.innerHTML = html;
+  for (const img of el.querySelectorAll('img')) {
+    const prev = (old.get(img.src) || []).shift();
+    if (!prev) continue;
+    for (const a of [...prev.attributes]) prev.removeAttribute(a.name);
+    for (const a of img.attributes) prev.setAttribute(a.name, a.value);
+    img.replaceWith(prev);
+  }
+}
+// A changed key image only swaps the src: the old picture stays until the new one is ready.
+function updateKeyImage(key, image) {
+  const img = document.querySelector(`#stage [data-slot="k${key}"] .screen.img img`);
+  if (!img || !image) return false;
+  img.src = image;
+  const tile = S.sel === 'k' + key && document.querySelector('img[alt="Aktuelles Tastenbild"]');
+  if (tile) tile.src = image;
+  return true;
+}
 function render() {
   const keepFocus = document.activeElement && document.activeElement.closest && document.activeElement.closest('.device');
   const dev = devState();
@@ -1501,7 +1525,7 @@ function render() {
   else if (S.route === 'settings') view = settingsHTML();
   else if (dev === 'none') view = noDeviceHTML();
   else view = editorHTML();
-  $('#app').innerHTML = (S.route === 'onboarding' ? '' : barHTML()) + view;
+  setHTML($('#app'), (S.route === 'onboarding' ? '' : barHTML()) + view);
   renderOverlay();
   syncBarHeight();
   if (keepFocus) { const b = document.querySelector(`[data-slot="${S.sel}"]`); if (b) b.focus(); }
@@ -1509,7 +1533,7 @@ function render() {
 function renderStage() {
   const st = $('#stage'); if (!st) return;
   const keepFocus = document.activeElement && document.activeElement.closest && document.activeElement.closest('.device');
-  st.innerHTML = stageInner();
+  setHTML(st, stageInner());
   st.classList.toggle('dragmode', !!S.drag);
   if (keepFocus) { const b = document.querySelector(`[data-slot="${S.sel}"]`); if (b) b.focus(); }
 }
