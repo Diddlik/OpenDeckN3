@@ -472,6 +472,20 @@ impl App {
         Ok(())
     }
 
+    /// Switches to the profile after the active one in the profile list, wrapping around.
+    pub async fn next_profile(&mut self, device: &str) -> anyhow::Result<()> {
+        let ids = self.store.list_profiles(device)?;
+        let active = &self.device(device)?.config.active_profile;
+        let next = ids
+            .iter()
+            .position(|id| id == active)
+            .map_or(0, |i| (i + 1) % ids.len());
+        match ids.get(next).cloned() {
+            Some(id) => self.switch_profile(device, &id).await,
+            None => Ok(()),
+        }
+    }
+
     /// Shows page `index` of the active profile.
     pub async fn switch_page(&mut self, device: &str, index: usize) -> anyhow::Result<()> {
         let state = self.device(device)?;

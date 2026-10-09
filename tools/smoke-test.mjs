@@ -118,6 +118,12 @@ ws.addEventListener("open", async () => {
     assert(state.devices[0].profiles.includes("gaming"), "new profile created");
     await call("switchProfile", { device: DEVICE, profile: "default" });
 
+    await call("setAction", { device: DEVICE, controller: "Keypad", position: 2,
+      plugin: "opendeckn3.builtin", action: "opendeckn3.builtin.profile", settings: { mode: "next" } });
+    await call("simulateInput", { device: DEVICE, input: { type: "keyDown", key: 2 } });
+    await waitForDevice((d) => d.activeProfile === "gaming", "next-profile key switches to the next profile");
+    await call("switchProfile", { device: DEVICE, profile: "default" });
+
     // Built-in actions: catalog with settings schema, defaults, real command, error reporting.
     await call("switchProfile", { device: DEVICE, profile: "default" });
     state = await call("getState");

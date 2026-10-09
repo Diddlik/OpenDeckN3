@@ -174,9 +174,21 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
         action(
             SWITCH_PROFILE,
             "Profil wechseln",
-            "Wechselt zu einem anderen Profil",
+            "Wechselt zu einem bestimmten oder zum nächsten Profil",
             KEYPAD,
-            vec![field("profile", "Profil", "profile", KEYPAD)],
+            vec![
+                with(
+                    field("mode", "Funktion", "select", KEYPAD),
+                    json!({
+                        "default": "goto",
+                        "options": [["goto", "Bestimmtes Profil"], ["next", "Nächstes Profil"]],
+                    }),
+                ),
+                with(
+                    field("profile", "Profil", "profile", KEYPAD),
+                    json!({ "showIf": { "mode": "goto" } }),
+                ),
+            ],
         ),
         action(
             SWITCH_PAGE,
@@ -274,7 +286,10 @@ fn step(instance: &ActionInstance) -> u32 {
 pub fn default_label(instance: &ActionInstance) -> Option<String> {
     let label = match instance.action.as_str() {
         HOTKEY => setting(instance, "shortcut").to_owned(),
-        SWITCH_PROFILE => format!("→ {}", setting(instance, "profile")),
+        SWITCH_PROFILE => match setting(instance, "mode") {
+            "next" => "Profil →".to_owned(),
+            _ => format!("→ {}", setting(instance, "profile")),
+        },
         SWITCH_PAGE => match setting(instance, "mode") {
             "goto" => format!("Seite {}", page_number(instance)),
             _ => return None,
@@ -383,6 +398,7 @@ enum Effect {
     Command(String),
     Brightness(u8),
     Profile(String),
+    NextProfile,
     /// Pages forward (negative: back), wrapping around.
     PageStep(i64),
     /// Page index (from 0).
@@ -487,6 +503,7 @@ fn effect(instance: &ActionInstance, input: &InputEvent, brightness: u8) -> anyh
             _ => Effect::PageStep(1),
         },
         SWITCH_PAGE if twist != 0 => Effect::PageStep(i64::from(twist)),
+        SWITCH_PROFILE if pressed && setting(instance, "mode") == "next" => Effect::NextProfile,
         SWITCH_PROFILE if pressed => match setting(instance, "profile") {
             "" => anyhow::bail!("kein Profil gewählt"),
             profile => Effect::Profile(profile.to_owned()),
@@ -545,6 +562,7 @@ pub async fn on_input(app: &mut App, device: &str, input: InputEvent) {
         Effect::Command(cmd) => run_command(&cmd),
         Effect::Brightness(value) => app.set_brightness(device, value).await,
         Effect::Profile(profile) => app.switch_profile(device, &profile).await,
+        Effect::NextProfile => app.next_profile(device).await,
         Effect::PageStep(steps) => app.step_page(device, steps).await,
         Effect::Page(index) => app.switch_page(device, index).await,
     };
@@ -694,6 +712,27 @@ mod tests {
         assert_eq!(
             default_label(&page(json!({ "mode": "goto", "page": 2 }))).as_deref(),
             Some("Seite 2")
+        );
+
+        // Profiles saved before "mode" existed have none and keep switching to their profile.
+        let profile = |s| instance(SWITCH_PROFILE, s);
+        assert!(matches!(
+            effect(&profile(json!({ "profile": "work" })), &down, 50).unwrap(),
+            Effect::Profile(p) if p == "work"
+        ));
+        assert!(matches!(
+            effect(
+                &profile(json!({ "mode": "next", "profile": "work" })),
+                &down,
+                50
+            )
+            .unwrap(),
+            Effect::NextProfile
+        ));
+        assert!(effect(&profile(json!({ "mode": "goto" })), &down, 50).is_err());
+        assert_eq!(
+            default_label(&profile(json!({ "mode": "next" }))).as_deref(),
+            Some("Profil →")
         );
     }
 }

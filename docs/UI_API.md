@@ -221,7 +221,7 @@ Plugin-UUID `opendeckn3.builtin`, Aktions-UUIDs `opendeckn3.builtin.<name>`:
 | `url` | `url` (http/https) | im Standardbrowser öffnen | – |
 | `command` | `command`, `clockwise`, `anticlockwise` (`%d` = Rasten) | Shell-Befehl (`cmd /C` bzw. `sh -c`) | drehen = `clockwise`/`anticlockwise` |
 | `text` | `text` | Text tippen | – |
-| `profile` | `profile` | Profil wechseln | – |
+| `profile` | `mode` (`goto`/`next`, fehlt = `goto`), `profile` | `goto`: zu `profile` wechseln · `next`: nächstes Profil der Liste (nach dem letzten wieder das erste) | – |
 | `brightness` | – | Helligkeitsstufen | stufenlos |
 
 Tastennamen im Tastenkürzel (Groß-/Kleinschreibung egal, auch deutsch): `Ctrl`/`Strg`, `Shift`, `Alt`, `AltGr`, `Win`,
