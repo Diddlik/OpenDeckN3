@@ -108,15 +108,32 @@ pub async fn run_device(
 ) {
     let (done_tx, done_rx) = tokio::sync::oneshot::channel::<bool>();
     let thread_token = token.clone();
+    let thread_id = id.clone();
     let spawned = std::thread::Builder::new()
         .name(format!("hid-{id}"))
         .spawn(move || {
-            let connected = match tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-            {
-                Ok(rt) => rt.block_on(device_session(model, id, dev, events, thread_token)),
-                Err(err) => {
+            let runtimes = (
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build(),
+                // mirajazz converts key images inside `block_in_place`, which panics on a
+                // current-thread runtime. Conversion only fills the image cache; the HID
+                // writes (`flush`) stay on this thread.
+                tokio::runtime::Builder::new_multi_thread()
+                    .worker_threads(1)
+                    .thread_name("n3-images")
+                    .build(),
+            );
+            let connected = match runtimes {
+                (Ok(rt), Ok(images)) => rt.block_on(device_session(
+                    model,
+                    thread_id,
+                    dev,
+                    events,
+                    thread_token,
+                    images.handle().clone(),
+                )),
+                (Err(err), _) | (_, Err(err)) => {
                     tracing::error!(%err, "cannot start device runtime");
                     false
                 }
@@ -124,7 +141,11 @@ pub async fn run_device(
             done_tx.send(connected).ok();
         });
     let connected = match spawned {
-        Ok(_) => done_rx.await.unwrap_or(false),
+        Ok(_) => done_rx.await.unwrap_or_else(|_| {
+            // Panics go to stderr, which the desktop app does not show.
+            tracing::error!(%id, "device thread panicked");
+            false
+        }),
         Err(err) => {
             tracing::error!(%err, "cannot start device thread");
             false
@@ -146,6 +167,7 @@ async fn device_session(
     dev: HidDeviceInfo,
     events: mpsc::Sender<DeviceEvent>,
     token: CancellationToken,
+    images: tokio::runtime::Handle,
 ) -> bool {
     let device = match connect(model, &dev).await {
         Ok(device) => Arc::new(device),
@@ -182,7 +204,7 @@ async fn device_session(
                 tracing::warn!(%id, %err, "read loop ended");
             }
         }
-        res = command_loop(&device, model, command_rx) => {
+        res = command_loop(&device, model, command_rx, &images) => {
             if let Err(err) = res {
                 tracing::warn!(%id, %err, "command loop ended");
             }
@@ -234,9 +256,10 @@ async fn read_loop(
 }
 
 async fn command_loop(
-    device: &Device,
+    device: &Arc<Device>,
     model: &ModelSpec,
     mut commands: mpsc::Receiver<DeviceCommand>,
+    images: &tokio::runtime::Handle,
 ) -> Result<(), MirajazzError> {
     let mut keep_alive = tokio::time::interval(KEEP_ALIVE_INTERVAL);
     loop {
@@ -244,7 +267,7 @@ async fn command_loop(
             _ = keep_alive.tick() => device.keep_alive().await?,
             command = commands.recv() => {
                 let Some(command) = command else { return Ok(()) };
-                match apply_command(device, model, command).await {
+                match apply_command(device, model, command, images).await {
                     Ok(()) => {}
                     // A broken image must not take the device down.
                     Err(MirajazzError::ImageError(err)) => tracing::warn!(%err, "image conversion failed"),
@@ -256,9 +279,10 @@ async fn command_loop(
 }
 
 async fn apply_command(
-    device: &Device,
+    device: &Arc<Device>,
     model: &ModelSpec,
     command: DeviceCommand,
+    images: &tokio::runtime::Handle,
 ) -> Result<(), MirajazzError> {
     match command {
         DeviceCommand::SetKeyImage { key, image } => {
@@ -267,9 +291,16 @@ async fn apply_command(
             }
             match image {
                 Some(image) => {
-                    device
-                        .set_button_image(key, model.image_format, (*image).clone())
-                        .await?
+                    let (device, format) = (device.clone(), model.image_format);
+                    let converted = images
+                        .spawn(async move {
+                            device.set_button_image(key, format, (*image).clone()).await
+                        })
+                        .await;
+                    match converted {
+                        Ok(result) => result?,
+                        Err(err) => tracing::warn!(%err, "image conversion failed"),
+                    }
                 }
                 None => device.clear_button_image(key).await?,
             }
@@ -283,6 +314,32 @@ async fn apply_command(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The device thread runs a current-thread runtime, where mirajazz's image
+    /// conversion panics; it has to go through the separate image runtime.
+    #[test]
+    fn key_images_convert_off_the_device_runtime() {
+        let format = crate::models::TREASLIN_N3.image_format;
+        let image = || image::DynamicImage::new_rgb8(64, 64);
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+        let direct = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            rt.block_on(mirajazz::images::convert_image_with_format(format, image()))
+        }));
+        assert!(direct.is_err(), "mirajazz no longer needs block_in_place");
+
+        let images = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .build()
+            .unwrap();
+        let handle = images.handle().clone();
+        let data = rt
+            .block_on(handle.spawn(mirajazz::images::convert_image_with_format(format, image())))
+            .unwrap()
+            .unwrap();
+        assert!(!data.is_empty());
+    }
 
     fn pressed_key(input: DeviceInput) -> Option<usize> {
         match input {
