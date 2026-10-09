@@ -111,7 +111,9 @@ pre.code{margin:0;padding:14px;font-family:'Geist Mono',monospace;font-size:12.5
 .center{padding:24px 28px;display:flex;flex-direction:column;gap:16px;min-width:0}
 /* Gerät bleibt oben im Bild: die Mitte klebt unter der (ebenfalls festen) Leiste, ist so hoch
    wie der Rest des Fensters und scrollt nicht mit, wenn die Bibliothek links die Seite verlängert. */
-@media (min-width:1181px){.center{position:sticky;top:var(--bar-h,64px);align-self:start;height:calc(100vh - var(--bar-h,64px));min-height:620px}}
+@media (min-width:1181px){.center{position:sticky;top:var(--bar-h,64px);align-self:start;height:calc(100vh - var(--bar-h,64px));min-height:620px}
+  /* The inspector stays in view too; long settings scroll inside it. */
+  .insp{position:sticky;top:var(--bar-h,64px);align-self:start;height:calc(100vh - var(--bar-h,64px));overflow-y:auto;overscroll-behavior:contain}}
 .head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
 /* Seiten des Profils */
 .pages{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:-4px}
