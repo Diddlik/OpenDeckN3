@@ -107,7 +107,7 @@ Design:
 ## Project facts
 
 - Purpose and scope: open-source replacement for the TreasLin N3 stream-deck software (keys, dials, profiles, plugins). Goals, non-goals, terms: `docs/VORHABEN.md`; architecture: `docs/ARCHITEKTUR.md`; technical overview: `docs/ENTWICKLUNG.md`.
-- Primary languages and runtimes: Rust workspace (edition 2024, MSRV 1.87); web UI in plain HTML/JS; example plugin and tools in Node.js >= 22.
+- Primary languages and runtimes: Rust workspace (edition 2024, MSRV 1.88); web UI in plain HTML/JS; example plugin and tools in Node.js >= 22.
 - Platform-specific constraints: Windows and Linux. Linux device access needs `udev/` rules. Desktop app on Linux needs `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev`; on Windows it needs WebView2.
 - GUI toolkit, update mechanism, and distribution: Tauri 2 desktop app (`crates/n3-desktop`) loading `ui/` as frontend. Auto-update (`crates/n3-desktop/src/updater.rs`) checks GitHub releases and verifies the installer against the release's `SHA256SUMS.txt`. Windows installer and portable ZIP are built by `.github/workflows/windows.yml`. The app version comes from `[workspace.package] version` in `Cargo.toml`; release tags (`vX.Y.Z`) must match it because the workflow stamps the tag version into the installer. The UI shows it via `getState.version` (desktop: `desktop_paths.version`).
 - Build command: `cargo build`; desktop app: `cargo build -p n3-desktop` (not in `default-members`), installer: `cd crates/n3-desktop && npx @tauri-apps/cli@2 build`.
@@ -117,7 +117,7 @@ Design:
   ./target/debug/opendeckn3d --virtual --no-hardware --plugins-dir plugins/examples --config-dir /tmp/n3cfg &
   node tools/smoke-test.mjs
   ```
-- Lint and format command (run before every commit, CI enforces it): `cargo fmt --all && cargo clippy --all-targets -- -D warnings && cargo test`; desktop: `cargo clippy -p n3-desktop --all-targets -- -D warnings`.
+- Lint and format command (run before every commit, CI enforces it): `cargo fmt --all && cargo clippy --all-targets -- -D warnings && cargo test`; desktop: `cargo clippy -p n3-desktop --all-targets -- -D warnings`. CI uses the latest stable toolchain, so new Clippy lints can fail there first; keep the local toolchain current (`rustup update`).
 - Local run command: `cargo run -p n3-daemon -- --virtual --no-hardware` or the desktop app; UI in the browser at `http://127.0.0.1:57132/`.
 - Required environment: stable Rust with rustfmt and clippy; Node.js >= 22 for the smoke test and icon tools.
 - Important entry points: daemon CLI `opendeckn3d` (`crates/n3-daemon/src/main.rs`, library entry `n3_daemon::run`), desktop `crates/n3-desktop/src/main.rs`, UI `ui/index.html`, plugins under `plugins/`.

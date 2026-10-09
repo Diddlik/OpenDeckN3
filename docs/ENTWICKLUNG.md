@@ -62,7 +62,7 @@ Desktop-App selbst bauen: `cd crates/n3-desktop && npx @tauri-apps/cli@2 build` 
 
 ## Schnellstart
 
-Voraussetzungen: Rust ≥ 1.87, für Plugins/Tests Node.js ≥ 22.
+Voraussetzungen: Rust ≥ 1.88, für Plugins/Tests Node.js ≥ 22.
 
 ```sh
 # Bauen und testen
