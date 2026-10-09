@@ -373,6 +373,16 @@ pub fn icon(instance: &ActionInstance) -> Option<DynamicImage> {
             "stop" => "media-stop",
             _ => "media-playpause",
         },
+        #[cfg(windows)]
+        LAUNCH => {
+            let path = setting(instance, "path").trim_matches('"');
+            if !path.is_empty()
+                && let Some(icon) = crate::system::apps::shell_icon(path)
+            {
+                return Some(DynamicImage::ImageRgba8(icon));
+            }
+            "launch"
+        }
         other => other.strip_prefix(PREFIX)?,
     };
     image::load_from_memory(icon_bytes(name)?).ok()
