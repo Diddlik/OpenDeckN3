@@ -168,6 +168,32 @@ fn open_log(app: AppHandle, service: tauri::State<'_, Service>) -> Result<(), St
     open_path(&app, service.config_dir.join(LOG_FILE))
 }
 
+/// Saves `contents` where the user picks in a save dialog. The path never comes
+/// from the page, so the page cannot write files anywhere on its own.
+#[tauri::command]
+async fn save_file_as(
+    app: AppHandle,
+    title: String,
+    file_name: String,
+    contents: String,
+) -> Result<bool, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let Some(path) = app
+        .dialog()
+        .file()
+        .set_title(title)
+        .set_file_name(file_name)
+        .add_filter("JSON", &["json"])
+        .blocking_save_file()
+    else {
+        return Ok(false);
+    };
+    let path = path.into_path().map_err(|e| e.to_string())?;
+    std::fs::write(&path, contents)
+        .map_err(|e| format!("„{}“ lässt sich nicht schreiben: {e}", path.display()))?;
+    Ok(true)
+}
+
 /// Without a console, logs go to `<config>/opendeckn3.log` (overwritten per start).
 fn init_logging(config_dir: &std::path::Path) {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
@@ -268,6 +294,7 @@ fn main() {
             open_config_dir,
             open_plugins_dir,
             open_log,
+            save_file_as,
             update_check,
             update_install
         ])

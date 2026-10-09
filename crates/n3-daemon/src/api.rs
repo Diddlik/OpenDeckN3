@@ -81,12 +81,10 @@ pub enum ApiCommand {
         #[serde(default)]
         settings: Option<Value>,
     },
-    /// All profiles of a device as one backup document; with `path` it is
-    /// written to that `.json` file instead of returned.
+    /// All profiles of a device as one backup document. The service never
+    /// writes it to a path from the request; the UI saves it.
     ExportProfiles {
         device: String,
-        #[serde(default)]
-        path: Option<String>,
     },
     /// Adds the profiles of an export document; existing profiles are never
     /// overwritten, a clashing name gets a suffix.

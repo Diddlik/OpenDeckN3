@@ -1983,17 +1983,16 @@ const ACTS = {
   async exportProfiles() {
     const name = `opendeckn3-profile-${new Date().toISOString().slice(0, 10)}.json`;
     try {
-      if (desktop) {
-        const path = await desktop('plugin:dialog|save', { options: { title: 'Profile exportieren', defaultPath: name, filters: [{ name: 'OpenDeckN3-Profile', extensions: ['json'] }] } });
-        if (!path) return;
-        const r = await api.call('exportProfiles', { device: S.devId, path: String(path) });
-        toast('ok', `${r.count} ${r.count === 1 ? 'Profil' : 'Profile'} exportiert`);
-        return;
-      }
       const data = await api.call('exportProfiles', { device: S.devId });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-      a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      const text = JSON.stringify(data, null, 2);
+      if (desktop) {
+        // Die Desktop-App öffnet den Speichern-Dialog selbst und schreibt nur an die gewählte Stelle.
+        if (!await desktop('save_file_as', { title: 'Profile exportieren', fileName: name, contents: text })) return;
+      } else {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+        a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      }
       toast('ok', `${data.profiles.length} ${data.profiles.length === 1 ? 'Profil' : 'Profile'} exportiert`);
     } catch (e) { toast('err', e.message || String(e)); }
   },

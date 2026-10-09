@@ -980,30 +980,19 @@ impl App {
                 self.emit(json!({ "event": "slotChanged", "device": device }));
                 Ok(Value::Null)
             }
-            ApiCommand::ExportProfiles { device, path } => {
+            ApiCommand::ExportProfiles { device } => {
                 let profiles = self
                     .store
                     .list_profiles(&device)?
                     .iter()
                     .map(|id| self.store.load_profile(&device, id))
                     .collect::<anyhow::Result<Vec<_>>>()?;
-                let count = profiles.len();
                 // Plugin logins and tokens live in the global plugin settings and stay out.
-                let export = json!({
+                Ok(json!({
                     "format": PROFILE_EXPORT_FORMAT,
                     "version": env!("CARGO_PKG_VERSION"),
                     "profiles": profiles,
-                });
-                let Some(path) = path else {
-                    return Ok(export);
-                };
-                anyhow::ensure!(
-                    path.to_lowercase().ends_with(".json"),
-                    "Exportdatei muss auf .json enden"
-                );
-                std::fs::write(&path, serde_json::to_vec_pretty(&export)?)
-                    .with_context(|| format!("„{path}“ lässt sich nicht schreiben"))?;
-                Ok(json!({ "count": count }))
+                }))
             }
             ApiCommand::ImportProfiles { device, data } => {
                 anyhow::ensure!(
