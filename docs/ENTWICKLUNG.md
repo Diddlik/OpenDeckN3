@@ -31,6 +31,7 @@ plugins/obs/       OBS-Studio-Plugin (docs/PLUGIN_OBS.md)
 plugins/homeassistant/  Home-Assistant-Plugin (docs/PLUGIN_HOMEASSISTANT.md); Tastenbilder beider: tools/make-plugin-icons.cjs
 plugins/sdk/       Hilfsbibliothek für Plugins in Rust (Host-Verbindung, Tastenzustand, Einstellungen)
 tools/smoke-test.mjs  End-to-End-Test gegen den laufenden Dienst
+tools/make-iconlib.py  Icon-Bibliothek für Tastenbilder (Auswahl aus Lucide, ISC) in ui/index.html schreiben
 udev/          Linux-Regeln für Gerätezugriff
 assets/        App-Icon (erzeugt mit tools/make-icon.py)
 ui/            Oberfläche (Desktop-App-Fenster bzw. Browser) + Claude-Design-Prototyp

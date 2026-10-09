@@ -128,7 +128,7 @@ Design:
   - The Tauri window option `dragDropEnabled` must stay `false`; otherwise WebView2 on Windows intercepts drag & drop and actions cannot be dropped onto keys.
   - `README.md` is the product page (marketing, little technical detail); technical content goes into `docs/`.
 - Documentation language (exception to the English rule): the product page exists twice, `README.md` (English, GitHub landing page) and `README.de.md` (German); keep both in sync and linked to each other. `docs/` is German.
-- Generated files: app icons (`python3 tools/make-icon.py`); built-in action icons (`NODE_PATH=$(npm root -g) node tools/make-builtin-icons.cjs`, from `ICONS`/`KCOL` in `ui/index.html`); plugin key images (`tools/make-discord-icons.cjs`, `tools/make-plugin-icons.cjs`); screenshots in `docs/images/` (regenerate with `tools/screenshots/` when the UI visibly changes).
+- Generated files: app icons (`python3 tools/make-icon.py`); built-in action icons (`NODE_PATH=$(npm root -g) node tools/make-builtin-icons.cjs`, from `ICONS`/`KCOL` in `ui/index.html`); plugin key images (`tools/make-discord-icons.cjs`, `tools/make-plugin-icons.cjs`); icon library for key images (`ICONLIB` in `ui/index.html`, a Lucide subset: `python3 tools/make-iconlib.py <lucide-static>/package/icons`); screenshots in `docs/images/` (regenerate with `tools/screenshots/` when the UI visibly changes).
 - Files or directories not to edit manually: the generated icons and screenshots above; regenerate them with their tools.
 
 ## Definition of done
