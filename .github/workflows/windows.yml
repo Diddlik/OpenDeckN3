@@ -80,8 +80,16 @@ jobs:
           Compress-Archive -Path $dir -DestinationPath "target\installer\OpenDeckN3-$v-windows-x64-portable.zip" -Force
 
           # Beispiel-Plugin als installierbare Datei (Plugin-Katalog: plugins/registry.json).
+          # Version = Release-Version, sonst meldet der Katalog nach jedem Update erneut eines.
           $plugin = "de.opendeckn3.counter"
-          Compress-Archive -Path "plugins\examples\$plugin.sdPlugin" -DestinationPath "$env:RUNNER_TEMP\$plugin.zip" -Force
+          $dir = "$env:RUNNER_TEMP\pkg-counter\$plugin.sdPlugin"
+          Remove-Item -Recurse -Force "$env:RUNNER_TEMP\pkg-counter" -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Copy-Item -Recurse "plugins\examples\$plugin.sdPlugin\*" $dir
+          $m = Get-Content "$dir\manifest.json" -Raw -Encoding utf8
+          $m = $m -replace '"Version":\s*"[^"]*"', ('"Version": "' + $v + '"')
+          [IO.File]::WriteAllText("$dir\manifest.json", $m)
+          Compress-Archive -Path $dir -DestinationPath "$env:RUNNER_TEMP\$plugin.zip" -Force
           Copy-Item "$env:RUNNER_TEMP\$plugin.zip" "target\installer\$plugin.streamDeckPlugin"
 
           # Eigene Plugins (Windows-Binaries); Plugin-Version = Release-Version, damit der Katalog Updates erkennt.

@@ -58,13 +58,18 @@ flowchart LR
 
 ### Gerätetask (N3)
 
-Pro Gerät laufen zwei nebenläufige Schleifen (`n3-driver/src/n3.rs`):
+Jedes Gerät läuft auf einem eigenen Betriebssystem-Thread mit eigener (single-threaded) Tokio-Runtime.
+Grund: Windows bricht laufende HID-Leseoperationen ab (`ERROR_OPERATION_ABORTED`), wenn der Thread endet,
+der sie gestartet hat – auf einem gemeinsamen Thread-Pool kann das passieren. Darin laufen zwei nebenläufige
+Schleifen (`n3-driver/src/n3.rs`):
 
 1. **Leseschleife** – liest HID-Reports, übersetzt sie per `process_input` in `InputEvent`s.
 2. **Kommandoschleife** – setzt Bilder/Helligkeit und sendet alle 15 s ein Keep-Alive.
 
 Endet eine der Schleifen mit Fehler (z. B. Gerät abgezogen) oder wird der Task abgebrochen,
-meldet der Task `Disconnected`. Der Watcher startet beim erneuten Anstecken einen neuen Task.
+meldet der Task `Disconnected`. Der Watcher startet beim erneuten Anstecken einen neuen Task – und sucht
+zusätzlich alle 3 s nach Geräten, deren Verbindung ohne Abstecken abgebrochen ist, und verbindet sie neu.
+Ließ sich ein Gerät gar nicht öffnen (z. B. von der Hersteller-Software belegt), wartet er damit 10 s.
 
 ## Datenfluss-Beispiele
 

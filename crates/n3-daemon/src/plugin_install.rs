@@ -116,6 +116,9 @@ pub struct Installer {
     api: mpsc::Sender<ApiRequest>,
     http: reqwest::Client,
     cache: Arc<Mutex<Cache>>,
+    /// `uuid@version` of releases whose package carries an older manifest
+    /// version: installing them again would not help, so they are skipped.
+    stale: Arc<Mutex<std::collections::HashSet<String>>>,
 }
 
 impl Installer {
@@ -139,6 +142,7 @@ impl Installer {
             api,
             http,
             cache: Default::default(),
+            stale: Default::default(),
         })
     }
 
@@ -215,6 +219,11 @@ impl Installer {
             .flatten()
             .filter(|p| p["update"] == true);
         for plugin in due {
+            let latest = plugin["latest"]["version"].as_str().unwrap_or_default();
+            let key = format!("{}@{latest}", plugin["uuid"].as_str().unwrap_or_default());
+            if self.stale.lock().await.contains(&key) {
+                continue;
+            }
             let info = json!({ "uuid": plugin["uuid"], "name": plugin["name"] });
             let result = async {
                 let repo = parse_repo(plugin["repo"].as_str().unwrap_or_default())?;
@@ -223,11 +232,17 @@ impl Installer {
                 self.install_archive(bytes).await
             };
             match result.await {
-                Ok(_) => {
-                    tracing::info!(plugin = %plugin["uuid"], to = %plugin["latest"]["version"], "plugin updated");
+                Ok(result) => {
+                    let installed = result["version"].as_str().unwrap_or_default();
+                    if is_newer(latest, installed) {
+                        tracing::warn!(plugin = %plugin["uuid"], release = latest, %installed,
+                            "release package carries an older plugin version; not retrying it");
+                        self.stale.lock().await.insert(key);
+                    }
+                    tracing::info!(plugin = %plugin["uuid"], to = installed, "plugin updated");
                     let mut info = info;
                     info["from"] = plugin["installed"].clone();
-                    info["to"] = plugin["latest"]["version"].clone();
+                    info["to"] = json!(installed);
                     updated.push(info);
                 }
                 Err(err) => {
