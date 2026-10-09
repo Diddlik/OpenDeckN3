@@ -1,7 +1,7 @@
 # Entwicklung
 
 Technische Übersicht für alle, die OpenDeckN3 bauen, erweitern oder Plugins schreiben.
-Die Projekt-Startseite ist das [README](../README.md).
+Die Projekt-Startseite ist das [README](../README.de.md).
 
 ## Dokumentation
 

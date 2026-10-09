@@ -75,7 +75,7 @@ jobs:
 
           $dir = "target\portable\OpenDeckN3"
           New-Item -ItemType Directory -Force "$dir\plugins" | Out-Null
-          Copy-Item target\release\OpenDeckN3.exe, LICENSE, README.md $dir
+          Copy-Item target\release\OpenDeckN3.exe, LICENSE, README.md, README.de.md $dir
           Copy-Item -Recurse plugins\examples\* "$dir\plugins"
           Compress-Archive -Path $dir -DestinationPath "target\installer\OpenDeckN3-$v-windows-x64-portable.zip" -Force
 
