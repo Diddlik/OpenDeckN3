@@ -171,6 +171,7 @@ impl DesktopEntry {
     }
 
     /// `Exec` without field codes (`%U`, `%f` …), split into program + args.
+    #[cfg(any(test, all(unix, not(target_os = "macos"))))]
     pub fn command(&self) -> anyhow::Result<Vec<String>> {
         let words = shell_words::split(&self.exec)?;
         let words: Vec<String> = words

@@ -774,12 +774,13 @@ impl Plugin {
             .map(|i| (i.kind().to_owned(), i.text("input")))
         {
             Some((kind, input)) if kind == "audio" => {
-                if self.ensure_connected(context) {
-                    self.run(
-                        context,
-                        vec![("ToggleInputMute", json!({ "inputName": input }))],
-                    );
+                if !self.ensure_connected(context) {
+                    return;
                 }
+                self.run(
+                    context,
+                    vec![("ToggleInputMute", json!({ "inputName": input }))],
+                );
             }
             Some(_) => self.press(context, false),
             None => {}
