@@ -1,6 +1,6 @@
 //! Hot-plug detection for HID devices.
 
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use futures_lite::StreamExt;
 use mirajazz::{
@@ -22,8 +22,14 @@ fn device_id(model: &ModelSpec, dev: &HidDeviceInfo) -> Option<String> {
     ))
 }
 
+/// How often connected devices are re-enumerated. Catches devices whose
+/// connection broke without an unplug event (they reconnect on the next scan)
+/// and hot-plug events the OS did not deliver.
+const RESCAN_INTERVAL: Duration = Duration::from_secs(3);
+
 /// Scans for supported devices, then watches for hot-plug events until
-/// `token` is cancelled. Each device gets its own task.
+/// `token` is cancelled. Each device gets its own task; a task that ends
+/// cancels its token, so the next scan starts it again.
 pub async fn run_hid_watcher(
     events: mpsc::Sender<DeviceEvent>,
     token: CancellationToken,
@@ -55,10 +61,24 @@ pub async fn run_hid_watcher(
     let mut watcher = DeviceWatcher::new();
     let mut stream = watcher.watch(&queries).await?;
     tracing::info!("HID watcher ready");
+    let mut rescan = tokio::time::interval(RESCAN_INTERVAL);
+    rescan.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
     loop {
         let event = tokio::select! {
             ev = stream.next() => ev,
+            _ = rescan.tick() => {
+                running.retain(|_, t| !t.is_cancelled());
+                match list_devices(&queries).await {
+                    Ok(devices) => {
+                        for dev in devices {
+                            spawn((*dev).clone(), &mut running);
+                        }
+                    }
+                    Err(err) => tracing::debug!(%err, "rescan failed"),
+                }
+                continue;
+            }
             _ = token.cancelled() => None,
         };
         match event {

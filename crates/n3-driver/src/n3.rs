@@ -21,6 +21,9 @@ const KEY_COUNT: usize = N3_LAYOUT.keys as usize;
 const ENCODER_COUNT: usize = N3_LAYOUT.encoders as usize;
 const KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(15);
 const DEFAULT_BRIGHTNESS: u8 = 50;
+/// Pause before retrying a device that could not be opened (e.g. it is in
+/// use by the vendor software), so the rescan does not hammer it.
+const RETRY_AFTER_FAILURE: Duration = Duration::from_secs(10);
 
 /// Decodes a raw N3 input report `(input, state)` into a mirajazz input.
 ///
@@ -89,8 +92,13 @@ fn to_input_event(update: DeviceStateUpdate) -> InputEvent {
     }
 }
 
-/// Connects to one physical device and runs it until it disconnects or
-/// `token` is cancelled.
+/// Runs one physical device on its own OS thread until it disconnects or
+/// `token` is cancelled, then cancels `token` so the watcher may reconnect it.
+///
+/// Windows cancels pending overlapped I/O (`ERROR_OPERATION_ABORTED`) when
+/// the thread that issued it exits. On a shared runtime the HID read can be
+/// issued from a thread that later goes away; a dedicated thread that lives
+/// as long as the connection rules that out.
 pub async fn run_device(
     model: &'static ModelSpec,
     id: String,
@@ -98,11 +106,52 @@ pub async fn run_device(
     events: mpsc::Sender<DeviceEvent>,
     token: CancellationToken,
 ) {
+    let (done_tx, done_rx) = tokio::sync::oneshot::channel::<bool>();
+    let thread_token = token.clone();
+    let spawned = std::thread::Builder::new()
+        .name(format!("hid-{id}"))
+        .spawn(move || {
+            let connected = match tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+            {
+                Ok(rt) => rt.block_on(device_session(model, id, dev, events, thread_token)),
+                Err(err) => {
+                    tracing::error!(%err, "cannot start device runtime");
+                    false
+                }
+            };
+            done_tx.send(connected).ok();
+        });
+    let connected = match spawned {
+        Ok(_) => done_rx.await.unwrap_or(false),
+        Err(err) => {
+            tracing::error!(%err, "cannot start device thread");
+            false
+        }
+    };
+    if !connected {
+        tokio::select! {
+            _ = tokio::time::sleep(RETRY_AFTER_FAILURE) => {}
+            _ = token.cancelled() => {}
+        }
+    }
+    token.cancel();
+}
+
+/// Returns `false` if the device could not be opened.
+async fn device_session(
+    model: &'static ModelSpec,
+    id: String,
+    dev: HidDeviceInfo,
+    events: mpsc::Sender<DeviceEvent>,
+    token: CancellationToken,
+) -> bool {
     let device = match connect(model, &dev).await {
         Ok(device) => Arc::new(device),
         Err(err) => {
             tracing::error!(%id, %err, "failed to initialise device");
-            return;
+            return false;
         }
     };
 
@@ -124,7 +173,7 @@ pub async fn run_device(
         .await
         .is_err()
     {
-        return;
+        return true;
     }
 
     tokio::select! {
@@ -147,6 +196,7 @@ pub async fn run_device(
         .await
         .ok();
     tracing::info!(%id, "device task finished");
+    true
 }
 
 async fn connect(model: &ModelSpec, dev: &HidDeviceInfo) -> Result<Device, MirajazzError> {
