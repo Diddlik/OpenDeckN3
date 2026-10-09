@@ -984,7 +984,8 @@ function sourceSelectHTML(plugin, f, vals, at, texts = {}) {
   const v = vals[f.key] ?? '';
   const missingDep = (f.dependsOn || []).some((d) => !vals[d]);
   const opts = st && st.options ? st.options : [];
-  const hit = opts.find(([val]) => String(val) === String(v));
+  // Ohne Wert bleibt das Feld leer: ein Text wie „– keine Entität –“ würde die Vorschlagsliste darauf einschränken.
+  const hit = v === '' ? null : opts.find(([val]) => String(val) === String(v));
   const shown = hit ? hit[1] : v && !texts.custom ? String(v) : '';
   const placeholder = missingDep ? 'Erst oben auswählen …' : !st || st.loading ? 'Lade …'
     : !opts.length ? 'Keine Einträge' : v && !hit && texts.custom ? texts.custom : (texts.choose || 'Tippen zum Suchen …');
@@ -2239,6 +2240,16 @@ document.addEventListener('input', (e) => {
     if (typeof old === 'boolean' && (v === 'true' || v === 'false')) v = v === 'true';
     s.settings[t.dataset.key] = v; renderStage(); sendSettings(S.sel, { ...s.settings });
   }
+});
+// Der Browser zeigt nur Vorschläge, die zum Feldinhalt passen. Beim Hineinklicken daher leeren (der
+// aktuelle Wert steht im Platzhalter), damit die ganze Liste erscheint; ohne Auswahl kommt er zurück.
+document.addEventListener('focusin', (e) => {
+  const t = e.target; if (!t.dataset || t.dataset.in !== 'combo' || !t.value) return;
+  t.dataset.prev = t.value; t.placeholder = t.value; t.value = '';
+});
+document.addEventListener('focusout', (e) => {
+  const t = e.target; if (!t.dataset || t.dataset.in !== 'combo' || t.value || t.dataset.prev === undefined) return;
+  t.value = t.dataset.prev; delete t.dataset.prev;
 });
 document.addEventListener('change', (e) => {
   // Suchfeld verlassen, ohne einen Eintrag zu wählen: wieder den aktuellen Wert zeigen.
