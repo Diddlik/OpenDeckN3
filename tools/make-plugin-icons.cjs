@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant and mail & calendar plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar and AudioSwitcher plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -60,11 +60,21 @@ const MAIL = {
   calendar: icon(CALENDAR, false, IDLE), 'calendar-on': icon(CALENDAR, true),
 };
 
+// AudioSwitcher: speaker, lit in AudioSwitcher teal while the profile is active.
+const SPEAKER = '<path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>';
+const SWAP = '<path d="M4 8h13l-3-3M20 16H7l3 3"/>';
+const AUDIO = {
+  plugin: icon(SPEAKER, false, IDLE),
+  profile: icon(SPEAKER, false, IDLE), 'profile-on': icon(SPEAKER, true, ['#06302c', '#4fe0c8']),
+  toggle: icon(SWAP, false, IDLE),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
   for (const [dir, set] of [['plugins/obs/de.opendeckn3.obs.sdPlugin/imgs', OBS], ['plugins/homeassistant/de.opendeckn3.homeassistant.sdPlugin/imgs', HA],
-    ['plugins/mailcalendar/de.opendeckn3.mailcalendar.sdPlugin/imgs', MAIL]]) {
+    ['plugins/mailcalendar/de.opendeckn3.mailcalendar.sdPlugin/imgs', MAIL],
+    ['plugins/audioswitcher/de.opendeckn3.audioswitcher.sdPlugin/imgs', AUDIO]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {

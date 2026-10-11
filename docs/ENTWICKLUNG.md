@@ -29,7 +29,8 @@ plugins/registry.json  Plugin-Katalog (GitHub-Releases), siehe docs/PLUGINS_VERO
 plugins/discord/   Discord-Plugin (Rust, docs/PLUGIN_DISCORD.md); Tastenbilder: tools/make-discord-icons.cjs
 plugins/obs/       OBS-Studio-Plugin (docs/PLUGIN_OBS.md)
 plugins/homeassistant/  Home-Assistant-Plugin (docs/PLUGIN_HOMEASSISTANT.md)
-plugins/mailcalendar/   Mail-&-Kalender-Plugin (docs/PLUGIN_MAILKALENDER.md); Tastenbilder von OBS, HA und diesem: tools/make-plugin-icons.cjs
+plugins/mailcalendar/   Mail-&-Kalender-Plugin (docs/PLUGIN_MAILKALENDER.md)
+plugins/audioswitcher/  AudioSwitcher-Plugin (docs/PLUGIN_AUDIOSWITCHER.md); Tastenbilder von OBS, HA, Mail & Kalender und diesem: tools/make-plugin-icons.cjs
 plugins/sdk/       Hilfsbibliothek für Plugins in Rust (Host-Verbindung, Tastenzustand, Einstellungen)
 tools/smoke-test.mjs  End-to-End-Test gegen den laufenden Dienst
 tools/make-iconlib.py  Icon-Bibliothek für Tastenbilder (Auswahl aus Lucide, ISC) in ui/index.html schreiben

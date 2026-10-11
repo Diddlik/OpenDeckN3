@@ -1,0 +1,87 @@
+{
+  "UUID": "de.opendeckn3.audioswitcher",
+  "Name": "AudioSwitcher",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Aktiviert Audioprofile von AudioSwitcher (Ausgabe- und Eingabegerät auf einen Druck) und schaltet zwischen ihnen um, auch per Drehregler.",
+  "Category": "AudioSwitcher",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-audioswitcher.exe",
+  "OS": [
+    {
+      "Platform": "windows"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "link",
+      "key": "download",
+      "label": "AudioSwitcher herunterladen",
+      "url": "https://github.com/Diddlik/AudioSwitcher/releases/latest"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.audioswitcher.profile",
+      "Name": "Audioprofil",
+      "Tooltip": "Aktiviert ein AudioSwitcher-Profil; leuchtet, solange es aktiv ist",
+      "Icon": "imgs/profile",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/profile"
+        },
+        {
+          "Image": "imgs/profile-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "profile",
+          "label": "Profil",
+          "source": "profiles",
+          "help": "Profile legst du in AudioSwitcher an; die App muss laufen."
+        },
+        {
+          "type": "select",
+          "key": "showName",
+          "label": "Profilname als Titel",
+          "options": [
+            [
+              "yes",
+              "Ja"
+            ],
+            [
+              "no",
+              "Nein"
+            ]
+          ],
+          "default": "yes"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.audioswitcher.toggle",
+      "Name": "Profile umschalten",
+      "Tooltip": "Taste: zwischen den zwei Schnellwechsel-Profilen umschalten. Drehregler: durch alle Profile blättern",
+      "Icon": "imgs/toggle",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/toggle"
+        }
+      ]
+    }
+  ]
+}
