@@ -145,20 +145,26 @@ fn parse_duration(value: &str) -> Option<Duration> {
     Some(total * sign)
 }
 
-/// First meeting link in the given texts.
+/// First meeting link in the given texts. Invitations from others end up in
+/// the feed, so the host is taken from a real URL parser (a `\` or `user@`
+/// trick must not smuggle in another site) and the parsed URL is returned.
 fn meeting_link(texts: &[String]) -> Option<String> {
     texts
         .iter()
         .flat_map(|t| t.split(|c: char| c.is_whitespace() || matches!(c, '<' | '>' | '"' | ',')))
-        .find(|word| {
-            word.strip_prefix("https://").is_some_and(|rest| {
-                let host = rest.split(['/', '?', '#']).next().unwrap_or_default();
-                MEETING_HOSTS
+        .filter(|word| word.starts_with("https://") && !word.contains('\\'))
+        .filter_map(|word| reqwest::Url::parse(word).ok())
+        .find(|url| {
+            let host = url.host_str().unwrap_or_default().trim_end_matches('.');
+            url.scheme() == "https"
+                && url.username().is_empty()
+                && url.password().is_none()
+                && url.port().is_none()
+                && MEETING_HOSTS
                     .iter()
                     .any(|h| host == *h || host.ends_with(&format!(".{h}")))
-            })
         })
-        .map(str::to_owned)
+        .map(String::from)
 }
 
 /// UNTIL must be UTC for zoned starts (RFC 5545 §3.3.10); feeds do not
@@ -461,7 +467,15 @@ END:VCALENDAR\r
                 .as_deref(),
             Some("https://us02web.zoom.us/j/123?pwd=x")
         );
-        assert!(meeting_link(&["https://example.com/zoom.us".into()]).is_none());
+        for evil in [
+            "https://example.com/zoom.us",
+            "https://evil.com\\.zoom.us/j/1",
+            "https://zoom.us@evil.com/j/1",
+            "https://user@zoom.us/j/1",
+            "http://zoom.us/j/1",
+        ] {
+            assert!(meeting_link(&[evil.into()]).is_none(), "{evil}");
+        }
         let line = parse_line("ATTENDEE;CN=\"Doe: J\":mailto:j@x").unwrap();
         assert_eq!(line.param("CN"), Some("Doe: J"));
         assert_eq!(line.value, "mailto:j@x");
