@@ -14,10 +14,12 @@ use tokio::{
 };
 
 const TICK: Duration = Duration::from_secs(2);
-const TIMEOUT: Duration = Duration::from_secs(5);
+// The control pipe exists only on Windows; elsewhere every request fails early.
+#[cfg_attr(not(windows), allow(dead_code))]
 const NOT_RUNNING: &str = "AudioSwitcher läuft nicht oder ist zu alt für die Fernsteuerung";
 
 /// One request/response round trip: a JSON line out, a JSON line back.
+#[cfg_attr(not(windows), allow(dead_code))]
 async fn exchange<S: AsyncRead + AsyncWrite + Unpin>(
     stream: S,
     request: &Value,
@@ -39,6 +41,7 @@ async fn request(body: Value) -> anyhow::Result<Value> {
     use tokio::net::windows::named_pipe::ClientOptions;
     const PIPE: &str = r"\\.\pipe\AudioSwitcher.Control";
     const ERROR_PIPE_BUSY: i32 = 231;
+    const TIMEOUT: Duration = Duration::from_secs(5);
     tokio::time::timeout(TIMEOUT, async {
         let pipe = loop {
             match ClientOptions::new().open(PIPE) {
