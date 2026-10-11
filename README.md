@@ -127,6 +127,7 @@ And the best part: every key shows on its display what it does – with the real
 - [x] Discord plugin: mic, headphones, channels, volumes, soundboard, camera, screen share
 - [x] OBS Studio plugin: recording with timer, stream, scenes, sources, filters, audio, macros
 - [x] Home Assistant plugin: webhooks, services, switches, dimmers, states
+- [x] Mail & calendar plugin: unread mails and your next meeting – one press joins it (Gmail, Google Calendar, Outlook …)
 - [ ] Multi-actions and folders
 - [ ] Automatic profile switching based on the active program
 - [ ] More devices

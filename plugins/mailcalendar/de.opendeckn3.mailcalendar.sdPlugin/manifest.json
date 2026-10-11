@@ -1,0 +1,152 @@
+{
+  "UUID": "de.opendeckn3.mailcalendar",
+  "Name": "Mail & Kalender",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Ungelesene Mails (IMAP, z. B. Gmail mit App-Passwort) und nächster Termin samt Meeting-Link (geheime iCal-Adresse, z. B. Google Kalender). Ohne Google-Konto-Anmeldung.",
+  "Category": "Mail & Kalender",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-mailcalendar.exe",
+  "CodePathLin": "opendeckn3-mailcalendar",
+  "CodePathMac": "opendeckn3-mailcalendar",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    },
+    {
+      "Platform": "mac"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "textarea",
+      "key": "calendars",
+      "label": "Kalender (iCal-Adressen)",
+      "placeholder": "Arbeit = https://calendar.google.com/calendar/ical/…/basic.ics",
+      "help": "Eine Zeile pro Kalender: Name = Adresse. Google Kalender: Einstellungen → Kalender wählen → „Geheime Adresse im iCal-Format“. Outlook: Einstellungen → Kalender → Freigegebene Kalender → „Kalender veröffentlichen“ → ICS-Link."
+    },
+    {
+      "type": "text",
+      "key": "imapServer",
+      "label": "IMAP-Server",
+      "placeholder": "imap.gmail.com",
+      "help": "Verschlüsselt über Port 993; anderer Port als server:port."
+    },
+    {
+      "type": "text",
+      "key": "imapUser",
+      "label": "E-Mail-Adresse",
+      "placeholder": "name@gmail.com"
+    },
+    {
+      "type": "password",
+      "key": "imapPassword",
+      "label": "App-Passwort",
+      "help": "Gmail: Google-Konto → Sicherheit → Bestätigung in zwei Schritten einschalten → App-Passwörter → neues Passwort erstellen. Andere Anbieter: Mail-Passwort bzw. App-Passwort."
+    },
+    {
+      "type": "button",
+      "key": "connect",
+      "label": "Verbindung prüfen",
+      "primary": true
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.mailcalendar.mail",
+      "Name": "Ungelesene Mails",
+      "Tooltip": "Zeigt die Zahl ungelesener Mails, Drücken öffnet das Postfach",
+      "Icon": "imgs/mail",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/mail"
+        },
+        {
+          "Image": "imgs/mail-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "text",
+          "key": "folder",
+          "label": "Ordner",
+          "default": "INBOX",
+          "help": "INBOX = Posteingang; Gmail-Labels unter ihrem Namen, z. B. Rechnungen."
+        },
+        {
+          "type": "text",
+          "key": "url",
+          "label": "Beim Drücken öffnen",
+          "default": "https://mail.google.com/"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.mailcalendar.event",
+      "Name": "Nächster Termin",
+      "Tooltip": "Zeigt, wann der nächste Termin beginnt; Drücken öffnet den Meeting-Link (Meet, Teams, Zoom …)",
+      "Icon": "imgs/calendar",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/calendar"
+        },
+        {
+          "Image": "imgs/calendar-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "calendar",
+          "label": "Kalender",
+          "source": "calendars",
+          "help": "Kalender einmalig unter Plugins → Mail & Kalender → Einstellungen eintragen."
+        },
+        {
+          "type": "number",
+          "key": "lead",
+          "label": "Hervorheben ab (Minuten vorher)",
+          "default": 5,
+          "min": 0,
+          "max": 120
+        },
+        {
+          "type": "select",
+          "key": "showSummary",
+          "label": "Titel des Termins",
+          "options": [
+            [
+              "yes",
+              "Im Wechsel mit der Uhrzeit"
+            ],
+            [
+              "no",
+              "Nur Uhrzeit"
+            ]
+          ],
+          "default": "yes"
+        },
+        {
+          "type": "text",
+          "key": "url",
+          "label": "Ohne Meeting-Link öffnen",
+          "default": "https://calendar.google.com/"
+        }
+      ]
+    }
+  ]
+}

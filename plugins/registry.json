@@ -32,6 +32,16 @@
       "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_HOMEASSISTANT.md"
     },
     {
+      "uuid": "de.opendeckn3.mailcalendar",
+      "name": "Mail & Kalender",
+      "description": "Ungelesene Mails (IMAP, z. B. Gmail mit App-Passwort) und nächster Termin mit Meeting-Link (iCal-Adresse von Google, Outlook, iCloud …). Ohne Google-Konto-Anmeldung.",
+      "author": "OpenDeckN3",
+      "repo": "Diddlik/OpenDeckN3",
+      "asset": "de.opendeckn3.mailcalendar-windows.streamDeckPlugin",
+      "category": "Mail & Kalender",
+      "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_MAILKALENDER.md"
+    },
+    {
       "uuid": "de.opendeckn3.counter",
       "name": "Zähler (Beispiel)",
       "description": "Beispiel-Plugin: zählt Tastendrücke und färbt die Taste ein, Drehregler ändern den Farbton.",

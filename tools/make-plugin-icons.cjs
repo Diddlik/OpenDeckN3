@@ -1,4 +1,4 @@
-// Renders the key images of the OBS and Home Assistant plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant and mail & calendar plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -30,9 +30,8 @@ const OBS = {
   macro: badge('MAC', '#ff8fd0', false),
 };
 
-// Home Assistant: line icons on HA blue / active yellow.
-const icon = (svg, on) => {
-  const [bg, fg] = on ? ['#3a2f05', '#ffd34d'] : ['#0f2233', '#5bc4ff'];
+// Line icons; Home Assistant uses HA blue / active yellow.
+const icon = (svg, on, [bg, fg] = on ? ['#3a2f05', '#ffd34d'] : ['#0f2233', '#5bc4ff']) => {
   return `<div style="width:144px;height:144px;display:flex;align-items:center;justify-content:center;color:${fg};
     background:radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, ${fg} 18%, ${bg}) 0%, ${bg} 70%)">
     <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
@@ -51,10 +50,21 @@ const HA = {
   sensor: icon(GAUGE, false), 'sensor-on': icon(GAUGE, true),
 };
 
+// Mail & calendar: grey when idle, red with unread mail, yellow shortly before an appointment.
+const IDLE = ['#1a1d24', '#c3cad5'];
+const ENVELOPE = '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>';
+const CALENDAR = '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 14h3v3H8z"/>';
+const MAIL = {
+  plugin: icon(ENVELOPE, false, IDLE),
+  mail: icon(ENVELOPE, false, IDLE), 'mail-on': icon(ENVELOPE, true, ['#3a1012', '#ff6b6b']),
+  calendar: icon(CALENDAR, false, IDLE), 'calendar-on': icon(CALENDAR, true),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
-  for (const [dir, set] of [['plugins/obs/de.opendeckn3.obs.sdPlugin/imgs', OBS], ['plugins/homeassistant/de.opendeckn3.homeassistant.sdPlugin/imgs', HA]]) {
+  for (const [dir, set] of [['plugins/obs/de.opendeckn3.obs.sdPlugin/imgs', OBS], ['plugins/homeassistant/de.opendeckn3.homeassistant.sdPlugin/imgs', HA],
+    ['plugins/mailcalendar/de.opendeckn3.mailcalendar.sdPlugin/imgs', MAIL]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {
