@@ -22,7 +22,7 @@ use std::{
 use n3_daemon::Options;
 use serde_json::{Value, json};
 use tauri::{
-    AppHandle, Emitter, Manager, WindowEvent,
+    AppHandle, Emitter, Manager, RunEvent, WindowEvent,
     async_runtime::JoinHandle,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -50,18 +50,22 @@ fn show_main_window(app: &AppHandle) {
     }
 }
 
-/// Stops the embedded service (plugins included), then exits.
-fn quit(app: &AppHandle) {
+/// Stops the embedded service (plugins and devices included).
+async fn stop_service(app: &AppHandle) {
     let service = app.state::<Service>();
     service.shutdown.cancel();
     let task = service.task.lock().ok().and_then(|mut t| t.take());
+    if let Some(task) = task {
+        tokio::time::timeout(Duration::from_secs(3), task)
+            .await
+            .ok();
+    }
+}
+
+fn quit(app: &AppHandle) {
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
-        if let Some(task) = task {
-            tokio::time::timeout(Duration::from_secs(3), task)
-                .await
-                .ok();
-        }
+        stop_service(&app).await;
         app.exit(0);
     });
 }
@@ -316,6 +320,13 @@ fn main() {
                 window.hide().ok();
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running OpenDeckN3");
+        .build(tauri::generate_context!())
+        .expect("error while building OpenDeckN3")
+        .run(|app, event| {
+            // Also fires on Windows shutdown/logoff (WM_ENDSESSION), right before the
+            // process is killed: switch the deck off instead of leaving it lit.
+            if let RunEvent::Exit = event {
+                tauri::async_runtime::block_on(stop_service(app));
+            }
+        });
 }

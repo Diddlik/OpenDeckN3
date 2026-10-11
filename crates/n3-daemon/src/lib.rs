@@ -141,14 +141,14 @@ pub async fn run(opts: Options, shutdown: CancellationToken) -> anyhow::Result<(
         });
     }
 
-    if opts.hardware {
+    let hid_watcher = opts.hardware.then(|| {
         let (tx, token) = (device_tx.clone(), token.clone());
         tokio::spawn(async move {
             if let Err(err) = n3_driver::run_hid_watcher(tx, token).await {
                 tracing::error!(%err, "HID watcher failed");
             }
-        });
-    }
+        })
+    });
     if opts.virtual_device {
         tokio::spawn(n3_driver::virtual_deck::run_virtual_device(
             device_tx.clone(),
@@ -189,5 +189,10 @@ pub async fn run(opts: Options, shutdown: CancellationToken) -> anyhow::Result<(
     tracing::info!("shutting down");
     token.cancel();
     plugins.shutdown().await;
+    // The watcher returns once every device got its shutdown command; without
+    // waiting, the process may exit first and the deck stays lit.
+    if let Some(watcher) = hid_watcher {
+        watcher.await.ok();
+    }
     Ok(())
 }
