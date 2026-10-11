@@ -18,6 +18,8 @@ pub enum InputJob {
     Tap(Key, u32),
 }
 
+const KEY_HOLD: std::time::Duration = std::time::Duration::from_millis(20);
+
 type Request = (InputJob, oneshot::Sender<Result<(), String>>);
 
 #[derive(Clone)]
@@ -67,7 +69,14 @@ fn run(enigo: &mut Enigo, job: InputJob) -> Result<(), enigo::InputError> {
                 for m in &chord.modifiers {
                     enigo.key(*m, Direction::Press)?;
                 }
-                let result = enigo.key(chord.key, Direction::Click);
+                // Apps that poll key state or use keyboard hooks (game overlays,
+                // recorders) miss keys pressed and released within microseconds.
+                std::thread::sleep(KEY_HOLD);
+                let result = enigo.key(chord.key, Direction::Press).and_then(|()| {
+                    std::thread::sleep(KEY_HOLD);
+                    enigo.key(chord.key, Direction::Release)
+                });
+                std::thread::sleep(KEY_HOLD);
                 // Always release modifiers, even if the key failed.
                 for m in chord.modifiers.iter().rev() {
                     enigo.key(*m, Direction::Release)?;
