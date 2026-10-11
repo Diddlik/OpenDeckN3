@@ -38,12 +38,15 @@ impl Default for DeviceConfig {
 pub struct AppSettings {
     /// Install newer plugin versions from the catalog automatically.
     pub auto_update_plugins: bool,
+    /// Dim all decks after this many minutes without keyboard, mouse or deck input; 0 = never.
+    pub dim_after_minutes: u32,
 }
 
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
             auto_update_plugins: true,
+            dim_after_minutes: 0,
         }
     }
 }
@@ -201,9 +204,12 @@ mod tests {
         store
             .save_app_settings(&AppSettings {
                 auto_update_plugins: false,
+                dim_after_minutes: 5,
             })
             .unwrap();
-        assert!(!store.load_app_settings().unwrap().auto_update_plugins);
+        let loaded = store.load_app_settings().unwrap();
+        assert!(!loaded.auto_update_plugins);
+        assert_eq!(loaded.dim_after_minutes, 5);
     }
 
     #[test]

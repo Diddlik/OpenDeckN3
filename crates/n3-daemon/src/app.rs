@@ -8,6 +8,7 @@ use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     path::{Path, PathBuf},
     sync::Arc,
+    time::{Duration, Instant},
 };
 
 use anyhow::{Context, anyhow, bail};
@@ -18,6 +19,8 @@ use n3_core::{
 };
 /// Marks an OpenDeckN3 profile export file.
 const PROFILE_EXPORT_FORMAT: &str = "opendeckn3-profiles";
+/// Brightness while dimmed for idleness (never brighter than the configured value).
+const IDLE_BRIGHTNESS: u8 = 10;
 
 use n3_plugin::{
     BUILTIN_PLUGIN, InboundEvent, PluginEvent, PluginHost, PluginMessage, protocol,
@@ -130,6 +133,10 @@ pub struct App {
     /// Open `pluginRequest`s: id → (plugin, sent at, reply).
     plugin_requests: HashMap<u64, PendingRequest>,
     next_request: u64,
+    /// `AppSettings::dim_after_minutes`, cached for the idle poll.
+    dim_after_minutes: u32,
+    last_deck_input: Instant,
+    idle_dimmed: bool,
 }
 
 type PendingRequest = (
@@ -146,6 +153,10 @@ impl App {
         device_events: mpsc::Sender<DeviceEvent>,
         shutdown: CancellationToken,
     ) -> Self {
+        let dim_after_minutes = store
+            .load_app_settings()
+            .map(|s| s.dim_after_minutes)
+            .unwrap_or_default();
         Self {
             store,
             plugins,
@@ -158,6 +169,9 @@ impl App {
             extra_plugin_dirs: Vec::new(),
             plugin_requests: HashMap::new(),
             next_request: 1,
+            dim_after_minutes,
+            last_deck_input: Instant::now(),
+            idle_dimmed: false,
         }
     }
 
@@ -267,6 +281,10 @@ impl App {
             }
             DeviceEvent::Disconnected { device } => self.device_disconnected(&device).await,
             DeviceEvent::Input { device, event } => {
+                self.last_deck_input = Instant::now();
+                if self.idle_dimmed {
+                    self.set_idle_dimmed(false).await;
+                }
                 self.emit(json!({ "event": "input", "device": device, "input": event }));
                 if let Err(err) = self.on_input(&device, event).await {
                     tracing::warn!(%device, %err, "input handling failed");
@@ -282,7 +300,9 @@ impl App {
         self.store.save_profile(&id, &profile)?;
 
         handle
-            .send(DeviceCommand::SetBrightness(config.brightness))
+            .send(DeviceCommand::SetBrightness(
+                self.shown_brightness(config.brightness),
+            ))
             .await;
         let encoders = handle.info.layout.encoders as usize;
         let info = handle.info.clone();
@@ -597,6 +617,31 @@ impl App {
             })
             .await;
         self.emit(json!({ "event": "keyImage", "device": device, "key": key, "image": preview }));
+    }
+
+    /// Called with the OS idle time (keyboard and mouse) from the idle poll.
+    pub async fn on_idle(&mut self, os_idle: Duration) {
+        let idle = os_idle.min(self.last_deck_input.elapsed());
+        let dim = idle_dims(self.dim_after_minutes, idle);
+        if dim != self.idle_dimmed {
+            self.set_idle_dimmed(dim).await;
+        }
+    }
+
+    async fn set_idle_dimmed(&mut self, dimmed: bool) {
+        self.idle_dimmed = dimmed;
+        for state in self.devices.values() {
+            let value = self.shown_brightness(state.config.brightness);
+            state.handle.send(DeviceCommand::SetBrightness(value)).await;
+        }
+    }
+
+    fn shown_brightness(&self, configured: u8) -> u8 {
+        if self.idle_dimmed {
+            configured.min(IDLE_BRIGHTNESS)
+        } else {
+            configured
+        }
     }
 
     pub async fn set_brightness(&mut self, device: &str, value: u8) -> anyhow::Result<()> {
@@ -1142,6 +1187,7 @@ impl App {
                 let settings: crate::store::AppSettings =
                     serde_json::from_value(current).context("ungültige Einstellungen")?;
                 self.store.save_app_settings(&settings)?;
+                self.dim_after_minutes = settings.dim_after_minutes;
                 let value = serde_json::to_value(&settings)?;
                 self.emit(json!({ "event": "appSettingsChanged", "settings": value }));
                 Ok(value)
@@ -1403,5 +1449,21 @@ async fn remove_dir(path: &Path) -> anyhow::Result<()> {
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
             }
         }
+    }
+}
+
+fn idle_dims(dim_after_minutes: u32, idle: Duration) -> bool {
+    dim_after_minutes > 0 && idle >= Duration::from_secs(60 * u64::from(dim_after_minutes))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn idle_dims_only_after_the_configured_minutes() {
+        assert!(!idle_dims(0, Duration::from_secs(86_400)));
+        assert!(!idle_dims(5, Duration::from_secs(299)));
+        assert!(idle_dims(5, Duration::from_secs(300)));
     }
 }

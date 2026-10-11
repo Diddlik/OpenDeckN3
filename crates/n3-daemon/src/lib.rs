@@ -166,9 +166,11 @@ pub async fn run(opts: Options, shutdown: CancellationToken) -> anyhow::Result<(
         }))
         .await;
 
+    let mut idle_rx = system::idle::spawn();
     loop {
         tokio::select! {
             Some(event) = device_rx.recv() => app.on_device_event(event).await,
+            Some(idle) = idle_rx.recv() => app.on_idle(idle).await,
             Some(msg) = plugin_rx.recv() => app.on_plugin_message(msg).await,
             Some((command, reply)) = api_rx.recv() => {
                 if plugin_install::Installer::handles(&command) {

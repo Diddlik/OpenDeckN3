@@ -2,6 +2,7 @@
 //! running commands. Used by the built-in actions.
 
 pub mod apps;
+pub mod idle;
 pub mod input;
 pub mod launch;
 pub mod shortcut;

@@ -1445,8 +1445,8 @@ function settingsHTML() {
       <section class="scard" id="geraete"><h2>Geräte</h2>
         <div class="srow"><label class="t" for="bri"><b>Helligkeit</b><span>${d ? esc(d.info.name) + ' · ' + esc(d.info.id) : 'Kein Gerät verbunden'}</span></label>
           <div style="display:flex;align-items:center;gap:12px"><input id="bri" type="range" min="0" max="100" value="${d ? d.brightness : 0}" data-in="brightness" ${d ? '' : 'disabled'} style="width:200px;accent-color:var(--accent)"><output class="mono" style="font-size:13px;width:42px;text-align:right">${d ? d.brightness : 0} %</output></div></div>
-        <div class="srow"><div class="t"><b>Schlafmodus nach ${soon}</b><span>Displays aus, Tasten bleiben aktiv</span></div>
-          <select class="field" disabled style="min-width:180px"><option>Nie</option></select></div>
+        <div class="srow"><label class="t" for="dimAfter"><b>Abdunkeln nach Leerlauf</b><span>Ohne Tastatur-, Maus- oder Deck-Eingabe · jede Eingabe weckt das Deck</span></label>
+          <select id="dimAfter" class="field" data-in="dimAfter" ${S.appSettings ? '' : 'disabled'} style="min-width:180px">${[0, 1, 2, 5, 10, 15, 30, 60].map((m) => `<option value="${m}" ${S.appSettings && S.appSettings.dimAfterMinutes === m ? 'selected' : ''}>${m ? m + ' Min.' : 'Nie'}</option>`).join('')}</select></div>
         <div class="srow"><div class="t"><b>Gehäusefarbe in der Vorschau</b><span>Passend zu deinem Gerät</span></div>${seg('finish', S.finish, [['dunkel', 'Dunkel'], ['weiss', 'Weiß']])}</div>
       </section>
       <section class="scard" id="sichern"><h2>Sichern</h2>
@@ -2262,6 +2262,10 @@ document.addEventListener('change', (e) => {
     let v; try { v = JSON.parse(t.value); } catch (err) { $('#jsonErr').textContent = 'Ungültiges JSON: ' + err.message; return; }
     if (!v || typeof v !== 'object' || Array.isArray(v)) { $('#jsonErr').textContent = 'Einstellungen müssen ein JSON-Objekt sein.'; return; }
     $('#jsonErr').textContent = ''; s.settings = v; renderStage(); sendSettings(S.sel, v);
+  }
+  if (k === 'dimAfter') {
+    api.call('setAppSettings', { settings: { dimAfterMinutes: Number(t.value) } })
+      .then((v) => { S.appSettings = v; }).catch((err) => { toast('err', err.message); render(); });
   }
   if (k === 'port') {
     const p = Number(t.value);
