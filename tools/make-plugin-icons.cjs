@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter and Twitch plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch and YouTube plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -146,6 +146,19 @@ const TWITCH = {
   ad: icon(MEGAPHONE, false, TW),
 };
 
+// YouTube: red outline icons; the status key fills in while a live stream runs.
+const YT = ['#2a0d0d', '#ff4e45'];
+const YT_ON = ['#c4161c', '#ffffff'];
+const YT_PLAY = '<rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9v6l5-3z"/>';
+const BROADCAST = '<circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19.1 4.9a10 10 0 0 1 0 14.2M4.9 19.1a10 10 0 0 1 0-14.2"/>';
+const USERS = '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.5a6.5 6.5 0 0 1 3 5.5"/>';
+const YOUTUBE = {
+  plugin: icon(YT_PLAY, false, YT),
+  status: icon(BROADCAST, false, YT), 'status-on': icon(BROADCAST, true, YT_ON),
+  viewers: icon(USERS, false, YT),
+  chat: icon(BUBBLE, false, YT),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -157,7 +170,8 @@ const TWITCH = {
     ['plugins/sysmon/de.opendeckn3.sysmon.sdPlugin/imgs', SYSMON],
     ['plugins/mixer/de.opendeckn3.mixer.sdPlugin/imgs', MIXER],
     ['plugins/voicemeeter/de.opendeckn3.voicemeeter.sdPlugin/imgs', VOICEMEETER],
-    ['plugins/twitch/de.opendeckn3.twitch.sdPlugin/imgs', TWITCH]]) {
+    ['plugins/twitch/de.opendeckn3.twitch.sdPlugin/imgs', TWITCH],
+    ['plugins/youtube/de.opendeckn3.youtube.sdPlugin/imgs', YOUTUBE]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {

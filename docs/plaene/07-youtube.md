@@ -15,7 +15,7 @@
 
 | UUID-Suffix | Name | Aufruf | Verhalten |
 | --- | --- | --- | --- |
-| `status` | Live-Status | `GET liveBroadcasts?part=snippet,status&mine=true&broadcastStatus=active` | Zustand 1 = live; Taste öffnet das Studio (`https://studio.youtube.com`) |
+| `status` | Live-Status | `GET liveBroadcasts?part=snippet,status&broadcastStatus=active&broadcastType=all` (`mine` lässt sich nicht mit `broadcastStatus` kombinieren) | Zustand 1 = live; Taste öffnet das Studio (`https://studio.youtube.com`) |
 | `viewers` | Zuschauer | dann `GET videos?part=liveStreamingDetails&id=` | Titel = `concurrentViewers`, offline → „offline“ |
 | `chat` | Chat-Nachricht | `POST liveChat/messages?part=snippet` mit `liveChatId` der aktiven Übertragung | Text aus Einstellung `message`; `showOk` |
 

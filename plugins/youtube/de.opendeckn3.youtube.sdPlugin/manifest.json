@@ -1,0 +1,112 @@
+{
+  "UUID": "de.opendeckn3.youtube",
+  "Name": "YouTube Live",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Zeigt, ob dein YouTube-Livestream läuft, und die aktuelle Zuschauerzahl; sendet Nachrichten in den Live-Chat. Anmeldung mit einem Gerätecode, eigene Client-ID und Client-Secret unter Einstellungen.",
+  "Category": "YouTube",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-youtube.exe",
+  "CodePathLin": "opendeckn3-youtube",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "text",
+      "key": "clientId",
+      "label": "Client-ID",
+      "placeholder": "aus dem eigenen Google-OAuth-Client",
+      "help": "Anleitung zur Einrichtung: Dokumentation „PLUGIN_YOUTUBE.md“ im Projekt."
+    },
+    {
+      "type": "password",
+      "key": "clientSecret",
+      "label": "Client-Secret",
+      "help": "Steht im selben Google-OAuth-Client wie die Client-ID."
+    },
+    {
+      "type": "link",
+      "label": "Google-Cloud-Zugangsdaten öffnen",
+      "url": "https://console.cloud.google.com/apis/credentials"
+    },
+    {
+      "type": "button",
+      "key": "connect",
+      "label": "Anmelden",
+      "primary": true,
+      "help": "Öffnet Google im Browser. Dort den angezeigten Code eingeben und den Zugriff erlauben."
+    },
+    {
+      "type": "button",
+      "key": "signOut",
+      "label": "Abmelden"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.youtube.status",
+      "Name": "Live-Status",
+      "Tooltip": "Leuchtet, solange ein Livestream läuft; die Taste öffnet YouTube Studio",
+      "Icon": "imgs/status",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/status"
+        },
+        {
+          "Image": "imgs/status-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.youtube.viewers",
+      "Name": "Zuschauer",
+      "Tooltip": "Zeigt die aktuelle Zuschauerzahl des laufenden Livestreams",
+      "Icon": "imgs/viewers",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/viewers"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.youtube.chat",
+      "Name": "Chat-Nachricht",
+      "Tooltip": "Sendet die eingestellte Nachricht in den Live-Chat des laufenden Streams",
+      "Icon": "imgs/chat",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/chat"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "text",
+          "key": "message",
+          "label": "Nachricht",
+          "placeholder": "z. B. Hallo aus dem Stream!",
+          "help": "Höchstens 200 Zeichen."
+        }
+      ]
+    }
+  ]
+}

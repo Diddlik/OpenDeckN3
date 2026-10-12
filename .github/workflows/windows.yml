@@ -53,7 +53,7 @@ jobs:
         run: cargo test
 
       - name: Dienst (CLI) und Discord-Plugin bauen
-        run: cargo build --release -p n3-daemon -p opendeckn3-discord -p opendeckn3-obs -p opendeckn3-homeassistant -p opendeckn3-mailcalendar -p opendeckn3-audioswitcher -p opendeckn3-http -p opendeckn3-media -p opendeckn3-sysmon -p opendeckn3-mixer -p opendeckn3-voicemeeter -p opendeckn3-twitch
+        run: cargo build --release -p n3-daemon -p opendeckn3-discord -p opendeckn3-obs -p opendeckn3-homeassistant -p opendeckn3-mailcalendar -p opendeckn3-audioswitcher -p opendeckn3-http -p opendeckn3-media -p opendeckn3-sysmon -p opendeckn3-mixer -p opendeckn3-voicemeeter -p opendeckn3-twitch -p opendeckn3-youtube
 
       - name: Desktop-App + Installer bauen (Tauri)
         shell: pwsh
@@ -93,7 +93,7 @@ jobs:
           Copy-Item "$env:RUNNER_TEMP\$plugin.zip" "target\installer\$plugin.streamDeckPlugin"
 
           # Eigene Plugins (Windows-Binaries); Plugin-Version = Release-Version, damit der Katalog Updates erkennt.
-          foreach ($p in @("discord", "obs", "homeassistant", "mailcalendar", "audioswitcher", "http", "media", "sysmon", "mixer", "voicemeeter", "twitch")) {
+          foreach ($p in @("discord", "obs", "homeassistant", "mailcalendar", "audioswitcher", "http", "media", "sysmon", "mixer", "voicemeeter", "twitch", "youtube")) {
             $uuid = "de.opendeckn3.$p"
             $dir = "$env:RUNNER_TEMP\pkg-$p\$uuid.sdPlugin"
             Remove-Item -Recurse -Force "$env:RUNNER_TEMP\pkg-$p" -ErrorAction SilentlyContinue
