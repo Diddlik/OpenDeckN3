@@ -3058,6 +3058,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "opendeckn3-mixer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "n3-plugin-sdk",
+ "serde_json",
+ "tokio",
+ "windows 0.61.3",
+]
+
+[[package]]
 name = "opendeckn3-obs"
 version = "0.1.0"
 dependencies = [

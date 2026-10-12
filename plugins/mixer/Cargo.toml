@@ -1,0 +1,28 @@
+[package]
+name = "opendeckn3-mixer"
+description = "OpenDeckN3-Plugin: Lautstärke einzelner Anwendungen per Drehregler oder Taste ändern und stumm schalten (Windows: WASAPI, Linux: PulseAudio/PipeWire)"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "opendeckn3-mixer"
+path = "src/main.rs"
+
+[dependencies]
+n3-plugin-sdk.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Media_Audio",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Threading",
+    "Win32_System_Variant",
+    "Win32_UI_WindowsAndMessaging",
+] }

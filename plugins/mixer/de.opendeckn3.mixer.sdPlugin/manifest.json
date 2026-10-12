@@ -1,0 +1,88 @@
+{
+  "UUID": "de.opendeckn3.mixer",
+  "Name": "Lautstärke pro App",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Ändert die Lautstärke einzelner Anwendungen (Spiel, Discord, Browser) per Drehregler und schaltet sie stumm.",
+  "Category": "Lautstärke",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-mixer.exe",
+  "CodePathLin": "opendeckn3-mixer",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.mixer.app",
+      "Name": "App-Lautstärke",
+      "Tooltip": "Lautstärke einer festgelegten Anwendung per Drehregler ändern; Drücken schaltet sie stumm",
+      "Icon": "imgs/app",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/app"
+        },
+        {
+          "Image": "imgs/app-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "app",
+          "label": "Anwendung",
+          "source": "apps",
+          "help": "Prozessname der laufenden Audio-Sitzung, z. B. Discord.exe. Freitext ist möglich."
+        },
+        {
+          "type": "number",
+          "key": "step",
+          "label": "Schritt",
+          "default": 2,
+          "min": 1,
+          "max": 20,
+          "controllers": [
+            "Encoder"
+          ],
+          "help": "Prozent je Raste"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.mixer.focused",
+      "Name": "Aktive App",
+      "Tooltip": "Lautstärke der Anwendung im Vordergrund per Drehregler ändern; Drücken schaltet sie stumm (nur Windows)",
+      "Icon": "imgs/focused",
+      "Controllers": [
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/focused"
+        },
+        {
+          "Image": "imgs/focused-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "number",
+          "key": "step",
+          "label": "Schritt",
+          "default": 2,
+          "min": 1,
+          "max": 20,
+          "help": "Prozent je Raste"
+        }
+      ]
+    }
+  ]
+}

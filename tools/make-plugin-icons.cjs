@@ -103,6 +103,18 @@ const SYSMON = {
   metric: icon(BARS, false),
 };
 
+// Mixer: sliders for the plugin, speaker and window for the app keys (filled = muted).
+const SLIDERS = '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>';
+const MUTED_SPEAKER = '<path d="M11 5L6 9H3v6h3l5 4z"/><path d="M16 9l6 6M22 9l-6 6"/>';
+const WINDOW = '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/>';
+const MIXER = {
+  plugin: icon(SLIDERS, false),
+  app: icon(SPEAKER, false),
+  'app-on': icon(MUTED_SPEAKER, true),
+  focused: icon(WINDOW, false),
+  'focused-on': icon(WINDOW, true),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -111,7 +123,8 @@ const SYSMON = {
     ['plugins/audioswitcher/de.opendeckn3.audioswitcher.sdPlugin/imgs', AUDIO],
     ['plugins/http/de.opendeckn3.http.sdPlugin/imgs', HTTP],
     ['plugins/media/de.opendeckn3.media.sdPlugin/imgs', MEDIA],
-    ['plugins/sysmon/de.opendeckn3.sysmon.sdPlugin/imgs', SYSMON]]) {
+    ['plugins/sysmon/de.opendeckn3.sysmon.sdPlugin/imgs', SYSMON],
+    ['plugins/mixer/de.opendeckn3.mixer.sdPlugin/imgs', MIXER]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {
