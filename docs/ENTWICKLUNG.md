@@ -30,7 +30,7 @@ plugins/discord/   Discord-Plugin (Rust, docs/PLUGIN_DISCORD.md); Tastenbilder: 
 plugins/obs/       OBS-Studio-Plugin (docs/PLUGIN_OBS.md)
 plugins/homeassistant/  Home-Assistant-Plugin (docs/PLUGIN_HOMEASSISTANT.md)
 plugins/mailcalendar/   Mail-&-Kalender-Plugin (docs/PLUGIN_MAILKALENDER.md)
-plugins/audioswitcher/  AudioSwitcher-Plugin (docs/PLUGIN_AUDIOSWITCHER.md); Tastenbilder von OBS, HA, Mail & Kalender, AudioSwitcher, HTTP, Medien, Systemmonitor, Lautstärke, VoiceMeeter, Twitch, YouTube, Licht, MQTT, Teams, Timer, GitHub und MIDI: tools/make-plugin-icons.cjs
+plugins/audioswitcher/  AudioSwitcher-Plugin (docs/PLUGIN_AUDIOSWITCHER.md); Tastenbilder von OBS, HA, Mail & Kalender, AudioSwitcher, HTTP, Medien, Systemmonitor, Lautstärke, VoiceMeeter, Twitch, YouTube, Licht, MQTT, Teams, Timer, GitHub, MIDI und Spotify: tools/make-plugin-icons.cjs
 plugins/http/       HTTP-Plugin (docs/PLUGIN_HTTP.md)
 plugins/media/      Medien-Plugin (docs/PLUGIN_MEDIA.md)
 plugins/sysmon/     Systemmonitor-Plugin (docs/PLUGIN_SYSMON.md)
@@ -44,6 +44,7 @@ plugins/teams/       Microsoft-Teams-Plugin: Besprechungssteuerung über die lok
 plugins/timer/      Timer-Plugin: Countdown, Pomodoro, Stoppuhr; Laufzeit in den Instanz-Einstellungen (docs/PLUGIN_TIMER.md)
 plugins/github/     GitHub-Plugin: CI-Status, Pull Requests, Benachrichtigungen; optionales Token (docs/PLUGIN_GITHUB.md)
 plugins/midi/       MIDI-Plugin: Noten, Controller, Programmwechsel; Rückmeldung per Eingang (docs/PLUGIN_MIDI.md)
+plugins/spotify/    Spotify-Plugin: Gefällt mir, Playlist, Zufall, Wiederholen, Gerät; Anmeldung mit PKCE (docs/PLUGIN_SPOTIFY.md)
 plugins/sdk/       Hilfsbibliothek für Plugins in Rust (Host-Verbindung, Tastenzustand, Einstellungen)
 tools/smoke-test.mjs  End-to-End-Test gegen den laufenden Dienst
 tools/make-iconlib.py  Icon-Bibliothek für Tastenbilder (Auswahl aus Lucide, ISC) in ui/index.html schreiben

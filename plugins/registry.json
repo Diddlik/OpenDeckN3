@@ -182,6 +182,16 @@
       "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_MIDI.md"
     },
     {
+      "uuid": "de.opendeckn3.spotify",
+      "name": "Spotify",
+      "description": "Gefällt mir, zur Playlist hinzufügen, Zufall und Wiederholen umschalten, Wiedergabe auf ein anderes Gerät verschieben. Anmeldung mit eigener Client-ID (Windows und Linux).",
+      "author": "OpenDeckN3",
+      "repo": "Diddlik/OpenDeckN3",
+      "asset": "de.opendeckn3.spotify-windows.streamDeckPlugin",
+      "category": "Musik",
+      "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_SPOTIFY.md"
+    },
+    {
       "uuid": "de.opendeckn3.counter",
       "name": "Zähler (Beispiel)",
       "description": "Beispiel-Plugin: zählt Tastendrücke und färbt die Taste ein, Drehregler ändern den Farbton.",

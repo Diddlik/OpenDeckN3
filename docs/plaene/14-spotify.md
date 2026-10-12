@@ -10,15 +10,16 @@ Ergänzt Plan 02 um das, was Medientasten nicht können. Play/Pause, Titel und C
      und öffnet die Anmeldeseite per `openUrl`.
   3. Code gegen Token tauschen, Tokens speichern und erneuern (PKCE-Verifier wie in `plugins/discord/src/auth.rs`).
 - Scopes: `user-read-playback-state user-modify-playback-state user-library-read user-library-modify playlist-modify-private playlist-modify-public`.
-- Steuerbefehle verlangen Spotify Premium; App im Entwicklungsmodus erlaubt nur wenige eingetragene Nutzer. Beides
-  in der Doku erklären und vor der Umsetzung die aktuellen Spotify-Bedingungen prüfen.
+- Stand Februar 2026 (Migrationsleitfaden von Spotify): Apps im Entwicklungsmodus brauchen einen Premium-Account des
+  App-Besitzers, höchstens 5 eingetragene Nutzer, Kontingent pro Konto (429 mit `QUOTA_EXCEEDED`). `/me/tracks` und
+  `/playlists/{id}/tracks` gibt es dort nicht mehr; Ersatz siehe Tabelle. Steuerbefehle verlangen Premium.
 
 ## Aktionen
 
 | UUID-Suffix | Name | Aufruf | Verhalten |
 | --- | --- | --- | --- |
-| `like` | Gefällt mir | `GET /me/tracks/contains`, `PUT`/`DELETE /me/tracks` | Zustand 1 = gespeichert, umschalten |
-| `addtoplaylist` | Zur Playlist hinzufügen | `POST /playlists/{id}/tracks` | Playlist per `source: "playlists"`; `showOk` |
+| `like` | Gefällt mir | `GET /me/library/contains`, `PUT`/`DELETE /me/library` (Spotify-URIs `spotify:track:<id>`) | Zustand 1 = gespeichert, umschalten |
+| `addtoplaylist` | Zur Playlist hinzufügen | `POST /playlists/{id}/items` | Playlist per `source: "playlists"` (`GET /me/playlists`, nur eigene/gemeinsame); `showOk` |
 | `shuffle` | Zufall | `PUT /me/player/shuffle` | Zustand 1 = an |
 | `repeat` | Wiederholen | `PUT /me/player/repeat` | `off` → `context` → `track`, Zustand 0/1/2 |
 | `device` | Gerät wechseln | `PUT /me/player` (`device_ids`) | Gerät per `source: "devices"` |

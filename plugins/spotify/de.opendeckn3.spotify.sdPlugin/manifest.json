@@ -1,0 +1,152 @@
+{
+  "UUID": "de.opendeckn3.spotify",
+  "Name": "Spotify",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Steuert Spotify über die Web-API: Titel gefällt mir, zu Playlist hinzufügen, Zufall und Wiederholen umschalten, Gerät wechseln. Anmeldung mit eigener Client-ID unter Einstellungen. Play, Pause und Cover liefert das Medien-Plugin.",
+  "Category": "Spotify",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-spotify.exe",
+  "CodePathLin": "opendeckn3-spotify",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "text",
+      "key": "clientId",
+      "label": "Client-ID",
+      "placeholder": "aus der eigenen Spotify-Anwendung",
+      "help": "Anleitung zur Registrierung: Dokumentation „PLUGIN_SPOTIFY.md“ im Projekt."
+    },
+    {
+      "type": "link",
+      "label": "Spotify-Entwicklerkonsole öffnen",
+      "url": "https://developer.spotify.com/dashboard"
+    },
+    {
+      "type": "button",
+      "key": "connect",
+      "label": "Anmelden",
+      "primary": true,
+      "help": "Öffnet Spotify im Browser. Dort den Zugriff erlauben; danach schließt sich das Fenster von selbst."
+    },
+    {
+      "type": "button",
+      "key": "signOut",
+      "label": "Abmelden"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.spotify.like",
+      "Name": "Gefällt mir",
+      "Tooltip": "Speichert den laufenden Titel in der Bibliothek oder entfernt ihn; leuchtet, wenn er gespeichert ist",
+      "Icon": "imgs/like",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/like"
+        },
+        {
+          "Image": "imgs/like-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.spotify.addtoplaylist",
+      "Name": "Zur Playlist hinzufügen",
+      "Tooltip": "Fügt den laufenden Titel einer Playlist hinzu (nur eigene und gemeinsame Playlists)",
+      "Icon": "imgs/addtoplaylist",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/addtoplaylist"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "playlist",
+          "label": "Playlist",
+          "source": "playlists",
+          "help": "Die Liste lädt nach der Anmeldung."
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.spotify.shuffle",
+      "Name": "Zufall",
+      "Tooltip": "Schaltet die Zufallswiedergabe ein oder aus; leuchtet, wenn sie an ist",
+      "Icon": "imgs/shuffle",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/shuffle"
+        },
+        {
+          "Image": "imgs/shuffle-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.spotify.repeat",
+      "Name": "Wiederholen",
+      "Tooltip": "Schaltet um: aus, Titel wiederholen, Liste wiederholen",
+      "Icon": "imgs/repeat",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/repeat"
+        },
+        {
+          "Image": "imgs/repeat-context"
+        },
+        {
+          "Image": "imgs/repeat-track"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.spotify.device",
+      "Name": "Gerät wechseln",
+      "Tooltip": "Verschiebt die Wiedergabe auf das gewählte Gerät",
+      "Icon": "imgs/device",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/device"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "device",
+          "label": "Gerät",
+          "source": "devices",
+          "help": "Die Liste zeigt die Geräte, die Spotify gerade kennt. Ein Gerät muss einmal aktiv gewesen sein."
+        }
+      ]
+    }
+  ]
+}

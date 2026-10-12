@@ -141,6 +141,7 @@ And the best part: every key shows on its display what it does – with the real
 - [x] Timer plugin: countdown, Pomodoro and stopwatch on keys and dials; running timers survive page and profile switches – Windows and Linux
 - [x] GitHub plugin: CI status of a branch, open pull requests and notifications – Windows and Linux
 - [x] MIDI plugin: notes, controller values and program changes for DAWs and Lightroom (MIDI2LR), with feedback from the DAW – Windows and Linux
+- [x] Spotify plugin: like the playing track, add it to a playlist, toggle shuffle and repeat, move playback to another device – Windows and Linux
 - [x] Mail & calendar plugin: unread mails and your next meeting – one press joins it (Gmail, Google Calendar, Outlook …)
 - [ ] Multi-actions and folders
 - [ ] Automatic profile switching based on the active program

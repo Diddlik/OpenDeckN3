@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights, MQTT, Teams, timer, GitHub and MIDI plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights, MQTT, Teams, timer, GitHub, MIDI and Spotify plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -253,6 +253,26 @@ const MIDI_SET = {
   program: icon(DIN, false, MIDI_BLUE),
 };
 
+// Spotify: green line icons; lit state uses a filled green and white glyph.
+const SPOTIFY = ['#0d1f14', '#1db954'];
+const SPOTIFY_ON = ['#0b4d27', '#ffffff'];
+const HEART = '<path d="M12 20s-7-4.4-9-9.2C1.6 7.4 3.6 4 7.2 4c2 0 3.6 1.1 4.8 2.8C13.2 5.1 14.8 4 16.8 4 20.4 4 22.4 7.4 21 10.8 19 15.6 12 20 12 20z"/>';
+const LIST_PLUS = '<path d="M4 6h11M4 12h11M4 18h7"/><path d="M18 15v6M15 18h6"/>';
+const SHUFFLE_ICON = '<path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>';
+const REPEAT_ICON = '<path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>';
+const REPEAT_ONE = `${REPEAT_ICON}<text x="12" y="15" font-size="8" text-anchor="middle" fill="currentColor" stroke="none">1</text>`;
+const SPEAKER_DEVICE = '<rect x="6" y="2" width="12" height="20" rx="2"/><circle cx="12" cy="14" r="3"/><path d="M11 6h2"/>';
+const SPOTIFY_SET = {
+  plugin: icon(HEART, false, SPOTIFY),
+  like: icon(HEART, false, SPOTIFY), 'like-on': icon(HEART, true, SPOTIFY_ON),
+  addtoplaylist: icon(LIST_PLUS, false, SPOTIFY),
+  shuffle: icon(SHUFFLE_ICON, false, SPOTIFY), 'shuffle-on': icon(SHUFFLE_ICON, true, SPOTIFY_ON),
+  repeat: icon(REPEAT_ICON, false, SPOTIFY),
+  'repeat-context': icon(REPEAT_ICON, true, SPOTIFY_ON),
+  'repeat-track': icon(REPEAT_ONE, true, SPOTIFY_ON),
+  device: icon(SPEAKER_DEVICE, false, SPOTIFY),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -271,7 +291,8 @@ const MIDI_SET = {
     ['plugins/teams/de.opendeckn3.teams.sdPlugin/imgs', TEAMS_SET],
     ['plugins/timer/de.opendeckn3.timer.sdPlugin/imgs', TIMER_SET],
     ['plugins/github/de.opendeckn3.github.sdPlugin/imgs', GITHUB],
-    ['plugins/midi/de.opendeckn3.midi.sdPlugin/imgs', MIDI_SET]]) {
+    ['plugins/midi/de.opendeckn3.midi.sdPlugin/imgs', MIDI_SET],
+    ['plugins/spotify/de.opendeckn3.spotify.sdPlugin/imgs', SPOTIFY_SET]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {
