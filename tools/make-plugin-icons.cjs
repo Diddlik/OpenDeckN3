@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch and YouTube plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube and lights plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -159,6 +159,20 @@ const YOUTUBE = {
   chat: icon(BUBBLE, false, YT),
 };
 
+// Lights: bulb for the plugin, power symbol (filled = on), sun for brightness, thermometer for colour temperature, grid for scenes.
+const LAMP = ['#241c08', '#f2b84b'];
+const LAMP_ON = ['#5a4306', '#ffe066'];
+const SUN = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+const THERMO = '<path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/>';
+const GRID = '<rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/>';
+const LIGHTS = {
+  plugin: icon(BULB, false, LAMP),
+  power: icon(POWER, false, LAMP), 'power-on': icon(POWER, true, LAMP_ON),
+  brightness: icon(SUN, false, LAMP), 'brightness-on': icon(SUN, true, LAMP_ON),
+  temperature: icon(THERMO, false, LAMP),
+  scene: icon(GRID, false, LAMP),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -171,7 +185,8 @@ const YOUTUBE = {
     ['plugins/mixer/de.opendeckn3.mixer.sdPlugin/imgs', MIXER],
     ['plugins/voicemeeter/de.opendeckn3.voicemeeter.sdPlugin/imgs', VOICEMEETER],
     ['plugins/twitch/de.opendeckn3.twitch.sdPlugin/imgs', TWITCH],
-    ['plugins/youtube/de.opendeckn3.youtube.sdPlugin/imgs', YOUTUBE]]) {
+    ['plugins/youtube/de.opendeckn3.youtube.sdPlugin/imgs', YOUTUBE],
+    ['plugins/lights/de.opendeckn3.lights.sdPlugin/imgs', LIGHTS]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {

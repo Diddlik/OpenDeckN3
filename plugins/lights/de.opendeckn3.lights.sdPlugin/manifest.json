@@ -1,0 +1,275 @@
+{
+  "UUID": "de.opendeckn3.lights",
+  "Name": "Licht",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Steuert Lampen im lokalen Netz: Elgato Key Light, Philips Hue und WLED. Ein/Aus, Helligkeit und Farbtemperatur per Drehregler, Hue-Szenen und WLED-Presets.",
+  "Category": "Licht",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-lights.exe",
+  "CodePathLin": "opendeckn3-lights",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "text",
+      "key": "hueBridge",
+      "label": "Hue-Bridge (IP-Adresse)",
+      "placeholder": "192.168.1.20",
+      "help": "Nur für Philips Hue. Die IP-Adresse steht in der Hue-App unter Einstellungen → Hue-Bridges."
+    },
+    {
+      "type": "button",
+      "key": "pair",
+      "label": "Mit Bridge koppeln",
+      "primary": true,
+      "help": "Zuerst den runden Knopf an der Bridge drücken, dann hier klicken. Die Kopplung wartet bis zu 30 Sekunden."
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.lights.power",
+      "Name": "Ein/Aus",
+      "Tooltip": "Schaltet eine Lampe, einen Raum oder einen WLED-Strip um; leuchtet, wenn sie an ist",
+      "Icon": "imgs/power",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/power"
+        },
+        {
+          "Image": "imgs/power-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "kind",
+          "label": "Lampenart",
+          "options": [
+            [
+              "elgato",
+              "Elgato (Key Light, Ring Light)"
+            ],
+            [
+              "hue",
+              "Philips Hue"
+            ],
+            [
+              "wled",
+              "WLED"
+            ]
+          ],
+          "default": "elgato"
+        },
+        {
+          "type": "text",
+          "key": "host",
+          "label": "IP-Adresse",
+          "placeholder": "192.168.1.50",
+          "help": "Elgato und WLED: IP-Adresse des Geräts. Bei Hue leer lassen; die Bridge steht in den globalen Einstellungen."
+        },
+        {
+          "type": "select",
+          "key": "light",
+          "label": "Lampe oder Raum",
+          "source": "hueLights",
+          "showIf": {
+            "kind": "hue"
+          }
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.lights.brightness",
+      "Name": "Helligkeit",
+      "Tooltip": "Helligkeit per Drehregler ändern; Drücken oder Taste schaltet ein/aus",
+      "Icon": "imgs/brightness",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/brightness"
+        },
+        {
+          "Image": "imgs/brightness-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "kind",
+          "label": "Lampenart",
+          "options": [
+            [
+              "elgato",
+              "Elgato (Key Light, Ring Light)"
+            ],
+            [
+              "hue",
+              "Philips Hue"
+            ],
+            [
+              "wled",
+              "WLED"
+            ]
+          ],
+          "default": "elgato"
+        },
+        {
+          "type": "text",
+          "key": "host",
+          "label": "IP-Adresse",
+          "placeholder": "192.168.1.50",
+          "help": "Elgato und WLED: IP-Adresse des Geräts. Bei Hue leer lassen; die Bridge steht in den globalen Einstellungen."
+        },
+        {
+          "type": "select",
+          "key": "light",
+          "label": "Lampe oder Raum",
+          "source": "hueLights",
+          "showIf": {
+            "kind": "hue"
+          }
+        },
+        {
+          "type": "number",
+          "key": "step",
+          "label": "Schritt",
+          "default": 5,
+          "min": 1,
+          "max": 50,
+          "controllers": [
+            "Encoder"
+          ],
+          "help": "Prozent je Raste"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.lights.temperature",
+      "Name": "Farbtemperatur",
+      "Tooltip": "Farbtemperatur per Drehregler ändern (warm bis kalt, ±100 K je Raste); nicht bei WLED",
+      "Icon": "imgs/temperature",
+      "Controllers": [
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/temperature"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "kind",
+          "label": "Lampenart",
+          "options": [
+            [
+              "elgato",
+              "Elgato (Key Light, Ring Light)"
+            ],
+            [
+              "hue",
+              "Philips Hue"
+            ]
+          ],
+          "default": "elgato"
+        },
+        {
+          "type": "text",
+          "key": "host",
+          "label": "IP-Adresse",
+          "placeholder": "192.168.1.50",
+          "help": "Elgato: IP-Adresse des Geräts. Bei Hue leer lassen; die Bridge steht in den globalen Einstellungen."
+        },
+        {
+          "type": "select",
+          "key": "light",
+          "label": "Lampe oder Raum",
+          "source": "hueLights",
+          "showIf": {
+            "kind": "hue"
+          }
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.lights.scene",
+      "Name": "Szene / Preset",
+      "Tooltip": "Hue: gespeicherte Szene des Raums aufrufen; WLED: Preset-Nummer abspielen",
+      "Icon": "imgs/scene",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/scene"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "kind",
+          "label": "Lampenart",
+          "options": [
+            [
+              "hue",
+              "Philips Hue"
+            ],
+            [
+              "wled",
+              "WLED"
+            ]
+          ],
+          "default": "hue"
+        },
+        {
+          "type": "text",
+          "key": "host",
+          "label": "IP-Adresse",
+          "placeholder": "192.168.1.60",
+          "help": "WLED: IP-Adresse des Geräts. Bei Hue leer lassen.",
+          "showIf": {
+            "kind": "wled"
+          }
+        },
+        {
+          "type": "select",
+          "key": "scene",
+          "label": "Szene",
+          "source": "hueScenes",
+          "showIf": {
+            "kind": "hue"
+          }
+        },
+        {
+          "type": "number",
+          "key": "preset",
+          "label": "Preset-Nummer",
+          "default": 1,
+          "min": 1,
+          "max": 250,
+          "showIf": {
+            "kind": "wled"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -3027,6 +3027,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "opendeckn3-lights"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "n3-plugin-sdk",
+ "reqwest 0.12.28",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "opendeckn3-mailcalendar"
 version = "0.1.0"
 dependencies = [
