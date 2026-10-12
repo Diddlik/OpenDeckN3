@@ -5,7 +5,7 @@ Status: `offen` → `in Arbeit` → `fertig`.
 
 | # | Plan | Plugin-UUID | Plattform | Status |
 | --- | --- | --- | --- | --- |
-| 01 | [HTTP-Anfrage / Webhook](01-http.md) | `de.opendeckn3.http` | Win, Linux | offen |
+| 01 | [HTTP-Anfrage / Webhook](01-http.md) | `de.opendeckn3.http` | Win, Linux | fertig |
 | 02 | [Medien / Now Playing](02-media.md) | `de.opendeckn3.media` | Win, Linux | offen |
 | 03 | [Systemmonitor](03-sysmon.md) | `de.opendeckn3.sysmon` | Win, Linux | offen |
 | 04 | [Lautstärke pro App](04-mixer.md) | `de.opendeckn3.mixer` | Win, Linux | offen |

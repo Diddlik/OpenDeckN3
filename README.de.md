@@ -128,6 +128,7 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit dem echten 
 - [x] OBS-Studio-Plugin: Aufnahme mit Laufzeit, Stream, Szenen, Quellen, Filter, Audio, Makros
 - [x] Home-Assistant-Plugin: Webhooks, Dienste, Schalter, Dimmer, Zustände
 - [x] AudioSwitcher-Plugin: Lautsprecher, Headset und Mikro auf einen Druck wechseln – die Taste zeigt das aktive Profil
+- [x] HTTP-Plugin: Anfragen an n8n, Zapier, IFTTT oder eigene Server per Taste oder Drehregler senden und Werte aus JSON-Antworten anzeigen
 - [x] Mail-&-Kalender-Plugin: ungelesene Mails und dein nächster Termin – ein Druck und du bist im Meeting (Gmail, Google Kalender, Outlook …)
 - [ ] Multi-Aktionen und Ordner
 - [ ] Automatischer Profilwechsel je nach aktivem Programm

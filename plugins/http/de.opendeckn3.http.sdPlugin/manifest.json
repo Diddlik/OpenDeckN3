@@ -1,0 +1,180 @@
+{
+  "UUID": "de.opendeckn3.http",
+  "Name": "HTTP-Anfrage",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Sendet HTTP-Anfragen per Taste oder Drehregler (Webhooks von n8n, Zapier, IFTTT, eigene Server) und zeigt Werte aus JSON-Antworten an.",
+  "Category": "HTTP",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-http.exe",
+  "CodePathLin": "opendeckn3-http",
+  "CodePathMac": "opendeckn3-http",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    },
+    {
+      "Platform": "mac"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.http.request",
+      "Name": "Anfrage senden",
+      "Tooltip": "Sendet eine HTTP-Anfrage; der Drehregler sendet je Rastung eine Anfrage",
+      "Icon": "imgs/request",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/request"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "method",
+          "label": "Methode",
+          "options": [
+            [
+              "GET",
+              "GET"
+            ],
+            [
+              "POST",
+              "POST"
+            ],
+            [
+              "PUT",
+              "PUT"
+            ],
+            [
+              "PATCH",
+              "PATCH"
+            ],
+            [
+              "DELETE",
+              "DELETE"
+            ]
+          ],
+          "default": "POST"
+        },
+        {
+          "type": "text",
+          "key": "url",
+          "label": "Adresse",
+          "placeholder": "https://n8n.example.com/webhook/licht",
+          "help": "Nur http:// oder https://. {{ticks}} wird beim Drehen durch die Rastenzahl ersetzt."
+        },
+        {
+          "type": "textarea",
+          "key": "headers",
+          "label": "Header (optional)",
+          "placeholder": "Authorization: Bearer …",
+          "help": "Eine Zeile pro Header: Name: Wert"
+        },
+        {
+          "type": "textarea",
+          "key": "body",
+          "label": "Inhalt (optional)",
+          "placeholder": "{\"quelle\": \"n3\"}",
+          "help": "Wird unverändert gesendet. {{ticks}} wird wie oben ersetzt."
+        },
+        {
+          "type": "select",
+          "key": "contentType",
+          "label": "Inhaltstyp",
+          "options": [
+            [
+              "application/json",
+              "JSON"
+            ],
+            [
+              "text/plain",
+              "Text"
+            ],
+            [
+              "application/x-www-form-urlencoded",
+              "Formular"
+            ]
+          ],
+          "default": "application/json"
+        },
+        {
+          "type": "text",
+          "key": "showResponse",
+          "label": "Antwort anzeigen (optional)",
+          "placeholder": "/status",
+          "help": "JSON-Pointer auf einen Wert der Antwort; der Wert wird als Titel gezeigt."
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.http.poll",
+      "Name": "Wert anzeigen",
+      "Tooltip": "Ruft eine URL regelmäßig ab und zeigt einen Wert der Antwort; Drücken öffnet optional eine Seite",
+      "Icon": "imgs/poll",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/poll"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "text",
+          "key": "url",
+          "label": "Adresse",
+          "placeholder": "https://api.example.com/status",
+          "help": "Nur http:// oder https://. Immer GET."
+        },
+        {
+          "type": "textarea",
+          "key": "headers",
+          "label": "Header (optional)",
+          "placeholder": "Authorization: Bearer …",
+          "help": "Eine Zeile pro Header: Name: Wert"
+        },
+        {
+          "type": "text",
+          "key": "pointer",
+          "label": "Wert (JSON-Pointer)",
+          "placeholder": "/euro/kurs",
+          "help": "Leer: die Antwort als Text (die ersten 12 Zeichen)."
+        },
+        {
+          "type": "number",
+          "key": "interval",
+          "label": "Intervall (Sekunden)",
+          "default": 30,
+          "min": 5
+        },
+        {
+          "type": "text",
+          "key": "prefix",
+          "label": "Präfix",
+          "placeholder": "€"
+        },
+        {
+          "type": "text",
+          "key": "suffix",
+          "label": "Suffix",
+          "placeholder": "°C"
+        },
+        {
+          "type": "text",
+          "key": "openUrl",
+          "label": "Beim Drücken öffnen (optional)",
+          "placeholder": "https://example.com/dashboard"
+        }
+      ]
+    }
+  ]
+}
