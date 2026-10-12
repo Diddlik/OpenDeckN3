@@ -14,6 +14,7 @@ members = [
     "plugins/audioswitcher",
     "plugins/http",
     "plugins/media",
+    "plugins/sysmon",
 ]
 # The desktop app needs the platform webview (WebView2 / WebKitGTK) to build,
 # so plain `cargo build`/`cargo test` skip it. Build it with `-p n3-desktop`.
@@ -30,6 +31,7 @@ default-members = [
     "plugins/audioswitcher",
     "plugins/http",
     "plugins/media",
+    "plugins/sysmon",
 ]
 
 [workspace.package]
@@ -63,3 +65,5 @@ data-url = "0.3"
 base64 = "0.22"
 dirs = "6"
 clap = { version = "4", features = ["derive"] }
+sysinfo = "0.38"
+nvml-wrapper = "0.13"

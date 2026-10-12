@@ -95,6 +95,14 @@ const MEDIA = {
   nowplaying: icon(NOTE, false),
 };
 
+// System monitor: pulse line for the plugin, bar chart for the value key.
+const PULSE = '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>';
+const BARS = '<path d="M3 3v18h18"/><path d="M7 16v-4M12 16V8M17 16v-6"/>';
+const SYSMON = {
+  plugin: icon(PULSE, false),
+  metric: icon(BARS, false),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -102,7 +110,8 @@ const MEDIA = {
     ['plugins/mailcalendar/de.opendeckn3.mailcalendar.sdPlugin/imgs', MAIL],
     ['plugins/audioswitcher/de.opendeckn3.audioswitcher.sdPlugin/imgs', AUDIO],
     ['plugins/http/de.opendeckn3.http.sdPlugin/imgs', HTTP],
-    ['plugins/media/de.opendeckn3.media.sdPlugin/imgs', MEDIA]]) {
+    ['plugins/media/de.opendeckn3.media.sdPlugin/imgs', MEDIA],
+    ['plugins/sysmon/de.opendeckn3.sysmon.sdPlugin/imgs', SYSMON]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {

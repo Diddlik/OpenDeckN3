@@ -7,7 +7,7 @@ Status: `offen` → `in Arbeit` → `fertig`.
 | --- | --- | --- | --- | --- |
 | 01 | [HTTP-Anfrage / Webhook](01-http.md) | `de.opendeckn3.http` | Win, Linux | fertig |
 | 02 | [Medien / Now Playing](02-media.md) | `de.opendeckn3.media` | Win, Linux | fertig |
-| 03 | [Systemmonitor](03-sysmon.md) | `de.opendeckn3.sysmon` | Win, Linux | offen |
+| 03 | [Systemmonitor](03-sysmon.md) | `de.opendeckn3.sysmon` | Win, Linux | fertig |
 | 04 | [Lautstärke pro App](04-mixer.md) | `de.opendeckn3.mixer` | Win, Linux | offen |
 | 05 | [VoiceMeeter](05-voicemeeter.md) | `de.opendeckn3.voicemeeter` | Win | offen |
 | 06 | [Twitch](06-twitch.md) | `de.opendeckn3.twitch` | Win, Linux | offen |

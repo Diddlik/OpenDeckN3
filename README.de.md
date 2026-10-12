@@ -130,6 +130,7 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit dem echten 
 - [x] AudioSwitcher-Plugin: Lautsprecher, Headset und Mikro auf einen Druck wechseln – die Taste zeigt das aktive Profil
 - [x] HTTP-Plugin: Anfragen an n8n, Zapier, IFTTT oder eigene Server per Taste oder Drehregler senden und Werte aus JSON-Antworten anzeigen
 - [x] Medien-Plugin: Wiedergabe steuern (Spotify, Browser, VLC …) und Titel sowie Cover auf der Taste anzeigen – Windows und Linux
+- [x] Systemmonitor-Plugin: CPU, RAM, GPU, Temperaturen, Netz und Laufwerke als Verlaufsgrafik auf der Taste – Windows und Linux (GPU nur NVIDIA)
 - [x] Mail-&-Kalender-Plugin: ungelesene Mails und dein nächster Termin – ein Druck und du bist im Meeting (Gmail, Google Kalender, Outlook …)
 - [ ] Multi-Aktionen und Ordner
 - [ ] Automatischer Profilwechsel je nach aktivem Programm

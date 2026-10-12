@@ -130,6 +130,7 @@ And the best part: every key shows on its display what it does – with the real
 - [x] AudioSwitcher plugin: switch speakers, headset, and mic with one press – the key shows the active profile
 - [x] HTTP plugin: send requests to n8n, Zapier, IFTTT or your own server per key or dial, and show values from JSON responses
 - [x] Media plugin: play, pause and skip the running player (Spotify, browser, VLC …) and show title and cover on the key – Windows and Linux
+- [x] System monitor plugin: CPU, RAM, GPU, temperatures, network and disks as live graphs on a key – Windows and Linux (GPU: NVIDIA only)
 - [x] Mail & calendar plugin: unread mails and your next meeting – one press joins it (Gmail, Google Calendar, Outlook …)
 - [ ] Multi-actions and folders
 - [ ] Automatic profile switching based on the active program

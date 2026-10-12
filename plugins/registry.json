@@ -72,6 +72,16 @@
       "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_MEDIA.md"
     },
     {
+      "uuid": "de.opendeckn3.sysmon",
+      "name": "Systemmonitor",
+      "description": "CPU, RAM, GPU, Temperaturen, Netzwerk und Laufwerke als Verlaufsgrafik auf der Taste (Windows und Linux, GPU nur NVIDIA).",
+      "author": "OpenDeckN3",
+      "repo": "Diddlik/OpenDeckN3",
+      "asset": "de.opendeckn3.sysmon-windows.streamDeckPlugin",
+      "category": "System",
+      "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_SYSMON.md"
+    },
+    {
       "uuid": "de.opendeckn3.counter",
       "name": "Zähler (Beispiel)",
       "description": "Beispiel-Plugin: zählt Tastendrücke und färbt die Taste ein, Drehregler ändern den Farbton.",

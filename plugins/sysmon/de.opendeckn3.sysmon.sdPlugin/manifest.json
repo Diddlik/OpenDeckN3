@@ -1,0 +1,114 @@
+{
+  "UUID": "de.opendeckn3.sysmon",
+  "Name": "Systemmonitor",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Zeigt CPU-, RAM-, GPU- und Netzwerkwerte sowie Temperaturen und Laufwerksbelegung als Verlaufsgrafik auf der Taste.",
+  "Category": "Systemmonitor",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-sysmon.exe",
+  "CodePathLin": "opendeckn3-sysmon",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.sysmon.metric",
+      "Name": "Systemwert",
+      "Tooltip": "Zeigt einen Systemwert als Verlaufsgrafik oder Zahl; Drücken öffnet den Task-Manager (Windows)",
+      "Icon": "imgs/metric",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/metric"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "metric",
+          "label": "Wert",
+          "options": [
+            [
+              "cpu",
+              "CPU-Auslastung"
+            ],
+            [
+              "ram",
+              "Arbeitsspeicher"
+            ],
+            [
+              "gpu",
+              "GPU-Auslastung (NVIDIA)"
+            ],
+            [
+              "vram",
+              "GPU-Speicher (NVIDIA)"
+            ],
+            [
+              "gputemp",
+              "GPU-Temperatur (NVIDIA)"
+            ],
+            [
+              "cputemp",
+              "CPU-Temperatur"
+            ],
+            [
+              "netdown",
+              "Netzwerk Empfang"
+            ],
+            [
+              "netup",
+              "Netzwerk Senden"
+            ],
+            [
+              "disk",
+              "Laufwerk belegt"
+            ]
+          ],
+          "default": "cpu"
+        },
+        {
+          "type": "select",
+          "key": "disk",
+          "label": "Laufwerk",
+          "source": "disks",
+          "showIf": {
+            "metric": "disk"
+          },
+          "help": "Nur für „Laufwerk belegt“."
+        },
+        {
+          "type": "select",
+          "key": "style",
+          "label": "Anzeige",
+          "options": [
+            [
+              "graph",
+              "Verlaufsgrafik"
+            ],
+            [
+              "number",
+              "Nur Zahl"
+            ]
+          ],
+          "default": "graph"
+        },
+        {
+          "type": "text",
+          "key": "color",
+          "label": "Linienfarbe",
+          "placeholder": "#5bc4ff",
+          "help": "Farbe als #rrggbb. Leer: Standardfarbe des Werts."
+        }
+      ]
+    }
+  ]
+}
