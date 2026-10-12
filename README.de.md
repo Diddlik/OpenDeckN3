@@ -139,6 +139,7 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit dem echten 
 - [x] MQTT-Plugin: Nachrichten senden, Werte anzeigen und Geräte wie Zigbee2MQTT oder Tasmota schalten – Windows und Linux
 - [x] Microsoft-Teams-Plugin: Mikrofon, Kamera, Hand heben, Hintergrund, Reaktionen und Verlassen der Besprechung – nur Windows
 - [x] Timer-Plugin: Countdown, Pomodoro und Stoppuhr auf Tasten und Drehreglern; laufende Timer bleiben beim Seiten- und Profilwechsel erhalten – Windows und Linux
+- [x] GitHub-Plugin: CI-Status eines Branches, offene Pull Requests und Benachrichtigungen – Windows und Linux
 - [x] Mail-&-Kalender-Plugin: ungelesene Mails und dein nächster Termin – ein Druck und du bist im Meeting (Gmail, Google Kalender, Outlook …)
 - [ ] Multi-Aktionen und Ordner
 - [ ] Automatischer Profilwechsel je nach aktivem Programm

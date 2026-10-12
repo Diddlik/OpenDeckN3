@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights, MQTT, Teams and timer plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights, MQTT, Teams, timer and GitHub plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -221,6 +221,24 @@ const TIMER_SET = {
   stopwatch: icon(STOPWATCH, false, CLOCK),
 };
 
+// GitHub: branch icon for the plugin, check / spinner / cross for the CI state, pull request and bell for the other keys.
+const GH = ['#0f1a24', '#8ab4ff'];
+const GIT_BRANCH = '<line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>';
+const PULL_REQUEST = '<circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" x2="6" y1="9" y2="21"/>';
+const CHECK_CIRCLE = '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>';
+const SPINNER = '<path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>';
+const X_CIRCLE = '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>';
+const BELL = '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>';
+const GITHUB = {
+  plugin: icon(GIT_BRANCH, false, GH),
+  ci: icon(CHECK_CIRCLE, false, ['#0d2a17', '#3fb950']),
+  'ci-running': icon(SPINNER, false, ['#2e2508', '#f5c451']),
+  'ci-failed': icon(X_CIRCLE, false, ['#3a1012', '#ff6b6b']),
+  prs: icon(PULL_REQUEST, false, GH),
+  notifications: icon(BELL, false, GH),
+  'notifications-on': icon(BELL, true, ['#2e2508', '#f5c451']),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -237,7 +255,8 @@ const TIMER_SET = {
     ['plugins/lights/de.opendeckn3.lights.sdPlugin/imgs', LIGHTS],
     ['plugins/mqtt/de.opendeckn3.mqtt.sdPlugin/imgs', MQTT],
     ['plugins/teams/de.opendeckn3.teams.sdPlugin/imgs', TEAMS_SET],
-    ['plugins/timer/de.opendeckn3.timer.sdPlugin/imgs', TIMER_SET]]) {
+    ['plugins/timer/de.opendeckn3.timer.sdPlugin/imgs', TIMER_SET],
+    ['plugins/github/de.opendeckn3.github.sdPlugin/imgs', GITHUB]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {

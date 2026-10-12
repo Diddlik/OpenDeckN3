@@ -16,7 +16,7 @@ Status: `offen` → `in Arbeit` → `fertig`.
 | 09 | [MQTT](09-mqtt.md) | `de.opendeckn3.mqtt` | Win, Linux | fertig |
 | 10 | [Microsoft Teams](10-teams.md) | `de.opendeckn3.teams` | Win | fertig |
 | 11 | [Timer / Pomodoro](11-timer.md) | `de.opendeckn3.timer` | Win, Linux | fertig |
-| 12 | [GitHub](12-github.md) | `de.opendeckn3.github` | Win, Linux | offen |
+| 12 | [GitHub](12-github.md) | `de.opendeckn3.github` | Win, Linux | fertig |
 | 13 | [MIDI](13-midi.md) | `de.opendeckn3.midi` | Win, Linux | offen |
 | 14 | [Spotify](14-spotify.md) | `de.opendeckn3.spotify` | Win, Linux | offen |
 

@@ -94,7 +94,7 @@ und erwartet als Antwort `sendToPropertyInspector` mit derselben `requestId` und
 ```
 Ändert ein Plugin seine globalen Einstellungen selbst, aktualisiert die App das Formular (`globalSettingsChanged`).
 Vollständige Beispiele: [Discord](PLUGIN_DISCORD.md), [OBS Studio](PLUGIN_OBS.md),
-[Home Assistant](PLUGIN_HOMEASSISTANT.md), [Mail & Kalender](PLUGIN_MAILKALENDER.md), [AudioSwitcher](PLUGIN_AUDIOSWITCHER.md), [HTTP](PLUGIN_HTTP.md), [Medien](PLUGIN_MEDIA.md), [Systemmonitor](PLUGIN_SYSMON.md), [Lautstärke](PLUGIN_MIXER.md), [VoiceMeeter](PLUGIN_VOICEMEETER.md), [Twitch](PLUGIN_TWITCH.md), [YouTube](PLUGIN_YOUTUBE.md), [Licht](PLUGIN_LIGHTS.md), [MQTT](PLUGIN_MQTT.md), [Microsoft Teams](PLUGIN_TEAMS.md), [Timer](PLUGIN_TIMER.md). Für Plugins in Rust nimmt [`plugins/sdk`](../plugins/sdk) die
+[Home Assistant](PLUGIN_HOMEASSISTANT.md), [Mail & Kalender](PLUGIN_MAILKALENDER.md), [AudioSwitcher](PLUGIN_AUDIOSWITCHER.md), [HTTP](PLUGIN_HTTP.md), [Medien](PLUGIN_MEDIA.md), [Systemmonitor](PLUGIN_SYSMON.md), [Lautstärke](PLUGIN_MIXER.md), [VoiceMeeter](PLUGIN_VOICEMEETER.md), [Twitch](PLUGIN_TWITCH.md), [YouTube](PLUGIN_YOUTUBE.md), [Licht](PLUGIN_LIGHTS.md), [MQTT](PLUGIN_MQTT.md), [Microsoft Teams](PLUGIN_TEAMS.md), [Timer](PLUGIN_TIMER.md), [GitHub](PLUGIN_GITHUB.md). Für Plugins in Rust nimmt [`plugins/sdk`](../plugins/sdk) die
 Verbindung zum Host, die Tasten-Verwaltung und die Antworten auf Auswahllisten ab.
 
 ## Start & Registrierung

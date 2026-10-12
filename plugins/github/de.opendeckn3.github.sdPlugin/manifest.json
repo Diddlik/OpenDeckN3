@@ -1,0 +1,144 @@
+{
+  "UUID": "de.opendeckn3.github",
+  "Name": "GitHub",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Zeigt den CI-Status eines Branches, offene Pull Requests und ungelesene Benachrichtigungen. Ein Token ist optional; öffentliche Repos gehen auch ohne.",
+  "Category": "GitHub",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-github.exe",
+  "CodePathLin": "opendeckn3-github",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "password",
+      "key": "token",
+      "label": "Token",
+      "placeholder": "github_pat_…",
+      "help": "Optional. Für Benachrichtigungen ist ein klassisches Token mit Bereich „notifications“ nötig. Anleitung: Dokumentation „PLUGIN_GITHUB.md“ im Projekt."
+    },
+    {
+      "type": "link",
+      "label": "Token erstellen",
+      "url": "https://github.com/settings/tokens"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.github.ci",
+      "Name": "CI-Status",
+      "Tooltip": "Zeigt, ob der letzte Workflow-Lauf eines Branches läuft, erfolgreich war oder fehlgeschlagen ist; die Taste öffnet den Lauf",
+      "Icon": "imgs/ci",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/ci"
+        },
+        {
+          "Image": "imgs/ci-running"
+        },
+        {
+          "Image": "imgs/ci-failed"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "text",
+          "key": "repo",
+          "label": "Repository",
+          "placeholder": "owner/name",
+          "help": "Zum Beispiel Diddlik/OpenDeckN3"
+        },
+        {
+          "type": "text",
+          "key": "branch",
+          "label": "Branch",
+          "default": "main"
+        },
+        {
+          "type": "text",
+          "key": "workflow",
+          "label": "Workflow-Datei",
+          "placeholder": "ci.yml",
+          "help": "Optional. Ohne Angabe zählt der neueste Lauf aller Workflows des Branches."
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.github.prs",
+      "Name": "Pull Requests",
+      "Tooltip": "Zeigt die Anzahl offener Pull Requests; die Taste öffnet die Liste auf github.com",
+      "Icon": "imgs/prs",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/prs"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "filter",
+          "label": "Welche Pull Requests",
+          "default": "review-requested:@me",
+          "options": [
+            [
+              "review-requested:@me",
+              "Ich soll prüfen"
+            ],
+            [
+              "author:@me",
+              "Von mir"
+            ],
+            [
+              "repo",
+              "Eines Repos"
+            ]
+          ]
+        },
+        {
+          "type": "text",
+          "key": "repo",
+          "label": "Repository",
+          "placeholder": "owner/name",
+          "showIf": {
+            "filter": "repo"
+          }
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.github.notifications",
+      "Name": "Benachrichtigungen",
+      "Tooltip": "Zeigt die Anzahl ungelesener GitHub-Benachrichtigungen (bis 50); braucht ein Token",
+      "Icon": "imgs/notifications",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/notifications"
+        },
+        {
+          "Image": "imgs/notifications-on"
+        }
+      ]
+    }
+  ]
+}

@@ -139,6 +139,7 @@ And the best part: every key shows on its display what it does – with the real
 - [x] MQTT plugin: publish messages, show topic values and switch devices such as Zigbee2MQTT or Tasmota – Windows and Linux
 - [x] Microsoft Teams plugin: mute, camera, raise hand, blur, reactions and leave a meeting – Windows only
 - [x] Timer plugin: countdown, Pomodoro and stopwatch on keys and dials; running timers survive page and profile switches – Windows and Linux
+- [x] GitHub plugin: CI status of a branch, open pull requests and notifications – Windows and Linux
 - [x] Mail & calendar plugin: unread mails and your next meeting – one press joins it (Gmail, Google Calendar, Outlook …)
 - [ ] Multi-actions and folders
 - [ ] Automatic profile switching based on the active program
