@@ -1,0 +1,151 @@
+{
+  "UUID": "de.opendeckn3.voicemeeter",
+  "Name": "VoiceMeeter",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Steuert VoiceMeeter (Standard, Banana, Potato): Pegel per Drehregler, Stummschaltung, Bus-Routing und Befehle.",
+  "Category": "Audio",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-voicemeeter.exe",
+  "OS": [
+    {
+      "Platform": "windows"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "link",
+      "key": "download",
+      "label": "VoiceMeeter herunterladen",
+      "url": "https://vb-audio.com/Voicemeeter/"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.voicemeeter.gain",
+      "Name": "Pegel",
+      "Tooltip": "Pegel eines Kanals per Drehregler ändern (−60 bis +12 dB); Drücken schaltet stumm",
+      "Icon": "imgs/gain",
+      "Controllers": [
+        "Encoder",
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/gain"
+        },
+        {
+          "Image": "imgs/gain-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "target",
+          "label": "Kanal",
+          "source": "targets",
+          "help": "Strip oder Bus. Die Liste richtet sich nach der laufenden VoiceMeeter-Version; VoiceMeeter muss laufen."
+        },
+        {
+          "type": "number",
+          "key": "step",
+          "label": "Schritt",
+          "default": 1,
+          "min": 0.5,
+          "max": 12,
+          "controllers": [
+            "Encoder"
+          ],
+          "help": "dB je Raste"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.voicemeeter.mute",
+      "Name": "Stumm",
+      "Tooltip": "Stummschaltung eines Kanals umschalten; leuchtet, solange er stumm ist",
+      "Icon": "imgs/mute",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/mute"
+        },
+        {
+          "Image": "imgs/mute-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "target",
+          "label": "Kanal",
+          "source": "targets",
+          "help": "Strip oder Bus. VoiceMeeter muss laufen."
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.voicemeeter.route",
+      "Name": "Routing",
+      "Tooltip": "Schaltet einen Eingang auf einen Bus um; leuchtet, solange die Verbindung besteht",
+      "Icon": "imgs/route",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/route"
+        },
+        {
+          "Image": "imgs/route-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "strip",
+          "label": "Eingang",
+          "source": "strips",
+          "help": "VoiceMeeter muss laufen."
+        },
+        {
+          "type": "select",
+          "key": "bus",
+          "label": "Ausgang",
+          "source": "buses",
+          "help": "A1 bis A5 bzw. B1 bis B3, je nach VoiceMeeter-Version."
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.voicemeeter.script",
+      "Name": "Befehl",
+      "Tooltip": "Führt einen VoiceMeeter-Parameterbefehl aus, z. B. Strip[0].Mute=1;",
+      "Icon": "imgs/script",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/script"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "textarea",
+          "key": "script",
+          "label": "Befehl",
+          "placeholder": "Strip[0].Mute=1; Bus[0].Gain=-10;",
+          "help": "Parameter nach der Syntax der VoiceMeeter-Remote-API, jede Zuweisung mit Semikolon beenden."
+        }
+      ]
+    }
+  ]
+}

@@ -132,6 +132,7 @@ And the best part: every key shows on its display what it does – with the real
 - [x] Media plugin: play, pause and skip the running player (Spotify, browser, VLC …) and show title and cover on the key – Windows and Linux
 - [x] System monitor plugin: CPU, RAM, GPU, temperatures, network and disks as live graphs on a key – Windows and Linux (GPU: NVIDIA only)
 - [x] Mixer plugin: turn the volume of single apps (game, Discord, browser) with a dial and mute them with a press – Windows and Linux
+- [x] VoiceMeeter plugin: levels, mutes, bus routing and commands for VoiceMeeter Standard, Banana and Potato – Windows
 - [x] Mail & calendar plugin: unread mails and your next meeting – one press joins it (Gmail, Google Calendar, Outlook …)
 - [ ] Multi-actions and folders
 - [ ] Automatic profile switching based on the active program

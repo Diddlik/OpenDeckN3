@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP and media plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer and VoiceMeeter plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -115,6 +115,19 @@ const MIXER = {
   'focused-on': icon(WINDOW, true),
 };
 
+// VoiceMeeter: knob for the plugin, fader for levels, speaker for mute (red when muted), crossed lines for routing, prompt for scripts.
+const KNOB = '<circle cx="12" cy="12" r="9"/><path d="M12 12l-3.5-3.5M12 7v1"/>';
+const FADER = '<path d="M7 3v18M17 3v18"/><rect x="4" y="13" width="6" height="3" rx="1"/><rect x="14" y="7" width="6" height="3" rx="1"/>';
+const ROUTE = '<circle cx="5" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 6h5a5 5 0 0 1 5 5v5"/>';
+const PROMPT = '<path d="M4 6l6 6-6 6M12 19h8"/>';
+const VOICEMEETER = {
+  plugin: icon(KNOB, false, IDLE),
+  gain: icon(FADER, false, IDLE), 'gain-on': icon(FADER, true, ['#3a1012', '#ff6b6b']),
+  mute: icon(SPEAKER, false, IDLE), 'mute-on': icon(MUTED_SPEAKER, true, ['#3a1012', '#ff6b6b']),
+  route: icon(ROUTE, false, IDLE), 'route-on': icon(ROUTE, true, ['#06302c', '#4fe0c8']),
+  script: icon(PROMPT, false, IDLE),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -124,7 +137,8 @@ const MIXER = {
     ['plugins/http/de.opendeckn3.http.sdPlugin/imgs', HTTP],
     ['plugins/media/de.opendeckn3.media.sdPlugin/imgs', MEDIA],
     ['plugins/sysmon/de.opendeckn3.sysmon.sdPlugin/imgs', SYSMON],
-    ['plugins/mixer/de.opendeckn3.mixer.sdPlugin/imgs', MIXER]]) {
+    ['plugins/mixer/de.opendeckn3.mixer.sdPlugin/imgs', MIXER],
+    ['plugins/voicemeeter/de.opendeckn3.voicemeeter.sdPlugin/imgs', VOICEMEETER]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {
