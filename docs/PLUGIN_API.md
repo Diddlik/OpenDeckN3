@@ -144,7 +144,7 @@ Gemeinsame Felder: `event`, `action`, `context`, `device`, `payload`.
 
 | Event | Felder | Wirkung |
 | --- | --- | --- |
-| `setSettings` | `context`, `payload` (Objekt) | Einstellungen der Instanz speichern |
+| `setSettings` | `context`, `payload` (Objekt) | Einstellungen der Instanz speichern (ohne `didReceiveSettings`-Echo – eigene Kopie selbst aktualisieren) |
 | `getSettings` | `context` | löst `didReceiveSettings` aus |
 | `setGlobalSettings` | `context` = Plugin-UUID, `payload` | globale Einstellungen speichern |
 | `getGlobalSettings` | `context` = Plugin-UUID | löst `didReceiveGlobalSettings` aus |
