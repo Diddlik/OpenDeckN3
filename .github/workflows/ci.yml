@@ -8,7 +8,7 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: ALSA-Bibliotheken (MIDI-Plugin)
         run: |
           sudo apt-get update
@@ -17,7 +17,7 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: cargo fmt --all -- --check
@@ -33,7 +33,7 @@ jobs:
   desktop:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: WebKitGTK & Tray-Bibliotheken
         run: |
           sudo apt-get update

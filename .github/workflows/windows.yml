@@ -20,10 +20,10 @@ jobs:
   installer:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
@@ -128,7 +128,7 @@ jobs:
           if ($code -ne 0) { Get-Content "$env:RUNNER_TEMP\daemon.out", "$env:RUNNER_TEMP\daemon.err" -Tail 80 }
           exit $code
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: OpenDeckN3-${{ steps.version.outputs.version }}-windows-x64
           path: target/installer/*
@@ -137,7 +137,7 @@ jobs:
       # legt GitHub es auf dem gebauten Commit an.
       - name: GitHub-Release
         if: steps.version.outputs.tag != ''
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
