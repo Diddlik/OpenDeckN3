@@ -14,7 +14,7 @@ Status: `offen` → `in Arbeit` → `fertig`.
 | 07 | [YouTube Live](07-youtube.md) | `de.opendeckn3.youtube` | Win, Linux | fertig |
 | 08 | [Licht: Elgato, Hue, WLED](08-lights.md) | `de.opendeckn3.lights` | Win, Linux | fertig |
 | 09 | [MQTT](09-mqtt.md) | `de.opendeckn3.mqtt` | Win, Linux | fertig |
-| 10 | [Microsoft Teams](10-teams.md) | `de.opendeckn3.teams` | Win | offen |
+| 10 | [Microsoft Teams](10-teams.md) | `de.opendeckn3.teams` | Win | fertig |
 | 11 | [Timer / Pomodoro](11-timer.md) | `de.opendeckn3.timer` | Win, Linux | offen |
 | 12 | [GitHub](12-github.md) | `de.opendeckn3.github` | Win, Linux | offen |
 | 13 | [MIDI](13-midi.md) | `de.opendeckn3.midi` | Win, Linux | offen |

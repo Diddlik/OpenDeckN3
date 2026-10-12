@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights and MQTT plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights, MQTT and Teams plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -184,6 +184,27 @@ const MQTT = {
   value: icon(ACTIVITY, false),
 };
 
+// Teams: purple line icons; the state image shows the feature in action (muted, camera on, hand up, blur on).
+const TEAMS = ['#17142c', '#a9a2ff'];
+const TEAMS_ON = ['#3a2e86', '#ffffff'];
+const MIC = '<rect x="9" y="2" width="6" height="11" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8"/>';
+const MIC_OFF = '<path d="M1 1l22 22"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23M12 19v4M8 23h8"/>';
+const CAMERA = '<path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/>';
+const CAMERA_OFF = '<path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/><path d="M1 1l22 22"/>';
+const HAND = '<path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v7"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>';
+const BLEND = '<circle cx="9" cy="9" r="7"/><circle cx="15" cy="15" r="7"/>';
+const SMILE = '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/>';
+const LOGOUT = '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>';
+const TEAMS_SET = {
+  plugin: icon(USERS, false, TEAMS),
+  mute: icon(MIC, false, TEAMS), 'mute-on': icon(MIC_OFF, true, TEAMS_ON),
+  video: icon(CAMERA_OFF, false, TEAMS), 'video-on': icon(CAMERA, true, TEAMS_ON),
+  hand: icon(HAND, false, TEAMS), 'hand-on': icon(HAND, true, TEAMS_ON),
+  blur: icon(BLEND, false, TEAMS), 'blur-on': icon(BLEND, true, TEAMS_ON),
+  react: icon(SMILE, false, TEAMS),
+  leave: icon(LOGOUT, false, ['#2a0d12', '#ff6b7a']),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -198,7 +219,8 @@ const MQTT = {
     ['plugins/twitch/de.opendeckn3.twitch.sdPlugin/imgs', TWITCH],
     ['plugins/youtube/de.opendeckn3.youtube.sdPlugin/imgs', YOUTUBE],
     ['plugins/lights/de.opendeckn3.lights.sdPlugin/imgs', LIGHTS],
-    ['plugins/mqtt/de.opendeckn3.mqtt.sdPlugin/imgs', MQTT]]) {
+    ['plugins/mqtt/de.opendeckn3.mqtt.sdPlugin/imgs', MQTT],
+    ['plugins/teams/de.opendeckn3.teams.sdPlugin/imgs', TEAMS_SET]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {

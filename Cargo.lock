@@ -3138,6 +3138,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "opendeckn3-teams"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "futures-util",
+ "n3-plugin-sdk",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite",
+ "url",
+]
+
+[[package]]
 name = "opendeckn3-twitch"
 version = "0.1.0"
 dependencies = [

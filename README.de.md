@@ -137,6 +137,7 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit dem echten 
 - [x] YouTube-Live-Plugin: Live-Status und Zuschauerzahl auf der Taste, Nachrichten in den Live-Chat – Windows und Linux
 - [x] Licht-Plugin: Elgato Key Light, Philips Hue und WLED – Ein/Aus, Helligkeit, Farbtemperatur und Szenen – Windows und Linux
 - [x] MQTT-Plugin: Nachrichten senden, Werte anzeigen und Geräte wie Zigbee2MQTT oder Tasmota schalten – Windows und Linux
+- [x] Microsoft-Teams-Plugin: Mikrofon, Kamera, Hand heben, Hintergrund, Reaktionen und Verlassen der Besprechung – nur Windows
 - [x] Mail-&-Kalender-Plugin: ungelesene Mails und dein nächster Termin – ein Druck und du bist im Meeting (Gmail, Google Kalender, Outlook …)
 - [ ] Multi-Aktionen und Ordner
 - [ ] Automatischer Profilwechsel je nach aktivem Programm

@@ -1,0 +1,150 @@
+{
+  "UUID": "de.opendeckn3.teams",
+  "Name": "Microsoft Teams",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Steuert Besprechungen im neuen Microsoft Teams: Mikrofon, Kamera, Hand heben, Hintergrund, Reaktionen und Verlassen. Teams muss die Drittanbieter-App-API erlauben.",
+  "Category": "Microsoft Teams",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-teams.exe",
+  "OS": [
+    {
+      "Platform": "windows"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.teams.mute",
+      "Name": "Mikrofon",
+      "Tooltip": "Schaltet das Mikrofon in der Besprechung stumm oder laut",
+      "Icon": "imgs/mute",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/mute"
+        },
+        {
+          "Image": "imgs/mute-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.teams.video",
+      "Name": "Kamera",
+      "Tooltip": "Schaltet die Kamera in der Besprechung ein oder aus",
+      "Icon": "imgs/video",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/video"
+        },
+        {
+          "Image": "imgs/video-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.teams.hand",
+      "Name": "Hand heben",
+      "Tooltip": "Hebt oder senkt die Hand in der Besprechung",
+      "Icon": "imgs/hand",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/hand"
+        },
+        {
+          "Image": "imgs/hand-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.teams.blur",
+      "Name": "Hintergrund unscharf",
+      "Tooltip": "Schaltet die Hintergrundunschärfe ein oder aus",
+      "Icon": "imgs/blur",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/blur"
+        },
+        {
+          "Image": "imgs/blur-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.teams.react",
+      "Name": "Reaktion",
+      "Tooltip": "Sendet eine Reaktion in die Besprechung",
+      "Icon": "imgs/react",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/react"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "reaction",
+          "label": "Reaktion",
+          "options": [
+            [
+              "like",
+              "Daumen hoch"
+            ],
+            [
+              "love",
+              "Herz"
+            ],
+            [
+              "applause",
+              "Applaus"
+            ],
+            [
+              "laugh",
+              "Lachen"
+            ],
+            [
+              "wow",
+              "Überrascht"
+            ]
+          ],
+          "default": "like"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.teams.leave",
+      "Name": "Verlassen",
+      "Tooltip": "Verlässt die laufende Besprechung",
+      "Icon": "imgs/leave",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/leave"
+        }
+      ]
+    }
+  ]
+}
