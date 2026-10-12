@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights, MQTT and Teams plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights, MQTT, Teams and timer plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -205,6 +205,22 @@ const TEAMS_SET = {
   leave: icon(LOGOUT, false, ['#2a0d12', '#ff6b7a']),
 };
 
+// Timer: hourglass for countdown (red when it has ended), tomato timer for focus and coffee cup for breaks, stopwatch.
+const CLOCK = ['#2a2210', '#f5c451'];
+const ALARM = ['#3a1012', '#ff6b6b'];
+const TOMATO = ['#3a1412', '#ff7a5c'];
+const BREAK = ['#06302c', '#4fe0c8'];
+const HOURGLASS = '<path d="M6 2h12M6 22h12M7 2v4a5 5 0 0 0 5 5 5 5 0 0 0 5-5V2M7 22v-4a5 5 0 0 1 5-5 5 5 0 0 1 5 5v4"/>';
+const TIMER_DIAL = '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M10 2h4M12 2v3"/>';
+const COFFEE = '<path d="M17 8h1a4 4 0 0 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M6 2v2M10 2v2M14 2v2"/>';
+const STOPWATCH = '<circle cx="12" cy="13" r="8"/><path d="M12 9v4M10 2h4M12 2v3M18.5 6.5l1.5-1.5"/>';
+const TIMER_SET = {
+  plugin: icon(HOURGLASS, false, CLOCK),
+  countdown: icon(HOURGLASS, false, CLOCK), 'countdown-on': icon(HOURGLASS, true, ALARM),
+  pomodoro: icon(TIMER_DIAL, false, TOMATO), 'pomodoro-on': icon(COFFEE, true, BREAK),
+  stopwatch: icon(STOPWATCH, false, CLOCK),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -220,7 +236,8 @@ const TEAMS_SET = {
     ['plugins/youtube/de.opendeckn3.youtube.sdPlugin/imgs', YOUTUBE],
     ['plugins/lights/de.opendeckn3.lights.sdPlugin/imgs', LIGHTS],
     ['plugins/mqtt/de.opendeckn3.mqtt.sdPlugin/imgs', MQTT],
-    ['plugins/teams/de.opendeckn3.teams.sdPlugin/imgs', TEAMS_SET]]) {
+    ['plugins/teams/de.opendeckn3.teams.sdPlugin/imgs', TEAMS_SET],
+    ['plugins/timer/de.opendeckn3.timer.sdPlugin/imgs', TIMER_SET]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {

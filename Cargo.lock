@@ -3151,6 +3151,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "opendeckn3-timer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "n3-plugin-sdk",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "opendeckn3-twitch"
 version = "0.1.0"
 dependencies = [

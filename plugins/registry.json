@@ -152,6 +152,16 @@
       "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_TEAMS.md"
     },
     {
+      "uuid": "de.opendeckn3.timer",
+      "name": "Timer",
+      "description": "Countdown, Pomodoro-Technik und Stoppuhr auf Tasten und Drehreglern; laufende Timer bleiben beim Seiten- und Profilwechsel erhalten (Windows und Linux).",
+      "author": "OpenDeckN3",
+      "repo": "Diddlik/OpenDeckN3",
+      "asset": "de.opendeckn3.timer-windows.streamDeckPlugin",
+      "category": "Zeit",
+      "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_TIMER.md"
+    },
+    {
       "uuid": "de.opendeckn3.counter",
       "name": "Zähler (Beispiel)",
       "description": "Beispiel-Plugin: zählt Tastendrücke und färbt die Taste ein, Drehregler ändern den Farbton.",

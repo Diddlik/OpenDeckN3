@@ -1,0 +1,116 @@
+{
+  "UUID": "de.opendeckn3.timer",
+  "Name": "Timer",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Countdown, Pomodoro-Technik und Stoppuhr auf Tasten und Drehreglern. Laufende Timer bleiben beim Seiten- und Profilwechsel erhalten.",
+  "Category": "Zeit",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-timer.exe",
+  "CodePathLin": "opendeckn3-timer",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.timer.countdown",
+      "Name": "Countdown",
+      "Tooltip": "Startet oder pausiert den Countdown; langer Druck setzt zurück. Der Drehregler stellt im Stillstand die Minuten ein",
+      "Icon": "imgs/countdown",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/countdown"
+        },
+        {
+          "Image": "imgs/countdown-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "number",
+          "key": "minutes",
+          "label": "Minuten",
+          "default": 5,
+          "min": 1,
+          "max": 1440,
+          "help": "Am Drehregler verstellbar, solange der Countdown steht"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.timer.pomodoro",
+      "Name": "Pomodoro",
+      "Tooltip": "Fokus- und Pausenphasen nach der Pomodoro-Technik; langer Druck setzt zurück",
+      "Icon": "imgs/pomodoro",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/pomodoro"
+        },
+        {
+          "Image": "imgs/pomodoro-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "number",
+          "key": "work",
+          "label": "Fokus (Minuten)",
+          "default": 25,
+          "min": 1,
+          "max": 1440
+        },
+        {
+          "type": "number",
+          "key": "short",
+          "label": "Kurze Pause (Minuten)",
+          "default": 5,
+          "min": 1,
+          "max": 1440
+        },
+        {
+          "type": "number",
+          "key": "long",
+          "label": "Lange Pause (Minuten)",
+          "default": 15,
+          "min": 1,
+          "max": 1440
+        },
+        {
+          "type": "number",
+          "key": "rounds",
+          "label": "Fokus-Phasen pro Zyklus",
+          "default": 4,
+          "min": 1,
+          "max": 12,
+          "help": "Nach so vielen Fokus-Phasen folgt die lange Pause"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.timer.stopwatch",
+      "Name": "Stoppuhr",
+      "Tooltip": "Startet oder pausiert die Stoppuhr; langer Druck setzt auf 00:00 zurück",
+      "Icon": "imgs/stopwatch",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/stopwatch"
+        }
+      ]
+    }
+  ]
+}
