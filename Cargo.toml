@@ -24,6 +24,7 @@ members = [
     "plugins/teams",
     "plugins/timer",
     "plugins/github",
+    "plugins/midi",
 ]
 # The desktop app needs the platform webview (WebView2 / WebKitGTK) to build,
 # so plain `cargo build`/`cargo test` skip it. Build it with `-p n3-desktop`.
@@ -50,6 +51,7 @@ default-members = [
     "plugins/teams",
     "plugins/timer",
     "plugins/github",
+    "plugins/midi",
 ]
 
 [workspace.package]

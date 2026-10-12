@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights, MQTT, Teams, timer and GitHub plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights, MQTT, Teams, timer, GitHub and MIDI plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -239,6 +239,20 @@ const GITHUB = {
   'notifications-on': icon(BELL, true, ['#2e2508', '#f5c451']),
 };
 
+// MIDI: piano keys for notes (lit when held or toggled on), dial for controller values, DIN-style plug for program changes.
+const MIDI_BLUE = ['#0c1a2e', '#7ab8ff'];
+const PIANO = '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v9M15 4v9M7 13v7M12 13v7M17 13v7"/>';
+const MIDI_DIAL = '<circle cx="12" cy="12" r="9"/><path d="M12 12l-3.5-3.5M12 7v1"/>';
+const DIN = '<circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1"/><circle cx="15.5" cy="10" r="1"/><circle cx="12" cy="15" r="1"/><path d="M9 17.5h6"/>';
+const MIDI_SET = {
+  plugin: icon(PIANO, false, MIDI_BLUE),
+  note: icon(PIANO, false, MIDI_BLUE),
+  'note-on': icon(PIANO, true, ['#06302c', '#4fe0c8']),
+  cc: icon(MIDI_DIAL, false, MIDI_BLUE),
+  'cc-on': icon(MIDI_DIAL, true, ['#06302c', '#4fe0c8']),
+  program: icon(DIN, false, MIDI_BLUE),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -256,7 +270,8 @@ const GITHUB = {
     ['plugins/mqtt/de.opendeckn3.mqtt.sdPlugin/imgs', MQTT],
     ['plugins/teams/de.opendeckn3.teams.sdPlugin/imgs', TEAMS_SET],
     ['plugins/timer/de.opendeckn3.timer.sdPlugin/imgs', TIMER_SET],
-    ['plugins/github/de.opendeckn3.github.sdPlugin/imgs', GITHUB]]) {
+    ['plugins/github/de.opendeckn3.github.sdPlugin/imgs', GITHUB],
+    ['plugins/midi/de.opendeckn3.midi.sdPlugin/imgs', MIDI_SET]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {

@@ -1,0 +1,18 @@
+[package]
+name = "opendeckn3-midi"
+description = "OpenDeckN3-Plugin: MIDI-Noten, Controller und Programmwechsel für DAWs und Lightroom (MIDI2LR); Rückmeldung per MIDI-Eingang"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[[bin]]
+name = "opendeckn3-midi"
+path = "src/main.rs"
+
+[dependencies]
+n3-plugin-sdk.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+midir = "0.10"

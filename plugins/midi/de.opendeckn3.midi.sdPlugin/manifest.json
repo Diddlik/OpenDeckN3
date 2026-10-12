@@ -1,0 +1,203 @@
+{
+  "UUID": "de.opendeckn3.midi",
+  "Name": "MIDI",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Sendet MIDI-Noten, Controller-Werte und Programmwechsel an DAWs (Ableton, Reaper, Bitwig) und an MIDI2LR für Lightroom. Ein optionaler MIDI-Eingang zeigt Rückmeldungen der DAW auf den Tasten.",
+  "Category": "Musik",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-midi.exe",
+  "CodePathLin": "opendeckn3-midi",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "select",
+      "key": "output",
+      "label": "MIDI-Ausgang",
+      "source": "outputs",
+      "help": "Windows: zuerst loopMIDI starten und dort einen Port anlegen. Linux: „Virtueller Port OpenDeckN3“ oder einen vorhandenen Port wählen."
+    },
+    {
+      "type": "select",
+      "key": "input",
+      "label": "MIDI-Eingang (Rückmeldung, optional)",
+      "source": "inputs",
+      "help": "Eingehende Noten und Controller der DAW setzen den Zustand der Tasten, z. B. um einen Schalter leuchten zu lassen."
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.midi.note",
+      "Name": "Note",
+      "Tooltip": "Sendet eine MIDI-Note: beim Drücken Note On, beim Loslassen Note Off oder Umschalten",
+      "Icon": "imgs/note",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/note"
+        },
+        {
+          "Image": "imgs/note-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "number",
+          "key": "channel",
+          "label": "Kanal",
+          "default": 1,
+          "min": 1,
+          "max": 16
+        },
+        {
+          "type": "number",
+          "key": "note",
+          "label": "Note",
+          "default": 60,
+          "min": 0,
+          "max": 127,
+          "help": "60 ist C4"
+        },
+        {
+          "type": "number",
+          "key": "velocity",
+          "label": "Anschlagstärke",
+          "default": 127,
+          "min": 1,
+          "max": 127
+        },
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "default": "momentary",
+          "options": [
+            [
+              "momentary",
+              "Solange gedrückt"
+            ],
+            [
+              "toggle",
+              "Umschalten"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.midi.cc",
+      "Name": "Controller (CC)",
+      "Tooltip": "Sendet einen Control-Change-Wert; der Drehregler ändert ihn, eine Taste schaltet zwischen 0 und 127",
+      "Icon": "imgs/cc",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/cc"
+        },
+        {
+          "Image": "imgs/cc-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "number",
+          "key": "channel",
+          "label": "Kanal",
+          "default": 1,
+          "min": 1,
+          "max": 16
+        },
+        {
+          "type": "number",
+          "key": "cc",
+          "label": "Controller-Nummer",
+          "default": 1,
+          "min": 0,
+          "max": 127,
+          "help": "Zum Beispiel 1 für Modulationsrad oder die Nummer, die im MIDI-Learn der DAW gelernt wird"
+        },
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Drehregler",
+          "default": "absolute",
+          "controllers": [
+            "Encoder"
+          ],
+          "options": [
+            [
+              "absolute",
+              "Absoluter Wert (0–127)"
+            ],
+            [
+              "relative",
+              "Relativ (Zweierkomplement)"
+            ]
+          ],
+          "help": "Relativ für DAW-Funktionen, die Drehungen direkt auswerten, z. B. MIDI2LR"
+        },
+        {
+          "type": "number",
+          "key": "step",
+          "label": "Schritt",
+          "default": 1,
+          "min": 1,
+          "max": 127,
+          "controllers": [
+            "Encoder"
+          ],
+          "help": "Wert je Raste"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.midi.program",
+      "Name": "Programmwechsel",
+      "Tooltip": "Sendet einen Program Change beim Drücken",
+      "Icon": "imgs/program",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/program"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "number",
+          "key": "channel",
+          "label": "Kanal",
+          "default": 1,
+          "min": 1,
+          "max": 16
+        },
+        {
+          "type": "number",
+          "key": "program",
+          "label": "Programm",
+          "default": 0,
+          "min": 0,
+          "max": 127
+        }
+      ]
+    }
+  ]
+}
