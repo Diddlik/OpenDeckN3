@@ -30,8 +30,9 @@ plugins/discord/   Discord-Plugin (Rust, docs/PLUGIN_DISCORD.md); Tastenbilder: 
 plugins/obs/       OBS-Studio-Plugin (docs/PLUGIN_OBS.md)
 plugins/homeassistant/  Home-Assistant-Plugin (docs/PLUGIN_HOMEASSISTANT.md)
 plugins/mailcalendar/   Mail-&-Kalender-Plugin (docs/PLUGIN_MAILKALENDER.md)
-plugins/audioswitcher/  AudioSwitcher-Plugin (docs/PLUGIN_AUDIOSWITCHER.md); Tastenbilder von OBS, HA, Mail & Kalender, AudioSwitcher und HTTP: tools/make-plugin-icons.cjs
+plugins/audioswitcher/  AudioSwitcher-Plugin (docs/PLUGIN_AUDIOSWITCHER.md); Tastenbilder von OBS, HA, Mail & Kalender, AudioSwitcher, HTTP und Medien: tools/make-plugin-icons.cjs
 plugins/http/       HTTP-Plugin (docs/PLUGIN_HTTP.md)
+plugins/media/      Medien-Plugin (docs/PLUGIN_MEDIA.md)
 plugins/sdk/       Hilfsbibliothek für Plugins in Rust (Host-Verbindung, Tastenzustand, Einstellungen)
 tools/smoke-test.mjs  End-to-End-Test gegen den laufenden Dienst
 tools/make-iconlib.py  Icon-Bibliothek für Tastenbilder (Auswahl aus Lucide, ISC) in ui/index.html schreiben

@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher and HTTP plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP and media plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -79,13 +79,30 @@ const HTTP = {
   poll: icon(REFRESH, false),
 };
 
+// Media: disc for the plugin, play/pause (off = play symbol, on = pause symbol), skip arrows, note for now playing.
+const DISC = '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>';
+const PLAY = '<path d="M8 5v14l11-7z"/>';
+const PAUSE = '<path d="M8 5v14M16 5v14"/>';
+const NEXT = '<path d="M5 5v14l9-7zM18 5v14"/>';
+const PREV = '<path d="M19 5v14L10 12zM6 5v14"/>';
+const NOTE = '<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>';
+const MEDIA = {
+  plugin: icon(DISC, false),
+  playpause: icon(PLAY, false),
+  'playpause-on': icon(PAUSE, true),
+  next: icon(NEXT, false),
+  previous: icon(PREV, false),
+  nowplaying: icon(NOTE, false),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
   for (const [dir, set] of [['plugins/obs/de.opendeckn3.obs.sdPlugin/imgs', OBS], ['plugins/homeassistant/de.opendeckn3.homeassistant.sdPlugin/imgs', HA],
     ['plugins/mailcalendar/de.opendeckn3.mailcalendar.sdPlugin/imgs', MAIL],
     ['plugins/audioswitcher/de.opendeckn3.audioswitcher.sdPlugin/imgs', AUDIO],
-    ['plugins/http/de.opendeckn3.http.sdPlugin/imgs', HTTP]]) {
+    ['plugins/http/de.opendeckn3.http.sdPlugin/imgs', HTTP],
+    ['plugins/media/de.opendeckn3.media.sdPlugin/imgs', MEDIA]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {

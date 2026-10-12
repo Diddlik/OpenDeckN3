@@ -62,6 +62,16 @@
       "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_HTTP.md"
     },
     {
+      "uuid": "de.opendeckn3.media",
+      "name": "Medien",
+      "description": "Wiedergabe steuern und Titel sowie Cover des laufenden Mediums auf der Taste anzeigen (Windows und Linux).",
+      "author": "OpenDeckN3",
+      "repo": "Diddlik/OpenDeckN3",
+      "asset": "de.opendeckn3.media-windows.streamDeckPlugin",
+      "category": "Medien",
+      "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_MEDIA.md"
+    },
+    {
       "uuid": "de.opendeckn3.counter",
       "name": "Zähler (Beispiel)",
       "description": "Beispiel-Plugin: zählt Tastendrücke und färbt die Taste ein, Drehregler ändern den Farbton.",

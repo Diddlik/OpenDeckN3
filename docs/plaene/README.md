@@ -6,7 +6,7 @@ Status: `offen` → `in Arbeit` → `fertig`.
 | # | Plan | Plugin-UUID | Plattform | Status |
 | --- | --- | --- | --- | --- |
 | 01 | [HTTP-Anfrage / Webhook](01-http.md) | `de.opendeckn3.http` | Win, Linux | fertig |
-| 02 | [Medien / Now Playing](02-media.md) | `de.opendeckn3.media` | Win, Linux | offen |
+| 02 | [Medien / Now Playing](02-media.md) | `de.opendeckn3.media` | Win, Linux | fertig |
 | 03 | [Systemmonitor](03-sysmon.md) | `de.opendeckn3.sysmon` | Win, Linux | offen |
 | 04 | [Lautstärke pro App](04-mixer.md) | `de.opendeckn3.mixer` | Win, Linux | offen |
 | 05 | [VoiceMeeter](05-voicemeeter.md) | `de.opendeckn3.voicemeeter` | Win | offen |
@@ -42,6 +42,8 @@ Vorlage ist ein bestehendes Rust-Plugin, z. B. `plugins/audioswitcher` (klein) o
 4. Root-`Cargo.toml`: Pfad in `members` **und** `default-members`.
 5. Tastenbilder: Einträge in `tools/make-plugin-icons.cjs` ergänzen und erzeugen
    (`NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs`, braucht Playwright). Nicht von Hand zeichnen.
+   Das Skript erzeugt alle Plugins neu; unter Windows weichen die alten Bilder leicht ab → nur die Bilder des neuen
+   Plugins committen, die anderen mit `git checkout` zurücksetzen.
 6. `.github/workflows/windows.yml`: Paket bei `cargo build --release -p …` und Namen in der `foreach`-Liste ergänzen.
 7. `plugins/registry.json`: Eintrag mit `asset` `de.opendeckn3.<name>-windows.streamDeckPlugin` und `homepage`.
 8. Doku: `docs/PLUGIN_<NAME>.md` (Deutsch, Aufbau wie `PLUGIN_AUDIOSWITCHER.md`), Link in der Liste in

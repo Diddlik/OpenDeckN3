@@ -1,0 +1,118 @@
+{
+  "UUID": "de.opendeckn3.media",
+  "Name": "Medien",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Steuert die laufende Wiedergabe (Spotify, Browser, VLC …) und zeigt Titel und Cover auf der Taste.",
+  "Category": "Medien",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-media.exe",
+  "CodePathLin": "opendeckn3-media",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.media.playpause",
+      "Name": "Wiedergabe/Pause",
+      "Tooltip": "Startet oder pausiert die laufende Wiedergabe; optional mit Cover",
+      "Icon": "imgs/playpause",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/playpause"
+        },
+        {
+          "Image": "imgs/playpause-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "showCover",
+          "label": "Cover anzeigen",
+          "options": [
+            [
+              "no",
+              "Nein"
+            ],
+            [
+              "yes",
+              "Ja"
+            ]
+          ],
+          "default": "no",
+          "help": "Mit Cover ersetzt das Bild die Symbole für Wiedergabe und Pause."
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.media.next",
+      "Name": "Nächster Titel",
+      "Tooltip": "Springt zum nächsten Titel der laufenden Wiedergabe",
+      "Icon": "imgs/next",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/next"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.media.previous",
+      "Name": "Vorheriger Titel",
+      "Tooltip": "Springt zum vorherigen Titel der laufenden Wiedergabe",
+      "Icon": "imgs/previous",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/previous"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.media.nowplaying",
+      "Name": "Läuft gerade",
+      "Tooltip": "Zeigt Cover und Titel der laufenden Wiedergabe; Drücken startet oder pausiert, der Drehregler spult oder wechselt den Titel",
+      "Icon": "imgs/nowplaying",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/nowplaying"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "dial",
+          "label": "Drehregler",
+          "options": [
+            [
+              "seek",
+              "Spulen (5 s je Rastung)"
+            ],
+            [
+              "track",
+              "Titel wechseln (je Rastung)"
+            ]
+          ],
+          "default": "seek"
+        }
+      ]
+    }
+  ]
+}

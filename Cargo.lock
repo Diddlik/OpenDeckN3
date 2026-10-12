@@ -2966,6 +2966,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "opendeckn3-media"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "image",
+ "n3-plugin-sdk",
+ "serde_json",
+ "tokio",
+ "url",
+ "windows 0.61.3",
+ "zbus",
+]
+
+[[package]]
 name = "opendeckn3-obs"
 version = "0.1.0"
 dependencies = [
