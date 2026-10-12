@@ -136,6 +136,7 @@ And the best part: every key shows on its display what it does – with the real
 - [x] Twitch plugin: stream markers, clips, chat modes, ads and viewer count on a key – Windows and Linux
 - [x] YouTube Live plugin: live status and viewer count on a key, chat messages into the live chat – Windows and Linux
 - [x] Lights plugin: Elgato Key Light, Philips Hue and WLED – on/off, brightness, colour temperature and scenes – Windows and Linux
+- [x] MQTT plugin: publish messages, show topic values and switch devices such as Zigbee2MQTT or Tasmota – Windows and Linux
 - [x] Mail & calendar plugin: unread mails and your next meeting – one press joins it (Gmail, Google Calendar, Outlook …)
 - [ ] Multi-actions and folders
 - [ ] Automatic profile switching based on the active program

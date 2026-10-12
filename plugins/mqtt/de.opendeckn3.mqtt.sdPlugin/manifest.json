@@ -1,0 +1,217 @@
+{
+  "UUID": "de.opendeckn3.mqtt",
+  "Name": "MQTT",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Sendet MQTT-Nachrichten per Taste oder Drehregler, zeigt Werte an und schaltet Geräte über Befehls- und Status-Topics (Zigbee2MQTT, Tasmota, ioBroker, Node-RED).",
+  "Category": "Smart Home",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-mqtt.exe",
+  "CodePathLin": "opendeckn3-mqtt",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "text",
+      "key": "host",
+      "label": "Broker (Host oder IP)",
+      "placeholder": "192.168.1.10"
+    },
+    {
+      "type": "number",
+      "key": "port",
+      "label": "Port",
+      "default": 1883,
+      "min": 1,
+      "max": 65535
+    },
+    {
+      "type": "text",
+      "key": "username",
+      "label": "Benutzername (optional)"
+    },
+    {
+      "type": "password",
+      "key": "password",
+      "label": "Passwort (optional)"
+    },
+    {
+      "type": "select",
+      "key": "tls",
+      "label": "Verschlüsselung (TLS)",
+      "options": [
+        [
+          "no",
+          "Nein"
+        ],
+        [
+          "yes",
+          "Ja (Zertifikate des Systems)"
+        ]
+      ],
+      "default": "no",
+      "help": "Mit Ja meist den Port 8883 eintragen. Eigene CA-Zertifikate werden nicht unterstützt."
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.mqtt.publish",
+      "Name": "Nachricht senden",
+      "Tooltip": "Sendet eine MQTT-Nachricht; der Drehregler sendet je Rastung eine Nachricht",
+      "Icon": "imgs/publish",
+      "Controllers": [
+        "Keypad",
+        "Encoder"
+      ],
+      "States": [
+        {
+          "Image": "imgs/publish"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "text",
+          "key": "topic",
+          "label": "Topic",
+          "placeholder": "zigbee2mqtt/Lampe/set",
+          "help": "Ohne Platzhalter + oder #."
+        },
+        {
+          "type": "textarea",
+          "key": "payload",
+          "label": "Nachricht",
+          "placeholder": "{\"brightness\": {{ticks}}}",
+          "help": "{{ticks}} wird beim Drehen durch die Rastenzahl ersetzt, beim Drücken durch 0."
+        },
+        {
+          "type": "select",
+          "key": "qos",
+          "label": "Zustellung (QoS)",
+          "options": [
+            [
+              "0",
+              "0 – höchstens einmal"
+            ],
+            [
+              "1",
+              "1 – mindestens einmal"
+            ]
+          ],
+          "default": "0"
+        },
+        {
+          "type": "select",
+          "key": "retain",
+          "label": "Als Retained-Nachricht speichern",
+          "options": [
+            [
+              "no",
+              "Nein"
+            ],
+            [
+              "yes",
+              "Ja"
+            ]
+          ],
+          "default": "no"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.mqtt.switch",
+      "Name": "Schalter",
+      "Tooltip": "Schaltet ein Gerät über Befehls-Topic; leuchtet, wenn der Status-Topic „an“ meldet",
+      "Icon": "imgs/switch",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/switch"
+        },
+        {
+          "Image": "imgs/switch-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "text",
+          "key": "commandTopic",
+          "label": "Befehls-Topic",
+          "placeholder": "cmnd/tasmota/POWER"
+        },
+        {
+          "type": "text",
+          "key": "stateTopic",
+          "label": "Status-Topic",
+          "placeholder": "stat/tasmota/POWER"
+        },
+        {
+          "type": "text",
+          "key": "payloadOn",
+          "label": "Wert für „an“",
+          "default": "ON"
+        },
+        {
+          "type": "text",
+          "key": "payloadOff",
+          "label": "Wert für „aus“",
+          "default": "OFF"
+        },
+        {
+          "type": "text",
+          "key": "pointer",
+          "label": "Wert (JSON-Pointer, optional)",
+          "placeholder": "/state",
+          "help": "Leer, wenn die Nachricht nur den Wert enthält."
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.mqtt.value",
+      "Name": "Wert anzeigen",
+      "Tooltip": "Zeigt die letzte Nachricht eines Topics als Titel",
+      "Icon": "imgs/value",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/value"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "text",
+          "key": "topic",
+          "label": "Topic",
+          "placeholder": "zigbee2mqtt/Sensor"
+        },
+        {
+          "type": "text",
+          "key": "pointer",
+          "label": "Wert (JSON-Pointer, optional)",
+          "placeholder": "/temperature",
+          "help": "Leer: die ganze Nachricht. Ist die Nachricht kein JSON, wird sie als Text gezeigt."
+        },
+        {
+          "type": "text",
+          "key": "suffix",
+          "label": "Suffix",
+          "placeholder": "°C"
+        }
+      ]
+    }
+  ]
+}

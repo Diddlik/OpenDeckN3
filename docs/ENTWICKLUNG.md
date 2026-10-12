@@ -30,7 +30,7 @@ plugins/discord/   Discord-Plugin (Rust, docs/PLUGIN_DISCORD.md); Tastenbilder: 
 plugins/obs/       OBS-Studio-Plugin (docs/PLUGIN_OBS.md)
 plugins/homeassistant/  Home-Assistant-Plugin (docs/PLUGIN_HOMEASSISTANT.md)
 plugins/mailcalendar/   Mail-&-Kalender-Plugin (docs/PLUGIN_MAILKALENDER.md)
-plugins/audioswitcher/  AudioSwitcher-Plugin (docs/PLUGIN_AUDIOSWITCHER.md); Tastenbilder von OBS, HA, Mail & Kalender, AudioSwitcher, HTTP, Medien, Systemmonitor, Lautstärke, VoiceMeeter, Twitch, YouTube und Licht: tools/make-plugin-icons.cjs
+plugins/audioswitcher/  AudioSwitcher-Plugin (docs/PLUGIN_AUDIOSWITCHER.md); Tastenbilder von OBS, HA, Mail & Kalender, AudioSwitcher, HTTP, Medien, Systemmonitor, Lautstärke, VoiceMeeter, Twitch, YouTube, Licht und MQTT: tools/make-plugin-icons.cjs
 plugins/http/       HTTP-Plugin (docs/PLUGIN_HTTP.md)
 plugins/media/      Medien-Plugin (docs/PLUGIN_MEDIA.md)
 plugins/sysmon/     Systemmonitor-Plugin (docs/PLUGIN_SYSMON.md)
@@ -39,6 +39,7 @@ plugins/voicemeeter/  VoiceMeeter-Plugin (docs/PLUGIN_VOICEMEETER.md, nur Window
 plugins/twitch/      Twitch-Plugin (docs/PLUGIN_TWITCH.md)
 plugins/youtube/     YouTube-Live-Plugin (docs/PLUGIN_YOUTUBE.md)
 plugins/lights/      Licht-Plugin: Elgato, Hue, WLED (docs/PLUGIN_LIGHTS.md)
+plugins/mqtt/        MQTT-Plugin: Nachrichten senden, Werte anzeigen, Schalter (docs/PLUGIN_MQTT.md)
 plugins/sdk/       Hilfsbibliothek für Plugins in Rust (Host-Verbindung, Tastenzustand, Einstellungen)
 tools/smoke-test.mjs  End-to-End-Test gegen den laufenden Dienst
 tools/make-iconlib.py  Icon-Bibliothek für Tastenbilder (Auswahl aus Lucide, ISC) in ui/index.html schreiben

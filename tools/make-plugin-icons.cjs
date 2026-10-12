@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube and lights plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights and MQTT plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -173,6 +173,17 @@ const LIGHTS = {
   scene: icon(GRID, false, LAMP),
 };
 
+// MQTT: radio waves for the plugin, paper plane for publish, power symbol for switches, activity line for values.
+const RADIO = '<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/>';
+const SEND = '<path d="M14.5 21.7a.5.5 0 0 0 .9 0l6.5-19a.5.5 0 0 0-.6-.6l-19 6.5a.5.5 0 0 0 0 .9l7.9 3.2a2 2 0 0 1 1.1 1.1z"/><path d="M21.9 2.1l-10.9 10.9"/>';
+const ACTIVITY = '<path d="M22 12h-2.5a2 2 0 0 0-1.9 1.5l-2.4 8.4a.2.2 0 0 1-.5 0L9.2 2.2a.2.2 0 0 0-.5 0l-2.4 8.4A2 2 0 0 1 4.5 12H2"/>';
+const MQTT = {
+  plugin: icon(RADIO, false),
+  publish: icon(SEND, false),
+  switch: icon(POWER, false), 'switch-on': icon(POWER, true),
+  value: icon(ACTIVITY, false),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -186,7 +197,8 @@ const LIGHTS = {
     ['plugins/voicemeeter/de.opendeckn3.voicemeeter.sdPlugin/imgs', VOICEMEETER],
     ['plugins/twitch/de.opendeckn3.twitch.sdPlugin/imgs', TWITCH],
     ['plugins/youtube/de.opendeckn3.youtube.sdPlugin/imgs', YOUTUBE],
-    ['plugins/lights/de.opendeckn3.lights.sdPlugin/imgs', LIGHTS]]) {
+    ['plugins/lights/de.opendeckn3.lights.sdPlugin/imgs', LIGHTS],
+    ['plugins/mqtt/de.opendeckn3.mqtt.sdPlugin/imgs', MQTT]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {
