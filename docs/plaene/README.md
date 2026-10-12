@@ -10,7 +10,7 @@ Status: `offen` → `in Arbeit` → `fertig`.
 | 03 | [Systemmonitor](03-sysmon.md) | `de.opendeckn3.sysmon` | Win, Linux | fertig |
 | 04 | [Lautstärke pro App](04-mixer.md) | `de.opendeckn3.mixer` | Win, Linux | fertig |
 | 05 | [VoiceMeeter](05-voicemeeter.md) | `de.opendeckn3.voicemeeter` | Win | fertig |
-| 06 | [Twitch](06-twitch.md) | `de.opendeckn3.twitch` | Win, Linux | offen |
+| 06 | [Twitch](06-twitch.md) | `de.opendeckn3.twitch` | Win, Linux | fertig |
 | 07 | [YouTube Live](07-youtube.md) | `de.opendeckn3.youtube` | Win, Linux | offen |
 | 08 | [Licht: Elgato, Hue, WLED](08-lights.md) | `de.opendeckn3.lights` | Win, Linux | offen |
 | 09 | [MQTT](09-mqtt.md) | `de.opendeckn3.mqtt` | Win, Linux | offen |

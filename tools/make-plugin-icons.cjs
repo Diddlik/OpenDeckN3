@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer and VoiceMeeter plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter and Twitch plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -128,6 +128,24 @@ const VOICEMEETER = {
   script: icon(PROMPT, false, IDLE),
 };
 
+// Twitch: purple outline icons; the chat mode key fills in while its mode is on.
+const TW = ['#1d1630', '#b58cff'];
+const TW_ON = ['#4b2a8a', '#ffffff'];
+const TV = '<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M9 21h6M12 17v4"/><path d="M10 8v5l4-2.5z"/>';
+const FLAG = '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>';
+const SCISSORS = '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.5 7.5L20 19M8.5 16.5L20 5"/>';
+const BUBBLE = '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/>';
+const EYE = '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>';
+const MEGAPHONE = '<path d="M3 10v4h4l8 4V6L7 10z"/><path d="M19 9a4 4 0 0 1 0 6"/>';
+const TWITCH = {
+  plugin: icon(TV, false, TW),
+  marker: icon(FLAG, false, TW),
+  clip: icon(SCISSORS, false, TW),
+  chat: icon(BUBBLE, false, TW), 'chat-on': icon(BUBBLE, true, TW_ON),
+  viewers: icon(EYE, false, TW),
+  ad: icon(MEGAPHONE, false, TW),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -138,7 +156,8 @@ const VOICEMEETER = {
     ['plugins/media/de.opendeckn3.media.sdPlugin/imgs', MEDIA],
     ['plugins/sysmon/de.opendeckn3.sysmon.sdPlugin/imgs', SYSMON],
     ['plugins/mixer/de.opendeckn3.mixer.sdPlugin/imgs', MIXER],
-    ['plugins/voicemeeter/de.opendeckn3.voicemeeter.sdPlugin/imgs', VOICEMEETER]]) {
+    ['plugins/voicemeeter/de.opendeckn3.voicemeeter.sdPlugin/imgs', VOICEMEETER],
+    ['plugins/twitch/de.opendeckn3.twitch.sdPlugin/imgs', TWITCH]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {

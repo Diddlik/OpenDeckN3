@@ -1,0 +1,212 @@
+{
+  "UUID": "de.opendeckn3.twitch",
+  "Name": "Twitch",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Steuert deinen Twitch-Kanal: Marker setzen, Clips erstellen, Chat-Modi umschalten, Werbung schalten und die Zuschauerzahl anzeigen. Anmeldung mit einem Gerätecode, eigene Client-ID unter Einstellungen.",
+  "Category": "Twitch",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-twitch.exe",
+  "CodePathLin": "opendeckn3-twitch",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "text",
+      "key": "clientId",
+      "label": "Client-ID",
+      "placeholder": "aus der eigenen Twitch-Anwendung",
+      "help": "Anleitung zur Registrierung: Dokumentation „PLUGIN_TWITCH.md“ im Projekt."
+    },
+    {
+      "type": "link",
+      "label": "Twitch-Entwicklerkonsole öffnen",
+      "url": "https://dev.twitch.tv/console/apps"
+    },
+    {
+      "type": "button",
+      "key": "connect",
+      "label": "Anmelden",
+      "primary": true,
+      "help": "Öffnet Twitch im Browser. Dort den angezeigten Code eingeben und den Zugriff erlauben."
+    },
+    {
+      "type": "button",
+      "key": "signOut",
+      "label": "Abmelden"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.twitch.marker",
+      "Name": "Marker setzen",
+      "Tooltip": "Setzt einen Marker im laufenden Stream (zum Wiederfinden in der VOD)",
+      "Icon": "imgs/marker",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/marker"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "text",
+          "key": "description",
+          "label": "Beschreibung (optional)",
+          "placeholder": "z. B. Highlight",
+          "help": "Höchstens 140 Zeichen."
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.twitch.clip",
+      "Name": "Clip erstellen",
+      "Tooltip": "Erstellt einen Clip aus dem laufenden Stream",
+      "Icon": "imgs/clip",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/clip"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "open",
+          "label": "Bearbeiten-Link öffnen",
+          "options": [
+            [
+              "no",
+              "Nein"
+            ],
+            [
+              "yes",
+              "Ja"
+            ]
+          ],
+          "default": "no"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.twitch.chatmode",
+      "Name": "Chat-Modus",
+      "Tooltip": "Schaltet einen Chat-Modus ein oder aus; leuchtet, wenn er an ist",
+      "Icon": "imgs/chat",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/chat"
+        },
+        {
+          "Image": "imgs/chat-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Modus",
+          "options": [
+            [
+              "slow_mode",
+              "Langsam-Modus"
+            ],
+            [
+              "follower_mode",
+              "Follower-Modus"
+            ],
+            [
+              "subscriber_mode",
+              "Abo-Modus"
+            ],
+            [
+              "emote_mode",
+              "Nur-Emotes-Modus"
+            ],
+            [
+              "unique_chat_mode",
+              "Einzigartige Nachrichten"
+            ]
+          ],
+          "default": "slow_mode"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.twitch.viewers",
+      "Name": "Zuschauer",
+      "Tooltip": "Zeigt die aktuelle Zuschauerzahl; die Taste öffnet deinen Kanal",
+      "Icon": "imgs/viewers",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/viewers"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.twitch.ad",
+      "Name": "Werbung",
+      "Tooltip": "Startet eine Werbepause",
+      "Icon": "imgs/ad",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/ad"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "length",
+          "label": "Dauer",
+          "options": [
+            [
+              "30",
+              "30 Sekunden"
+            ],
+            [
+              "60",
+              "60 Sekunden"
+            ],
+            [
+              "90",
+              "90 Sekunden"
+            ],
+            [
+              "120",
+              "120 Sekunden"
+            ],
+            [
+              "180",
+              "180 Sekunden"
+            ]
+          ],
+          "default": "30"
+        }
+      ]
+    }
+  ]
+}

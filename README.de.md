@@ -133,6 +133,7 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit dem echten 
 - [x] Systemmonitor-Plugin: CPU, RAM, GPU, Temperaturen, Netz und Laufwerke als Verlaufsgrafik auf der Taste – Windows und Linux (GPU nur NVIDIA)
 - [x] Lautstärke-Plugin: Lautstärke einzelner Apps (Spiel, Discord, Browser) per Drehregler ändern und stumm schalten – Windows und Linux
 - [x] VoiceMeeter-Plugin: Pegel, Stummschaltung, Routing und Befehle für VoiceMeeter Standard, Banana und Potato – nur Windows
+- [x] Twitch-Plugin: Marker, Clips, Chat-Modi, Werbung und Zuschauerzahl auf der Taste – Windows und Linux
 - [x] Mail-&-Kalender-Plugin: ungelesene Mails und dein nächster Termin – ein Druck und du bist im Meeting (Gmail, Google Kalender, Outlook …)
 - [ ] Multi-Aktionen und Ordner
 - [ ] Automatischer Profilwechsel je nach aktivem Programm
