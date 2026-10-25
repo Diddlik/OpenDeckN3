@@ -87,6 +87,12 @@ neuen Instanzen → alle Display-Tasten mit Standardbild neu zeichnen → UI erh
 öffnet immer auf Seite 1. Wer eine Taste noch hält, während die Seite wechselt, löst beim Loslassen nichts auf
 der neuen Seite aus (`keyUp` wird verworfen).
 
+**Sperrtaste:** Die Sperrtaste (`lockKey` in `device.json`) wirkt auf allen Seiten und Profilen zusätzlich zu ihrer
+Belegung. Hält man sie `lockSeconds` lang, wechselt das Gerät zwischen gesperrt und entsperrt; ein Takt im Haupt-Loop
+(`LOCK_TICK`) zeichnet dabei den Countdown über alle Displays (`render::lock_tiles`). Gesperrt verwirft die App jede
+Eingabe außer der Sperrtaste (nur das Loslassen vorher gedrückter Tasten kommt noch an) und zeigt ein Schloss über alle
+Displays. Bildänderungen landen in dieser Zeit nur im Zustand; beim Entsperren werden alle Tasten neu gezeichnet.
+
 **Plugin-Updates:** Der `Installer` prüft 60 s nach dem Start und dann alle 6 Stunden den Katalog und
 installiert neuere Versionen, solange `autoUpdatePlugins` in `settings.json` gesetzt ist (Standard).
 

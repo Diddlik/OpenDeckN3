@@ -167,8 +167,11 @@ pub async fn run(opts: Options, shutdown: CancellationToken) -> anyhow::Result<(
         .await;
 
     let mut idle_rx = system::idle::spawn();
+    let mut lock_tick = tokio::time::interval(app::LOCK_TICK);
+    lock_tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
         tokio::select! {
+            _ = lock_tick.tick(), if app.lock_counting() => app.on_lock_tick().await,
             Some(event) = device_rx.recv() => app.on_device_event(event).await,
             Some(idle) = idle_rx.recv() => app.on_idle(idle).await,
             Some(msg) = plugin_rx.recv() => app.on_plugin_message(msg).await,

@@ -122,6 +122,7 @@ And the best part: every key shows on its display what it does – with the real
 - [x] Multiple pages per profile – switch with a key or a dial
 - [x] Plugins update themselves automatically (can be turned off)
 - [x] Titles directly on the key displays
+- [x] Lock key: hold it to lock the deck on every page and profile, hold again to unlock
 - [x] Built in: hotkeys, volume, media, programs, websites, commands, text
 - [x] One-click plugin install – from a file or straight from GitHub releases
 - [x] Discord plugin: mic, headphones, channels, volumes, soundboard, camera, screen share

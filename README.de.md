@@ -122,6 +122,7 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit dem echten 
 - [x] Mehrere Seiten pro Profil – wechseln per Taste oder Drehregler
 - [x] Plugins aktualisieren sich automatisch (abschaltbar)
 - [x] Titel direkt auf den Tasten-Displays
+- [x] Sperrtaste: gedrückt halten sperrt das Deck auf allen Seiten und Profilen, erneut halten entsperrt es
 - [x] Eingebaut: Tastenkürzel, Lautstärke, Medien, Programme, Websites, Befehle, Text
 - [x] Plugins per Klick installieren – aus Datei oder direkt aus GitHub-Releases
 - [x] Discord-Plugin: Mikro, Kopfhörer, Kanäle, Lautstärken, Soundboard, Kamera, Bildschirmfreigabe

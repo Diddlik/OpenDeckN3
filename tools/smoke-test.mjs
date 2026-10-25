@@ -187,6 +187,25 @@ ws.addEventListener("open", async () => {
     assert(events.some((e) => e.event === "actionError" && e.position === 5), "invalid shortcut is reported as actionError");
     await waitForDevice((d) => d.previews["5"]?.startsWith("data:image/png"), "built-in key gets an icon with label");
 
+    // Lock key: holding it locks the deck, presses are dropped, holding it again unlocks.
+    const press = async (key, type) => call("simulateInput", { device: DEVICE, input: { type, key } });
+    const count = async () => (await call("getState")).devices.find((d) => d.info.id === DEVICE).profile.keys["0"].settings.count;
+    await call("setLockKey", { device: DEVICE, key: 8, seconds: 1 });
+    await press(8, "keyDown");
+    await waitForDevice((d) => d.locked, "holding the lock key locks the deck");
+    await press(8, "keyUp");
+    const lockedImage = (await call("getState")).devices.find((d) => d.info.id === DEVICE).previews["0"];
+    const before = await count();
+    await press(0, "keyDown");
+    await press(0, "keyUp");
+    await sleep(500);
+    assert(await count() === before, "locked deck drops key presses");
+    await press(8, "keyDown");
+    await waitForDevice((d) => !d.locked, "holding the lock key again unlocks");
+    await press(8, "keyUp");
+    await waitForDevice((d) => d.previews["0"] !== lockedImage, "unlocking restores the key images");
+    await call("setLockKey", { device: DEVICE, key: null, seconds: 3 });
+
     // Plugin installation from an archive (as the UI sends it) and removal.
     const { readFileSync: readFile } = await import("node:fs");
     const counterDir = new URL("../plugins/examples/de.opendeckn3.counter.sdPlugin/", import.meta.url);

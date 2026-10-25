@@ -125,6 +125,13 @@ pub enum ApiCommand {
         device: String,
         value: u8,
     },
+    /// `key: null` removes the lock key (and unlocks the deck).
+    SetLockKey {
+        device: String,
+        #[serde(default)]
+        key: Option<u8>,
+        seconds: u8,
+    },
     SimulateInput {
         device: String,
         input: InputEvent,

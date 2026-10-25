@@ -690,6 +690,13 @@ function onEvent(ev) {
       if (ev.title) d.titles[ev.position] = ev.title; else delete d.titles[ev.position];
       if (mine) renderStage(); break;
     }
+    case 'lockChanged': {
+      const d = S.devices[ev.device]; if (!d) break;
+      if (mine && d.locked !== ev.locked) toast('ok', ev.locked ? 'Gerät gesperrt' : 'Gerät entsperrt');
+      Object.assign(d, { locked: ev.locked, lockKey: ev.lockKey, lockSeconds: ev.lockSeconds });
+      if (S.route === 'settings') render();
+      break;
+    }
     case 'brightnessChanged': {
       const d = S.devices[ev.device]; if (!d) break;
       d.brightness = ev.value;
@@ -1447,6 +1454,14 @@ function settingsHTML() {
           <div style="display:flex;align-items:center;gap:12px"><input id="bri" type="range" min="0" max="100" value="${d ? d.brightness : 0}" data-in="brightness" ${d ? '' : 'disabled'} style="width:200px;accent-color:var(--accent)"><output class="mono" style="font-size:13px;width:42px;text-align:right">${d ? d.brightness : 0} %</output></div></div>
         <div class="srow"><label class="t" for="dimAfter"><b>Abdunkeln nach Leerlauf</b><span>Ohne Tastatur-, Maus- oder Deck-Eingabe · jede Eingabe weckt das Deck</span></label>
           <select id="dimAfter" class="field" data-in="dimAfter" ${S.appSettings ? '' : 'disabled'} style="min-width:180px">${[0, 1, 2, 5, 10, 15, 30, 60].map((m) => `<option value="${m}" ${S.appSettings && S.appSettings.dimAfterMinutes === m ? 'selected' : ''}>${m ? m + ' Min.' : 'Nie'}</option>`).join('')}</select></div>
+        <div class="srow"><label class="t" for="lockKey"><b>Sperrtaste</b><span>Gilt auf allen Seiten und Profilen zusätzlich zur Belegung. Gedrückt halten sperrt das Gerät, erneut halten entsperrt es.</span></label>
+          <div style="display:flex;gap:8px">${(() => {
+            const n = d ? d.info.layout.keys + d.info.layout.encoders : 0;
+            const keys = Array.from({ length: n }, (_, p) => `<option value="${p}" ${d.lockKey === p ? 'selected' : ''}>${esc(slotName('k' + p))}</option>`).join('');
+            const secs = [1, 2, 3, 5, 10].map((s) => `<option value="${s}" ${d && d.lockSeconds === s ? 'selected' : ''}>${s} s halten</option>`).join('');
+            return `<select id="lockKey" class="field" data-in="lockKey" ${d ? '' : 'disabled'} style="min-width:150px"><option value="" ${d && d.lockKey == null ? 'selected' : ''}>Keine</option>${keys}</select>
+            <select class="field" data-in="lockSeconds" aria-label="Haltezeit zum Sperren" ${d && d.lockKey != null ? '' : 'disabled'}>${secs}</select>`;
+          })()}</div></div>
         <div class="srow"><div class="t"><b>Gehäusefarbe in der Vorschau</b><span>Passend zu deinem Gerät</span></div>${seg('finish', S.finish, [['dunkel', 'Dunkel'], ['weiss', 'Weiß']])}</div>
       </section>
       <section class="scard" id="sichern"><h2>Sichern</h2>
@@ -2262,6 +2277,12 @@ document.addEventListener('change', (e) => {
     let v; try { v = JSON.parse(t.value); } catch (err) { $('#jsonErr').textContent = 'Ungültiges JSON: ' + err.message; return; }
     if (!v || typeof v !== 'object' || Array.isArray(v)) { $('#jsonErr').textContent = 'Einstellungen müssen ein JSON-Objekt sein.'; return; }
     $('#jsonErr').textContent = ''; s.settings = v; renderStage(); sendSettings(S.sel, v);
+  }
+  if ((k === 'lockKey' || k === 'lockSeconds') && cur()) {
+    const d = cur();
+    const key = k === 'lockKey' ? (t.value === '' ? null : Number(t.value)) : d.lockKey;
+    const seconds = k === 'lockSeconds' ? Number(t.value) : d.lockSeconds;
+    api.call('setLockKey', { device: d.info.id, key, seconds }).catch((err) => { toast('err', err.message); render(); });
   }
   if (k === 'dimAfter') {
     api.call('setAppSettings', { settings: { dimAfterMinutes: Number(t.value) } })

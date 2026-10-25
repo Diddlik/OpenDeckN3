@@ -21,6 +21,10 @@ use n3_core::{
 const PROFILE_EXPORT_FORMAT: &str = "opendeckn3-profiles";
 /// Brightness while dimmed for idleness (never brighter than the configured value).
 const IDLE_BRIGHTNESS: u8 = 10;
+/// Frame interval of the lock countdown.
+pub const LOCK_TICK: Duration = Duration::from_millis(100);
+/// Taps of the lock key run its own action without flashing the countdown.
+const LOCK_COUNTDOWN_DELAY: Duration = Duration::from_millis(400);
 
 use n3_plugin::{
     BUILTIN_PLUGIN, InboundEvent, PluginEvent, PluginHost, PluginMessage, protocol,
@@ -33,7 +37,8 @@ use tokio_util::sync::CancellationToken;
 use crate::{
     api::ApiCommand,
     builtin, render,
-    store::{DeviceConfig, Store},
+    render::LockScreen,
+    store::{DeviceConfig, LOCK_SECONDS_MAX, Store},
     system::input::InputHandle,
 };
 
@@ -54,9 +59,28 @@ pub struct DeviceState {
     /// Images set at runtime by plugins (`setImage`), cleared on profile switch.
     pub runtime_images: BTreeMap<u8, DynamicImage>,
     pub encoders_pressed: Vec<bool>,
+    /// Locked with the lock key: input is dropped and the displays show a lock.
+    locked: bool,
+    lock_hold: Option<LockHold>,
+}
+
+/// The lock key is held down.
+struct LockHold {
+    since: Instant,
+    /// The press reached the key's action (deck was unlocked), so its release must too.
+    forwarded: bool,
+    /// The countdown covers the displays.
+    shown: bool,
+    /// The lock was toggled; waiting for the release.
+    done: bool,
 }
 
 impl DeviceState {
+    /// Displays show the lock or its countdown instead of the keys.
+    fn covered(&self) -> bool {
+        self.locked || self.lock_hold.as_ref().is_some_and(|h| h.shown)
+    }
+
     pub fn page(&self) -> &Page {
         self.profile.page(self.page)
     }
@@ -319,6 +343,8 @@ impl App {
                 titles: BTreeMap::new(),
                 runtime_images: BTreeMap::new(),
                 encoders_pressed: vec![false; encoders],
+                locked: false,
+                lock_hold: None,
             },
         );
 
@@ -349,6 +375,62 @@ impl App {
     }
 
     async fn on_input(&mut self, device: &str, input: InputEvent) -> anyhow::Result<()> {
+        if self.lock_filter(device, &input).await? {
+            self.route_input(device, input).await?;
+        }
+        Ok(())
+    }
+
+    /// Tracks the lock key and drops input while locked. Returns whether
+    /// `input` goes on to the actions.
+    async fn lock_filter(&mut self, device: &str, input: &InputEvent) -> anyhow::Result<bool> {
+        let state = self.device_mut(device)?;
+        let keys = state.handle.info.layout.keys;
+        let press = match *input {
+            InputEvent::KeyDown { key } => Some((key, true)),
+            InputEvent::KeyUp { key } => Some((key, false)),
+            InputEvent::EncoderDown { encoder } => Some((keys + encoder, true)),
+            InputEvent::EncoderUp { encoder } => Some((keys + encoder, false)),
+            InputEvent::EncoderTwist { .. } => None,
+        };
+        if let Some((position, down)) = press
+            && state.config.lock_key == Some(position)
+        {
+            if down {
+                state.lock_hold = Some(LockHold {
+                    since: Instant::now(),
+                    forwarded: !state.locked,
+                    shown: false,
+                    done: false,
+                });
+                return Ok(!state.locked);
+            }
+            if let Some(hold) = state.lock_hold.take() {
+                if hold.shown {
+                    self.restore_screens(device).await;
+                }
+                if !hold.forwarded {
+                    return Ok(false);
+                }
+            }
+        }
+        let state = self.device(device)?;
+        if !state.locked {
+            return Ok(true);
+        }
+        // Presses that started before the lock still get their release.
+        Ok(match *input {
+            InputEvent::KeyUp { key } => state.held_keys.contains(&key),
+            InputEvent::EncoderUp { encoder } => state
+                .encoders_pressed
+                .get(encoder as usize)
+                .copied()
+                .unwrap_or(false),
+            _ => false,
+        })
+    }
+
+    async fn route_input(&mut self, device: &str, input: InputEvent) -> anyhow::Result<()> {
         // Pressing a knob: a button assignment ("Tasten" mode) wins; otherwise
         // plugins assigned to the knob get dialDown/dialUp (Stream Deck dials
         // expect that). Built-in rotation actions ignore presses.
@@ -456,9 +538,122 @@ impl App {
             self.send_slot_event(device, controller, position, |s| s.simple("willAppear"))
                 .await;
         }
-        let keys = state.handle.info.layout.display_keys;
-        for key in 0..keys {
+        self.restore_screens(device).await;
+    }
+
+    /// Draws all displays: the lock picture while locked, else every key.
+    async fn restore_screens(&mut self, device: &str) {
+        let Some(state) = self.devices.get(device) else {
+            return;
+        };
+        if state.locked {
+            self.show_lock_screen(device, LockScreen::Locked).await;
+            return;
+        }
+        for key in 0..state.handle.info.layout.display_keys {
             self.redraw_key(device, key).await;
+        }
+    }
+
+    async fn show_lock_screen(&mut self, device: &str, screen: LockScreen) {
+        let Some(state) = self.devices.get(device) else {
+            return;
+        };
+        let layout = &state.handle.info.layout;
+        let keys = layout.display_keys;
+        let columns = u32::from(layout.columns);
+        let rows = u32::from(keys).div_ceil(columns);
+        let tiles = render::lock_tiles(columns, rows, screen);
+        for (key, tile) in (0..keys).zip(tiles) {
+            self.send_key_image(device, key, Some(tile)).await;
+        }
+    }
+
+    /// Advances the countdown of held lock keys and toggles the lock when it runs out.
+    pub async fn on_lock_tick(&mut self) {
+        let holding: Vec<String> = self
+            .devices
+            .iter()
+            .filter(|(_, s)| s.lock_hold.as_ref().is_some_and(|h| !h.done))
+            .map(|(id, _)| id.clone())
+            .collect();
+        for id in holding {
+            let Some(state) = self.devices.get_mut(&id) else {
+                continue;
+            };
+            let Some(hold) = state.lock_hold.as_mut() else {
+                continue;
+            };
+            let total =
+                Duration::from_secs(state.config.lock_seconds.clamp(1, LOCK_SECONDS_MAX).into());
+            let elapsed = hold.since.elapsed();
+            if elapsed >= total {
+                hold.done = true;
+                hold.shown = false;
+                state.locked = !state.locked;
+                tracing::info!(device = %id, locked = state.locked, "deck lock toggled");
+                self.restore_screens(&id).await;
+                self.emit_lock(&id);
+            } else if elapsed >= LOCK_COUNTDOWN_DELAY {
+                hold.shown = true;
+                let screen = LockScreen::Holding {
+                    locking: !state.locked,
+                    progress: elapsed.as_secs_f32() / total.as_secs_f32(),
+                    seconds_left: (total - elapsed).as_secs_f32().ceil() as u32,
+                };
+                self.show_lock_screen(&id, screen).await;
+            }
+        }
+    }
+
+    /// Whether a lock countdown is running (drives the tick in the main loop).
+    pub fn lock_counting(&self) -> bool {
+        self.devices
+            .values()
+            .any(|s| s.lock_hold.as_ref().is_some_and(|h| !h.done))
+    }
+
+    async fn set_lock_key(
+        &mut self,
+        device: &str,
+        key: Option<u8>,
+        seconds: u8,
+    ) -> anyhow::Result<()> {
+        let state = self.device_mut(device)?;
+        let layout = &state.handle.info.layout;
+        if let Some(key) = key {
+            anyhow::ensure!(
+                key < layout.keys + layout.encoders,
+                "Taste {key} gibt es nicht"
+            );
+        }
+        anyhow::ensure!(
+            (1..=LOCK_SECONDS_MAX).contains(&seconds),
+            "Haltezeit muss 1–{LOCK_SECONDS_MAX} s sein"
+        );
+        state.config.lock_key = key;
+        state.config.lock_seconds = seconds;
+        let was_covered = state.covered();
+        state.lock_hold = None;
+        // Without a lock key the deck could never be unlocked again.
+        if key.is_none() {
+            state.locked = false;
+        }
+        let config = state.config.clone();
+        self.store.save_device_config(device, &config)?;
+        if was_covered {
+            self.restore_screens(device).await;
+        }
+        self.emit_lock(device);
+        Ok(())
+    }
+
+    fn emit_lock(&self, device: &str) {
+        if let Some(state) = self.devices.get(device) {
+            self.emit(json!({
+                "event": "lockChanged", "device": device, "locked": state.locked,
+                "lockKey": state.config.lock_key, "lockSeconds": state.config.lock_seconds,
+            }));
         }
     }
 
@@ -598,6 +793,14 @@ impl App {
     }
 
     async fn set_key_image(&mut self, device: &str, key: u8, image: Option<DynamicImage>) {
+        // Unlocking redraws every key from the current state.
+        if self.devices.get(device).is_none_or(DeviceState::covered) {
+            return;
+        }
+        self.send_key_image(device, key, image).await;
+    }
+
+    async fn send_key_image(&mut self, device: &str, key: u8, image: Option<DynamicImage>) {
         let Some(state) = self.devices.get_mut(device) else {
             return;
         };
@@ -1153,6 +1356,14 @@ impl App {
                 self.set_brightness(&device, value).await?;
                 Ok(Value::Null)
             }
+            ApiCommand::SetLockKey {
+                device,
+                key,
+                seconds,
+            } => {
+                self.set_lock_key(&device, key, seconds).await?;
+                Ok(Value::Null)
+            }
             ApiCommand::SimulateInput { device, input } => {
                 self.device(&device)?;
                 self.on_device_event(DeviceEvent::Input {
@@ -1280,6 +1491,9 @@ impl App {
         Ok(json!({
             "info": state.handle.info,
             "brightness": state.config.brightness,
+            "locked": state.locked,
+            "lockKey": state.config.lock_key,
+            "lockSeconds": state.config.lock_seconds,
             "activeProfile": state.profile.id,
             "profiles": self.store.list_profiles(id)?,
             // The page shown, in the shape of a single-page profile.

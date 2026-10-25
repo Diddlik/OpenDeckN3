@@ -21,6 +21,18 @@ pub const DEFAULT_PROFILE: &str = "default";
 pub struct DeviceConfig {
     pub active_profile: String,
     pub brightness: u8,
+    /// Keypad position (knob presses: `keys + encoder`) that locks the deck
+    /// when held, on every page and profile, in addition to its own action.
+    #[serde(default)]
+    pub lock_key: Option<u8>,
+    #[serde(default = "default_lock_seconds")]
+    pub lock_seconds: u8,
+}
+
+pub const LOCK_SECONDS_MAX: u8 = 10;
+
+fn default_lock_seconds() -> u8 {
+    3
 }
 
 impl Default for DeviceConfig {
@@ -28,6 +40,8 @@ impl Default for DeviceConfig {
         Self {
             active_profile: DEFAULT_PROFILE.to_owned(),
             brightness: 50,
+            lock_key: None,
+            lock_seconds: default_lock_seconds(),
         }
     }
 }

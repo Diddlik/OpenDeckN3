@@ -155,6 +155,157 @@ pub fn compose_key(base: Option<DynamicImage>, title: Option<&str>) -> Option<Dy
     Some(DynamicImage::ImageRgba8(canvas))
 }
 
+/// What the display keys show together while the deck is locked or the lock key is held.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum LockScreen {
+    Locked,
+    /// `progress` runs from 0 to 1 towards locking (or unlocking).
+    Holding {
+        locking: bool,
+        progress: f32,
+        seconds_left: u32,
+    },
+}
+
+const LOCK_ACCENT: [u8; 3] = [0x35, 0xe0, 0xd0];
+const LOCK_LIGHT: [u8; 3] = [0xec, 0xee, 0xf1];
+const LOCK_TRACK: [u8; 3] = [0x2a, 0x2f, 0x37];
+const LOCK_DARK: [u8; 3] = [0x12, 0x15, 0x19];
+
+/// Blends `color` where the signed distance `sdf` (pixels, negative inside) is below zero, anti-aliased.
+fn fill(canvas: &mut RgbaImage, color: [u8; 3], sdf: impl Fn(f32, f32) -> f32) {
+    for (x, y, pixel) in canvas.enumerate_pixels_mut() {
+        let a = (0.5 - sdf(x as f32 + 0.5, y as f32 + 0.5)).clamp(0.0, 1.0);
+        if a > 0.0 {
+            for (channel, value) in pixel.0.iter_mut().zip(color) {
+                *channel = (*channel as f32 * (1.0 - a) + value as f32 * a).round() as u8;
+            }
+        }
+    }
+}
+
+fn rounded_box(x: f32, y: f32, center: (f32, f32), half: (f32, f32), radius: f32) -> f32 {
+    let qx = (x - center.0).abs() - half.0 + radius;
+    let qy = (y - center.1).abs() - half.1 + radius;
+    qx.max(0.0).hypot(qy.max(0.0)) + qx.max(qy).min(0.0) - radius
+}
+
+/// Distance to a vertical segment from `(sx, top)` to `(sx, bottom)`.
+fn vertical_segment(x: f32, y: f32, sx: f32, top: f32, bottom: f32) -> f32 {
+    (x - sx).hypot(y - y.clamp(top, bottom))
+}
+
+/// Draws one lock picture across a `columns` × `rows` key grid and cuts it into key images, row-major.
+pub fn lock_tiles(columns: u32, rows: u32, screen: LockScreen) -> Vec<DynamicImage> {
+    let (w, h) = (columns * KEY_SIZE, rows * KEY_SIZE);
+    let mut canvas = RgbaImage::from_pixel(w, h, KEY_BACKGROUND);
+    // Proportions are designed for the 3 × 2 displays of the N3 (432 × 288 px).
+    let s = (w as f32 / 432.0).min(h as f32 / 288.0);
+    let (cx, cy) = (w as f32 / 2.0, h as f32 / 2.0);
+    let open_lift = 30.0 * s;
+    let (lift, lock_color) = match screen {
+        LockScreen::Locked => (0.0, LOCK_ACCENT),
+        LockScreen::Holding {
+            locking, progress, ..
+        } => {
+            let opened = if locking { 1.0 - progress } else { progress };
+            (open_lift * opened.clamp(0.0, 1.0), LOCK_LIGHT)
+        }
+    };
+
+    if let LockScreen::Holding { progress, .. } = screen {
+        let (radius, half) = (118.0 * s, 5.0 * s);
+        fill(&mut canvas, LOCK_TRACK, |x, y| {
+            ((x - cx).hypot(y - cy) - radius).abs() - half
+        });
+        let progress = progress.clamp(0.0, 1.0);
+        let end = progress * std::f32::consts::TAU;
+        let cap = |angle: f32| (cx + radius * angle.sin(), cy - radius * angle.cos());
+        let (start_cap, end_cap) = (cap(0.0), cap(end));
+        fill(&mut canvas, LOCK_ACCENT, |x, y| {
+            let (dx, dy) = (x - cx, y - cy);
+            let on_arc = dx.atan2(-dy).rem_euclid(std::f32::consts::TAU) <= end;
+            let ring = if on_arc {
+                (dx.hypot(dy) - radius).abs() - half
+            } else {
+                f32::MAX
+            };
+            let caps = (x - start_cap.0)
+                .hypot(y - start_cap.1)
+                .min((x - end_cap.0).hypot(y - end_cap.1))
+                - half;
+            if progress > 0.0 {
+                ring.min(caps)
+            } else {
+                f32::MAX
+            }
+        });
+    }
+
+    // Shackle: upper half ring with a short left leg, which leaves the body when lifted.
+    let (sx, sy, sr, half) = (cx, cy - 18.0 * s - lift, 32.0 * s, 6.5 * s);
+    fill(&mut canvas, lock_color, |x, y| {
+        let arc = if y <= sy {
+            ((x - sx).hypot(y - sy) - sr).abs()
+        } else {
+            f32::MAX
+        };
+        let left = vertical_segment(x, y, sx - sr, sy, sy + 10.0 * s);
+        let right = vertical_segment(x, y, sx + sr, sy, sy + 44.0 * s);
+        arc.min(left).min(right) - half
+    });
+    let body = (cx, cy + 24.0 * s);
+    fill(&mut canvas, lock_color, |x, y| {
+        rounded_box(x, y, body, (54.0 * s, 42.0 * s), 12.0 * s)
+    });
+
+    match screen {
+        LockScreen::Locked => {
+            let hole = (body.0, body.1 - 6.0 * s);
+            fill(&mut canvas, LOCK_DARK, |x, y| {
+                let round = (x - hole.0).hypot(y - hole.1) - 9.0 * s;
+                let slot = rounded_box(
+                    x,
+                    y,
+                    (hole.0, hole.1 + 12.0 * s),
+                    (4.0 * s, 12.0 * s),
+                    2.0 * s,
+                );
+                round.min(slot)
+            });
+        }
+        LockScreen::Holding { seconds_left, .. } => {
+            let text = seconds_left.to_string();
+            let scale = PxScale::from(48.0 * s);
+            let ascent = FONT.as_scaled(scale).ascent();
+            let x = body.0 - text_width(&text, scale) / 2.0;
+            draw_text(
+                &mut canvas,
+                &text,
+                scale,
+                x,
+                body.1 + ascent * 0.36,
+                LOCK_DARK,
+                1.0,
+            );
+        }
+    }
+
+    (0..rows)
+        .flat_map(|row| (0..columns).map(move |column| (column, row)))
+        .map(|(column, row)| {
+            let tile = image::imageops::crop_imm(
+                &canvas,
+                column * KEY_SIZE,
+                row * KEY_SIZE,
+                KEY_SIZE,
+                KEY_SIZE,
+            );
+            DynamicImage::ImageRgba8(tile.to_image())
+        })
+        .collect()
+}
+
 /// Decodes `data:image/{png,jpeg,bmp};base64,...` into an image.
 pub fn decode_data_url(url: &str) -> anyhow::Result<DynamicImage> {
     let url = DataUrl::process(url).map_err(|e| anyhow::anyhow!("invalid data url: {e:?}"))?;
@@ -236,6 +387,34 @@ mod tests {
             "top stays untouched"
         );
         assert!(titled.get_pixel(2, 142).0[0] < 200, "bottom is darkened");
+    }
+
+    #[test]
+    fn lock_screen_spans_all_tiles() {
+        let tiles = lock_tiles(3, 2, LockScreen::Locked);
+        assert_eq!(tiles.len(), 6);
+        assert!(
+            tiles
+                .iter()
+                .all(|t| (t.width(), t.height()) == (KEY_SIZE, KEY_SIZE))
+        );
+        let accent = |t: &DynamicImage| {
+            t.to_rgba8()
+                .pixels()
+                .filter(|p| p.0[..3] == LOCK_ACCENT)
+                .count()
+        };
+        // The lock sits in the middle column, split between the two rows.
+        assert!(accent(&tiles[1]) > 100 && accent(&tiles[4]) > 100);
+        assert_eq!(accent(&tiles[0]), 0);
+
+        let holding = |progress| LockScreen::Holding {
+            locking: true,
+            progress,
+            seconds_left: 2,
+        };
+        let ring = |p| accent(&lock_tiles(3, 2, holding(p))[2]);
+        assert!(ring(0.5) > ring(0.1), "progress ring grows clockwise");
     }
 
     #[test]

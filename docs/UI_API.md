@@ -62,6 +62,9 @@ interface DeviceSnapshot {
     };
   };
   brightness: number;        // 0..100
+  locked: boolean;           // mit der Sperrtaste gesperrt (nicht gespeichert: nach dem Anstecken entsperrt)
+  lockKey: number | null;    // Sperrtaste (Tasten-Position, Regler-Drücken = keys + Regler)
+  lockSeconds: number;       // so lange halten zum Sperren/Entsperren (1..10, Standard 3)
   activeProfile: string;
   profiles: string[];        // alle Profil-Ids des Geräts
   profile: Profile;          // die angezeigte Seite des aktiven Profils
@@ -141,6 +144,7 @@ type InputEvent =
 | `setActionSettings` | `device`, `controller`, `position`, `settings` | `null` – Plugin erhält `didReceiveSettings` |
 | `setActionAppearance` | `device`, `controller`, `position`, `title?`, `image?` | `null` – `image: null` = Standardbild |
 | `setBrightness` | `device`, `value` (0–100) | `null` |
+| `setLockKey` | `device`, `key` (Tasten-Position, Regler-Drücken = `keys` + Regler; `null` = keine Sperrtaste, entsperrt das Gerät), `seconds` (1–10) | `null` |
 | `simulateInput` | `device`, `input: InputEvent` | `null` – wie echte Eingabe (ideal für das virtuelle Gerät) |
 | `startVirtualDevice` | – | `{ device: "virtual-n3" }` – startet das virtuelle N3, falls es noch nicht läuft |
 | `installPlugin` | genau eins von `path` (lokale Datei), `data` (Base64 oder Data-URL der Datei), `repo` (GitHub `besitzer/name` oder Link, optional `asset`) | `{ plugin, name, version, previousVersion, started, startError, source }` – entpackt `.streamDeckPlugin`/`.zip`, ersetzt eine ältere Version, startet das Plugin |
@@ -167,6 +171,7 @@ Profil-Ids dürfen nur `A-Z a-z 0-9 - _ .` enthalten und nicht mit `.` beginnen.
 | `keyImage` | `device`, `key`, `image: string \| null` | Vorschau einer Taste aktualisieren |
 | `keyTitle` | `device`, `controller`, `position`, `title` | Titel aktualisieren |
 | `brightnessChanged` | `device`, `value` | Regler aktualisieren |
+| `lockChanged` | `device`, `locked`, `lockKey`, `lockSeconds` | Gerät gesperrt/entsperrt oder Sperrtaste geändert |
 | `input` | `device`, `input: InputEvent` | Taste/Drehregler in der UI kurz aufleuchten lassen |
 | `feedback` | `device`, `controller`, `position` | Plugin meldet OK/Fehler (Animation) |
 | `pluginStatus` | `plugin`, `connected` | Plugin-Status im Katalog |
