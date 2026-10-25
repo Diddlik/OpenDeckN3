@@ -1039,7 +1039,7 @@ function schemaFormHTML(s, schema) {
         break;
       }
       case 'number':
-        input = `<input class="field" type="number" ${at} value="${esc(v)}" min="${f.min ?? ''}" max="${f.max ?? ''}">`;
+        input = `<input class="field" type="number" ${at} value="${esc(v)}" ${ph} min="${f.min ?? ''}" max="${f.max ?? ''}">`;
         break;
       case 'shortcut': {
         // Recorder statt Textfeld: Kombination wird per Tastendruck festgelegt.

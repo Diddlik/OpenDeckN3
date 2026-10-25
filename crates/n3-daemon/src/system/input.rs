@@ -4,6 +4,7 @@
 //! is not `Send` everywhere, so it lives on its own thread and receives jobs.
 
 use std::sync::mpsc;
+use std::time::Duration;
 
 use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 use tokio::sync::oneshot;
@@ -12,13 +13,12 @@ use super::shortcut::Chord;
 
 #[derive(Debug)]
 pub enum InputJob {
-    Chords(Vec<Chord>),
+    /// Chords with the time each key stays down.
+    Chords(Vec<Chord>, Duration),
     Text(String),
     /// Taps a key `n` times (volume steps, media keys).
     Tap(Key, u32),
 }
-
-const KEY_HOLD: std::time::Duration = std::time::Duration::from_millis(20);
 
 type Request = (InputJob, oneshot::Sender<Result<(), String>>);
 
@@ -64,19 +64,19 @@ impl InputHandle {
 
 fn run(enigo: &mut Enigo, job: InputJob) -> Result<(), enigo::InputError> {
     match job {
-        InputJob::Chords(chords) => {
+        InputJob::Chords(chords, hold) => {
             for chord in chords {
                 for m in &chord.modifiers {
                     enigo.key(*m, Direction::Press)?;
                 }
                 // Apps that poll key state or use keyboard hooks (game overlays,
                 // recorders) miss keys pressed and released within microseconds.
-                std::thread::sleep(KEY_HOLD);
+                std::thread::sleep(hold);
                 let result = enigo.key(chord.key, Direction::Press).and_then(|()| {
-                    std::thread::sleep(KEY_HOLD);
+                    std::thread::sleep(hold);
                     enigo.key(chord.key, Direction::Release)
                 });
-                std::thread::sleep(KEY_HOLD);
+                std::thread::sleep(hold);
                 // Always release modifiers, even if the key failed.
                 for m in chord.modifiers.iter().rev() {
                     enigo.key(*m, Direction::Release)?;

@@ -6,6 +6,7 @@
 //! schema (`settingsSchema` in the catalog) that the UI renders as a form.
 
 use std::sync::LazyLock;
+use std::time::Duration;
 
 use enigo::Key;
 use image::DynamicImage;
@@ -76,6 +77,13 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
                 with(
                     field("anticlockwise", "Drehen links", "shortcut", ENCODER),
                     json!({ "help": "Wird je Raste beim Linksdrehen gedrückt" }),
+                ),
+                with(
+                    field("hold", "Haltezeit (ms)", "number", BOTH),
+                    json!({
+                        "placeholder": HOLD_DEFAULT_MS.to_string(), "min": HOLD_MIN_MS, "max": HOLD_MAX_MS,
+                        "help": "Wie lange jede Taste gedrückt bleibt. Erhöhen, wenn ein Programm das Kürzel manchmal nicht erkennt.",
+                    }),
                 ),
             ],
         ),
@@ -273,6 +281,21 @@ fn page_number(instance: &ActionInstance) -> usize {
         .max(1) as usize
 }
 
+// Not a schema default, so keys without an own value follow later default changes.
+const HOLD_DEFAULT_MS: u64 = 50;
+const HOLD_MIN_MS: u64 = 10;
+const HOLD_MAX_MS: u64 = 500;
+
+fn hold(instance: &ActionInstance) -> Duration {
+    let ms = instance
+        .settings
+        .get("hold")
+        .and_then(|v| v.as_u64().or_else(|| v.as_str()?.trim().parse().ok()))
+        .unwrap_or(HOLD_DEFAULT_MS)
+        .clamp(HOLD_MIN_MS, HOLD_MAX_MS);
+    Duration::from_millis(ms)
+}
+
 fn step(instance: &ActionInstance) -> u32 {
     instance
         .settings
@@ -393,7 +416,7 @@ fn effect(instance: &ActionInstance, input: &InputEvent, brightness: u8) -> anyh
         Ok(if chords.is_empty() {
             Effect::None
         } else {
-            Effect::Input(InputJob::Chords(chords))
+            Effect::Input(InputJob::Chords(chords, hold(instance)))
         })
     };
     let turn = if twist > 0 {
@@ -407,11 +430,11 @@ fn effect(instance: &ActionInstance, input: &InputEvent, brightness: u8) -> anyh
         HOTKEY if twist != 0 => {
             let s = setting(instance, turn);
             match shortcut(s)? {
-                Effect::Input(InputJob::Chords(chords)) => {
+                Effect::Input(InputJob::Chords(chords, hold)) => {
                     let repeated = (0..twist.unsigned_abs())
                         .flat_map(|_| chords.clone())
                         .collect();
-                    Effect::Input(InputJob::Chords(repeated))
+                    Effect::Input(InputJob::Chords(repeated, hold))
                 }
                 other => other,
             }
@@ -593,10 +616,14 @@ mod tests {
             json!({ "shortcut": "Ctrl+C", "clockwise": "Ctrl+Plus" }),
         );
         assert!(
-            matches!(effect(&hotkey, &down, 50).unwrap(), Effect::Input(InputJob::Chords(c)) if c.len() == 1)
+            matches!(effect(&hotkey, &down, 50).unwrap(), Effect::Input(InputJob::Chords(c, h)) if c.len() == 1 && h == Duration::from_millis(50))
         );
         assert!(
-            matches!(effect(&hotkey, &twist(3), 50).unwrap(), Effect::Input(InputJob::Chords(c)) if c.len() == 3)
+            matches!(effect(&hotkey, &twist(3), 50).unwrap(), Effect::Input(InputJob::Chords(c, _)) if c.len() == 3)
+        );
+        let slow = instance(HOTKEY, json!({ "shortcut": "Ctrl+C", "hold": "9999" }));
+        assert!(
+            matches!(effect(&slow, &down, 50).unwrap(), Effect::Input(InputJob::Chords(_, h)) if h == Duration::from_millis(500))
         );
         assert!(matches!(
             effect(&hotkey, &twist(-1), 50).unwrap(),

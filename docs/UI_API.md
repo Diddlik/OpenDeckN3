@@ -219,7 +219,7 @@ Plugin-UUID `opendeckn3.builtin`, Aktions-UUIDs `opendeckn3.builtin.<name>`:
 
 | Aktion | Einstellungen | Taste | Drehregler |
 | --- | --- | --- | --- |
-| `hotkey` | `shortcut`, `clockwise`, `anticlockwise` (z. B. `Ctrl+Shift+M`, mehrere mit Leerzeichen) | drückt `shortcut` | drehen = `clockwise`/`anticlockwise` je Raste |
+| `hotkey` | `shortcut`, `clockwise`, `anticlockwise` (z. B. `Ctrl+Shift+M`, mehrere mit Leerzeichen), `hold` (Haltezeit je Taste in ms, 10–500, fehlt = 50) | drückt `shortcut` | drehen = `clockwise`/`anticlockwise` je Raste |
 | `volume` | `mode` (`mute`/`up`/`down`), `step` (1–10) | Funktion aus `mode` | drehen = lauter/leiser |
 | `media` | `mode` (`playpause`/`next`/`previous`/`stop`) | Funktion aus `mode` | drehen = Titel vor/zurück |
 | `launch` | `path` (Auswahlliste installierter Programme inkl. Spiele-Verknüpfungen und aller installierten Steam-Spiele als `steam://rungameid/<id>`, oder eigener Pfad), `args` | Programm/Datei/Ordner öffnen; Tastenbild = Cover des Steam-Spiels bzw. unter Windows das Icon des Programms | – |
