@@ -128,7 +128,7 @@ And the best part: every key shows on its display what it does – with the real
 - [x] Discord plugin: mic, headphones, channels, volumes, soundboard, camera, screen share
 - [x] OBS Studio plugin: recording with timer, stream, scenes, sources, filters, audio, macros
 - [x] Home Assistant plugin: webhooks, services, switches, dimmers, states
-- [x] AudioSwitcher plugin: switch speakers, headset, and mic with one press – the key shows the active profile
+- [x] AudioSwitcher plugin: switch speakers, headset, and mic with one press – the key shows the active profile, plus a microphone mute key
 - [x] HTTP plugin: send requests to n8n, Zapier, IFTTT or your own server per key or dial, and show values from JSON responses
 - [x] Media plugin: play, pause and skip the running player (Spotify, browser, VLC …) and show title and cover on the key – Windows and Linux
 - [x] System monitor plugin: CPU, RAM, GPU, temperatures, network and disks as live graphs on a key – Windows and Linux (GPU: NVIDIA only)

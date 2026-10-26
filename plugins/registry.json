@@ -44,7 +44,7 @@
     {
       "uuid": "de.opendeckn3.audioswitcher",
       "name": "AudioSwitcher",
-      "description": "Audioprofile von AudioSwitcher aktivieren: Lautsprecher, Headset und Mikrofon auf einen Druck wechseln, umschalten oder per Drehregler durchblättern. Die Taste zeigt das aktive Profil.",
+      "description": "Audioprofile von AudioSwitcher aktivieren: Lautsprecher, Headset und Mikrofon auf einen Druck wechseln, umschalten oder per Drehregler durchblättern und das Mikrofon stummschalten. Die Tasten zeigen das aktive Profil und den Stummschaltzustand.",
       "author": "OpenDeckN3",
       "repo": "Diddlik/OpenDeckN3",
       "asset": "de.opendeckn3.audioswitcher-windows.streamDeckPlugin",

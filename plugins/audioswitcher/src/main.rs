@@ -1,6 +1,6 @@
 #![cfg_attr(windows, windows_subsystem = "windows")]
 //! OpenDeckN3 AudioSwitcher plugin: activates and toggles the audio profiles
-//! of AudioSwitcher (https://github.com/Diddlik/AudioSwitcher) over its local
+//! and mutes the microphone of AudioSwitcher (https://github.com/Diddlik/AudioSwitcher) over its local
 //! control pipe (see `docs/PLUGIN_AUDIOSWITCHER.md`).
 
 use std::time::Duration;
@@ -84,6 +84,8 @@ struct Plugin {
     global: Map<String, Value>,
     profiles: Vec<Profile>,
     active: Option<String>,
+    /// `None` while AudioSwitcher is too old to report it, `Some(None)` without a default microphone.
+    muted: Option<Option<bool>>,
     online: Option<bool>,
     polling: bool,
 }
@@ -97,6 +99,7 @@ impl Plugin {
             global: Map::new(),
             profiles: Vec::new(),
             active: None,
+            muted: None,
             online: None,
             polling: false,
         }
@@ -154,6 +157,7 @@ impl Plugin {
             })
             .collect();
         self.active = reply["activeProfileId"].as_str().map(str::to_owned);
+        self.muted = reply.get("microphoneMuted").map(Value::as_bool);
         let count = self.profiles.len();
         self.set_status(format!(
             "Verbunden mit AudioSwitcher – {count} {}",
@@ -197,6 +201,12 @@ impl Plugin {
                 (active, title)
             }
             "toggle" => (0, self.active_name().unwrap_or("–").to_owned()),
+            "mute" => match self.muted {
+                Some(Some(muted)) => (u16::from(muted), String::new()),
+                Some(None) => (0, "kein Mikro".into()),
+                None if self.online.is_some() => (0, "zu alt".into()),
+                None => (0, String::new()),
+            },
             _ => (0, String::new()),
         }
     }
@@ -231,6 +241,7 @@ impl Plugin {
                 );
             }
             "toggle" => self.send(Some(context), json!({ "command": "toggle" })),
+            "mute" => self.send(Some(context), json!({ "command": "mute" })),
             _ => {}
         }
     }
@@ -353,7 +364,7 @@ mod tests {
     }
 
     fn state() -> Value {
-        json!({ "ok": true, "error": null, "activeProfileId": "c",
+        json!({ "ok": true, "error": null, "activeProfileId": "c", "microphoneMuted": true,
             "profiles": [{ "id": "a", "name": "Lautsprecher", "available": true },
                          { "id": "c", "name": "Headset", "available": true }] })
     }
@@ -390,6 +401,27 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn mute_key_reports_old_audioswitcher_and_missing_microphone() {
+        let (host, _host_rx) = Host::channel("de.opendeckn3.audioswitcher");
+        let (tx, _rx) = mpsc::unbounded_channel();
+        let mut p = Plugin::new(host, tx);
+        p.on_host(json!({ "event": "willAppear", "context": "m",
+            "action": "de.opendeckn3.audioswitcher.mute",
+            "payload": { "controller": "Keypad", "settings": {} } }));
+        let title = |p: &Plugin| p.appearance(p.contexts.get("m").unwrap()).1;
+
+        let mut reply = state();
+        reply.as_object_mut().unwrap().remove("microphoneMuted");
+        p.on_reply(None, Ok(reply));
+        assert_eq!(title(&p), "zu alt");
+
+        let mut reply = state();
+        reply["microphoneMuted"] = Value::Null;
+        p.on_reply(None, Ok(reply));
+        assert_eq!(title(&p), "kein Mikro");
+    }
+
+    #[tokio::test]
     async fn keys_follow_the_active_profile() {
         let (host, mut host_rx) = Host::channel("de.opendeckn3.audioswitcher");
         let (tx, _rx) = mpsc::unbounded_channel();
@@ -399,6 +431,7 @@ mod tests {
             ("a", "profile", json!({ "profile": "a" })),
             ("c", "profile", json!({ "profile": "c", "showName": "no" })),
             ("t", "toggle", json!({})),
+            ("m", "mute", json!({})),
         ] {
             p.on_host(json!({ "event": "willAppear", "context": context,
                 "action": format!("de.opendeckn3.audioswitcher.{kind}"),
@@ -422,6 +455,11 @@ mod tests {
         assert_eq!(state("c"), Some(json!(1)));
         assert_eq!(title("c"), Some(json!("")));
         assert_eq!(title("t"), Some(json!("Headset")));
+        assert_eq!(
+            state("m"),
+            Some(json!(1)),
+            "lit while the microphone is muted"
+        );
         assert!(sent.iter().any(|m| m["event"] == "setGlobalSettings"
             && m["payload"]["status"] == "Verbunden mit AudioSwitcher – 2 Profile"));
 

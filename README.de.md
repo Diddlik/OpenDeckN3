@@ -128,7 +128,7 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit dem echten 
 - [x] Discord-Plugin: Mikro, Kopfhörer, Kanäle, Lautstärken, Soundboard, Kamera, Bildschirmfreigabe
 - [x] OBS-Studio-Plugin: Aufnahme mit Laufzeit, Stream, Szenen, Quellen, Filter, Audio, Makros
 - [x] Home-Assistant-Plugin: Webhooks, Dienste, Schalter, Dimmer, Zustände
-- [x] AudioSwitcher-Plugin: Lautsprecher, Headset und Mikro auf einen Druck wechseln – die Taste zeigt das aktive Profil
+- [x] AudioSwitcher-Plugin: Lautsprecher, Headset und Mikro auf einen Druck wechseln – die Taste zeigt das aktive Profil, dazu eine Taste zum Stummschalten des Mikrofons
 - [x] HTTP-Plugin: Anfragen an n8n, Zapier, IFTTT oder eigene Server per Taste oder Drehregler senden und Werte aus JSON-Antworten anzeigen
 - [x] Medien-Plugin: Wiedergabe steuern (Spotify, Browser, VLC …) und Titel sowie Cover auf der Taste anzeigen – Windows und Linux
 - [x] Systemmonitor-Plugin: CPU, RAM, GPU, Temperaturen, Netz und Laufwerke als Verlaufsgrafik auf der Taste – Windows und Linux (GPU nur NVIDIA)

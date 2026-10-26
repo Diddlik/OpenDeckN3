@@ -60,13 +60,16 @@ const MAIL = {
   calendar: icon(CALENDAR, false, IDLE), 'calendar-on': icon(CALENDAR, true),
 };
 
-// AudioSwitcher: speaker, lit in AudioSwitcher teal while the profile is active.
+// AudioSwitcher: speaker, lit in AudioSwitcher teal while the profile is active; microphone, red while muted.
 const SPEAKER = '<path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>';
 const SWAP = '<path d="M4 8h13l-3-3M20 16H7l3 3"/>';
+const AUDIO_MIC = '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/>';
+const AUDIO_MIC_OFF = `${AUDIO_MIC}<path d="M4 4l16 16"/>`;
 const AUDIO = {
   plugin: icon(SPEAKER, false, IDLE),
   profile: icon(SPEAKER, false, IDLE), 'profile-on': icon(SPEAKER, true, ['#06302c', '#4fe0c8']),
   toggle: icon(SWAP, false, IDLE),
+  mic: icon(AUDIO_MIC, false, IDLE), 'mic-off': icon(AUDIO_MIC_OFF, true, ['#3a1012', '#ff6b6b']),
 };
 
 // HTTP: globe for the plugin, arrow for a request, refresh for a polled value.

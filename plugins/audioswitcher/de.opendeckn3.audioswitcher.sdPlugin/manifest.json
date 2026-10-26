@@ -2,8 +2,8 @@
   "UUID": "de.opendeckn3.audioswitcher",
   "Name": "AudioSwitcher",
   "Author": "OpenDeckN3",
-  "Version": "0.1.0",
-  "Description": "Aktiviert Audioprofile von AudioSwitcher (Ausgabe- und Eingabegerät auf einen Druck) und schaltet zwischen ihnen um, auch per Drehregler.",
+  "Version": "0.2.0",
+  "Description": "Aktiviert Audioprofile von AudioSwitcher (Ausgabe- und Eingabegerät auf einen Druck), schaltet zwischen ihnen um, auch per Drehregler, und schaltet das Mikrofon stumm.",
   "Category": "AudioSwitcher",
   "Icon": "imgs/plugin",
   "CodePathWin": "opendeckn3-audioswitcher.exe",
@@ -80,6 +80,23 @@
       "States": [
         {
           "Image": "imgs/toggle"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.audioswitcher.mute",
+      "Name": "Mikrofon stumm",
+      "Tooltip": "Schaltet das Standardmikrofon stumm oder wieder ein; leuchtet rot, solange es stumm ist",
+      "Icon": "imgs/mic",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/mic"
+        },
+        {
+          "Image": "imgs/mic-off"
         }
       ]
     }

@@ -1,7 +1,7 @@
 # AudioSwitcher-Plugin
 
 Schaltet die Audioprofile von [AudioSwitcher](https://github.com/Diddlik/AudioSwitcher) vom Deck aus: ein Druck setzt
-Ausgabe- und Eingabegerät eines Profils als Windows-Standard. Quellcode: [`plugins/audioswitcher`](../plugins/audioswitcher).
+Ausgabe- und Eingabegerät eines Profils als Windows-Standard. Außerdem lässt sich das Mikrofon stummschalten. Quellcode: [`plugins/audioswitcher`](../plugins/audioswitcher).
 Nur Windows.
 
 ## Einrichten
@@ -16,10 +16,12 @@ Nur Windows.
 | --- | --- | --- | --- |
 | Audioprofil | aktiviert das gewählte Profil | – | leuchtet, solange das Profil aktiv ist; Profilname optional als Titel |
 | Profile umschalten | wechselt zwischen den zwei Schnellwechsel-Profilen aus AudioSwitcher | blättert durch alle verfügbaren Profile, Drücken schaltet um | Name des aktiven Profils |
+| Mikrofon stumm | schaltet das Standardmikrofon stumm oder wieder ein | – | leuchtet rot, solange das Mikrofon stumm ist – auch wenn es anders stummgeschaltet wurde |
 
 Aktiv ist ein Profil, wenn seine Geräte gerade die Windows-Standardgeräte sind – auch wenn sie anders als über
 AudioSwitcher gesetzt wurden. Der Zustand wird alle 2 Sekunden abgefragt. `offline` heißt: AudioSwitcher läuft nicht
-oder ist zu alt; `fehlt` heißt: das gewählte Profil gibt es nicht mehr.
+oder ist zu alt; `fehlt` heißt: das gewählte Profil gibt es nicht mehr. Die Mikrofontaste zeigt `zu alt`, wenn
+AudioSwitcher vor Version 1.7.0 läuft, und `kein Mikro`, wenn Windows kein Standardmikrofon hat.
 
 ## Technik
 
@@ -30,12 +32,13 @@ eine JSON-Anfrage, pro Anfrage eine JSON-Zeile als Antwort:
 { "command": "state" }
 { "command": "activate", "profileId": "<guid>" }
 { "command": "toggle" }
+{ "command": "mute" }
 ```
 
 ```json
-{ "ok": true, "error": null, "activeProfileId": "<guid>",
+{ "ok": true, "error": null, "activeProfileId": "<guid>", "microphoneMuted": false,
   "profiles": [{ "id": "<guid>", "name": "Headset", "available": true }] }
 ```
 
 Jede Antwort enthält den aktuellen Zustand; bei `ok: false` steht in `error` der Grund (in der Sprache von
-AudioSwitcher). Tests: `cargo test -p opendeckn3-audioswitcher`.
+AudioSwitcher). `microphoneMuted` ist `null` ohne Standardmikrofon und fehlt vor AudioSwitcher 1.7.0. Tests: `cargo test -p opendeckn3-audioswitcher`.
