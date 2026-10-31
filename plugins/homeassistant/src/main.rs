@@ -87,10 +87,13 @@ impl Api {
         Ok(serde_json::from_slice(&bytes).unwrap_or(Value::Null))
     }
 
-    /// Any HTTP answer counts: the server is up (401 just means no/invalid token).
+    /// Any HTTP answer counts: the server is up (401 just means an invalid token).
+    /// The token is sent anyway because Home Assistant logs every unauthenticated
+    /// request as a failed login and may ban the IP.
     async fn reachable(&self) -> bool {
         self.http
             .get(format!("{}/api/", self.base))
+            .bearer_auth(&self.token)
             .send()
             .await
             .is_ok()
@@ -893,6 +896,15 @@ mod tests {
             !req.to_lowercase().contains("authorization"),
             "webhooks are sent without the token"
         );
+    }
+
+    #[tokio::test]
+    async fn reachability_ping_sends_token() {
+        let (base, log) = fake_ha(|_| (200, Value::Null)).await;
+        assert!(Api::new(&base, "T").unwrap().reachable().await);
+        let req = log.lock().unwrap().last().unwrap().clone();
+        assert!(req.starts_with("GET /api/ "), "{req}");
+        assert!(req.contains("Bearer T"), "{req}");
     }
 
     #[tokio::test]
