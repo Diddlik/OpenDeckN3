@@ -155,6 +155,24 @@ pub fn compose_key(base: Option<DynamicImage>, title: Option<&str>) -> Option<Dy
     Some(DynamicImage::ImageRgba8(canvas))
 }
 
+/// Red frame on a key whose hotkey is latched (keys held down), like an "on air" light.
+pub fn mark_latched(image: Option<DynamicImage>) -> DynamicImage {
+    const FRAME: u32 = 10;
+    const RED: Rgba<u8> = Rgba([0xe5, 0x48, 0x4d, 0xff]);
+    let mut canvas = match image {
+        Some(image) => image
+            .resize_exact(KEY_SIZE, KEY_SIZE, FilterType::Lanczos3)
+            .to_rgba8(),
+        None => RgbaImage::from_pixel(KEY_SIZE, KEY_SIZE, KEY_BACKGROUND),
+    };
+    for (x, y, p) in canvas.enumerate_pixels_mut() {
+        if x.min(y).min(KEY_SIZE - 1 - x).min(KEY_SIZE - 1 - y) < FRAME {
+            *p = RED;
+        }
+    }
+    DynamicImage::ImageRgba8(canvas)
+}
+
 /// What the display keys show together while the deck is locked or the lock key is held.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum LockScreen {
@@ -357,6 +375,18 @@ pub fn to_png_data_url(image: &DynamicImage) -> anyhow::Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn latched_keys_get_a_frame_around_the_image() {
+        let white = DynamicImage::ImageRgba8(RgbaImage::from_pixel(64, 64, Rgba([255; 4])));
+        let marked = mark_latched(Some(white)).to_rgba8();
+        assert_eq!(marked.dimensions(), (KEY_SIZE, KEY_SIZE));
+        assert_eq!(marked.get_pixel(0, 0)[1], 0x48);
+        assert_eq!(
+            *marked.get_pixel(KEY_SIZE / 2, KEY_SIZE / 2),
+            Rgba([255; 4])
+        );
+    }
 
     #[test]
     fn png_roundtrip_through_data_url() {

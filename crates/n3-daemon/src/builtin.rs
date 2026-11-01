@@ -19,7 +19,8 @@ use crate::{
     system::{
         input::InputJob,
         launch::{launch, run_command},
-        shortcut, steam,
+        shortcut::{self, Chord},
+        steam,
     },
 };
 
@@ -303,6 +304,16 @@ fn hold(instance: &ActionInstance) -> Duration {
     Duration::from_millis(ms)
 }
 
+/// Chords of a hotkey key in latch mode (`None` for every other key).
+pub fn latch_chords(instance: &ActionInstance) -> Option<Vec<Chord>> {
+    (instance.plugin == BUILTIN_PLUGIN
+        && instance.action == HOTKEY
+        && setting(instance, "mode") == "latch")
+        .then(|| shortcut::parse(setting(instance, "shortcut")).ok())
+        .flatten()
+        .filter(|c| !c.is_empty())
+}
+
 fn step(instance: &ActionInstance) -> u32 {
     instance
         .settings
@@ -394,6 +405,8 @@ fn next_preset(current: u8) -> u8 {
 enum Effect {
     None,
     Input(InputJob),
+    /// Toggles a latched hotkey.
+    Latch(Vec<Chord>),
     Launch {
         path: String,
         args: String,
@@ -435,9 +448,7 @@ fn effect(instance: &ActionInstance, input: &InputEvent, brightness: u8) -> anyh
     Ok(match instance.action.as_str() {
         HOTKEY if pressed && setting(instance, "mode") == "latch" => {
             match shortcut(setting(instance, "shortcut"))? {
-                Effect::Input(InputJob::Chords(chords, _)) => {
-                    Effect::Input(InputJob::Latch(chords))
-                }
+                Effect::Input(InputJob::Chords(chords, _)) => Effect::Latch(chords),
                 other => other,
             }
         }
@@ -568,6 +579,16 @@ pub async fn on_input(app: &mut App, device: &str, input: InputEvent) {
             });
             return;
         }
+        Effect::Latch(chords) => {
+            let down = app.toggle_latch(device, &chords).await;
+            let input = app.input();
+            tokio::spawn(async move {
+                if let Err(err) = input.run(InputJob::Latch(chords, down)).await {
+                    report(err);
+                }
+            });
+            return;
+        }
         Effect::Launch { path, args } => launch(&path, &args),
         Effect::Url(url) => crate::app::open_url(&url),
         Effect::Command(cmd) if cmd.is_empty() => Ok(()),
@@ -637,9 +658,9 @@ mod tests {
             matches!(effect(&hotkey, &twist(3), 50).unwrap(), Effect::Input(InputJob::Chords(c, _)) if c.len() == 3)
         );
         let latch = instance(HOTKEY, json!({ "mode": "latch", "shortcut": "CapsLock" }));
-        assert!(
-            matches!(effect(&latch, &down, 50).unwrap(), Effect::Input(InputJob::Latch(c)) if c.len() == 1)
-        );
+        assert!(matches!(effect(&latch, &down, 50).unwrap(), Effect::Latch(c) if c.len() == 1));
+        assert_eq!(latch_chords(&latch).map(|c| c.len()), Some(1));
+        assert!(latch_chords(&hotkey).is_none());
         let slow = instance(HOTKEY, json!({ "shortcut": "Ctrl+C", "hold": "9999" }));
         assert!(
             matches!(effect(&slow, &down, 50).unwrap(), Effect::Input(InputJob::Chords(_, h)) if h == Duration::from_millis(500))

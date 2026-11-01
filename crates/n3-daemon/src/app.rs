@@ -39,7 +39,7 @@ use crate::{
     builtin, render,
     render::LockScreen,
     store::{DeviceConfig, LOCK_SECONDS_MAX, Store},
-    system::input::InputHandle,
+    system::{input::InputHandle, shortcut::Chord},
 };
 
 pub struct DeviceState {
@@ -150,6 +150,9 @@ pub struct App {
     shutdown: CancellationToken,
     /// Simulated keyboard input for built-in actions.
     input: InputHandle,
+    /// Hotkeys currently latched down; shared by all keys with the same shortcut,
+    /// because the OS key is held for the whole system.
+    latched: Vec<Vec<Chord>>,
     /// Where installed plugins live (`<config>/plugins`, absolute).
     plugins_dir: PathBuf,
     /// Bundled/extra plugin directories (read-only for the app).
@@ -189,6 +192,7 @@ impl App {
             device_events,
             shutdown,
             input: InputHandle::spawn(),
+            latched: Vec::new(),
             plugins_dir: PathBuf::new(),
             extra_plugin_dirs: Vec::new(),
             plugin_requests: HashMap::new(),
@@ -788,8 +792,42 @@ impl App {
             None => self.default_image(device, key).await,
         };
         let title = self.key_title(device, key);
-        let image = render::compose_key(base, title.as_deref());
+        let mut image = render::compose_key(base, title.as_deref());
+        if self
+            .latch_chords(device, key)
+            .is_some_and(|c| self.latched.contains(&c))
+        {
+            image = Some(render::mark_latched(image));
+        }
         self.set_key_image(device, key, image).await;
+    }
+
+    fn latch_chords(&self, device: &str, key: u8) -> Option<Vec<Chord>> {
+        builtin::latch_chords(self.devices.get(device)?.page().keys.get(&key)?)
+    }
+
+    /// Flips a latched hotkey and redraws the device's keys using it; returns whether it is now down.
+    pub async fn toggle_latch(&mut self, device: &str, chords: &[Chord]) -> bool {
+        let down = match self.latched.iter().position(|c| c == chords) {
+            Some(i) => {
+                self.latched.remove(i);
+                false
+            }
+            None => {
+                self.latched.push(chords.to_vec());
+                true
+            }
+        };
+        let keys = self
+            .devices
+            .get(device)
+            .map_or(0, |s| s.handle.info.layout.display_keys);
+        for key in 0..keys {
+            if self.latch_chords(device, key).as_deref() == Some(chords) {
+                self.redraw_key(device, key).await;
+            }
+        }
+        down
     }
 
     async fn set_key_image(&mut self, device: &str, key: u8, image: Option<DynamicImage>) {

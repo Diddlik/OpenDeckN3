@@ -18,9 +18,9 @@ pub enum InputJob {
     Text(String),
     /// Taps a key `n` times (volume steps, media keys).
     Tap(Key, u32),
-    /// Presses the chords and keeps them down until the same job comes again
+    /// Presses (`true`) or releases latched chords; they stay down in between
     /// (push-to-talk without holding the deck key).
-    Latch(Vec<Chord>),
+    Latch(Vec<Chord>, bool),
 }
 
 type Request = (InputJob, oneshot::Sender<Result<(), String>>);
@@ -120,14 +120,15 @@ fn run(
                 result?;
             }
         }
-        InputJob::Latch(chords) => match latched.iter().position(|c| *c == chords) {
-            Some(i) => release(enigo, &latched.remove(i))?,
-            None => {
+        InputJob::Latch(chords, down) => match latched.iter().position(|c| *c == chords) {
+            Some(i) if !down => release(enigo, &latched.remove(i))?,
+            None if down => {
                 let result = press(enigo, &chords);
-                // Remember even partial presses so the next toggle releases them.
+                // Remember even partial presses so the release lets them go.
                 latched.push(chords);
                 result?;
             }
+            _ => {}
         },
         InputJob::Text(text) => enigo.text(&text)?,
         InputJob::Tap(key, n) => {
