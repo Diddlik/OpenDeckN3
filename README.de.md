@@ -71,7 +71,7 @@ Kein Plugin-Gebastel für die Basics – diese Aktionen sind direkt eingebaut un
 
 | | Aktion | Auf der Taste | Am Drehregler |
 | :---: | --- | --- | --- |
-| ⌨️ | **Tastenkürzel** | Jede Kombination – einfach drücken, die App nimmt sie auf | Eigenes Kürzel je Drehrichtung |
+| ⌨️ | **Tastenkürzel** | Jede Kombination – einfach drücken, die App nimmt sie auf. Oder einrasten: einmal drücken hält sie (Push-to-Talk), nochmal lässt los | Eigenes Kürzel je Drehrichtung |
 | 🔊 | **Lautstärke** | Lauter, leiser oder stumm | Drehen regelt, Drücken schaltet stumm |
 | ⏯️ | **Medien** | Play/Pause, vor, zurück, Stopp | Drehen wechselt den Titel |
 | 🚀 | **Programm öffnen** | Apps, Dateien und Ordner starten | ✓ |

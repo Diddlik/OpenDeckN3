@@ -71,7 +71,7 @@ No plugin tinkering for the basics – these actions are built in and set up in 
 
 | | Action | On a key | On a dial |
 | :---: | --- | --- | --- |
-| ⌨️ | **Hotkey** | Any combination – just press it, the app records it | Separate hotkey per direction |
+| ⌨️ | **Hotkey** | Any combination – just press it, the app records it. Or latch it: press once to hold (push-to-talk), again to release | Separate hotkey per direction |
 | 🔊 | **Volume** | Up, down, or mute | Turn to adjust, press to mute |
 | ⏯️ | **Media** | Play/pause, next, previous, stop | Turn to change tracks |
 | 🚀 | **Open program** | Launch apps, files, and folders | ✓ |

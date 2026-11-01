@@ -18,6 +18,9 @@ pub enum InputJob {
     Text(String),
     /// Taps a key `n` times (volume steps, media keys).
     Tap(Key, u32),
+    /// Presses the chords and keeps them down until the same job comes again
+    /// (push-to-talk without holding the deck key).
+    Latch(Vec<Chord>),
 }
 
 type Request = (InputJob, oneshot::Sender<Result<(), String>>);
@@ -35,6 +38,7 @@ impl InputHandle {
             .spawn(move || {
                 // Created lazily: fails without a desktop session (e.g. CI).
                 let mut enigo: Option<Enigo> = None;
+                let mut latched: Vec<Vec<Chord>> = Vec::new();
                 for (job, reply) in rx {
                     let result = (|| {
                         if enigo.is_none() {
@@ -44,9 +48,16 @@ impl InputHandle {
                                 })?);
                         }
                         let enigo = enigo.as_mut().expect("initialised above");
-                        run(enigo, job).map_err(|e| format!("Eingabe fehlgeschlagen: {e}"))
+                        run(enigo, &mut latched, job)
+                            .map_err(|e| format!("Eingabe fehlgeschlagen: {e}"))
                     })();
                     reply.send(result).ok();
+                }
+                // Never leave keys stuck down after the service stops.
+                if let Some(enigo) = enigo.as_mut() {
+                    for chords in latched {
+                        release(enigo, &chords).ok();
+                    }
                 }
             })
             .expect("cannot spawn input thread");
@@ -62,7 +73,32 @@ impl InputHandle {
     }
 }
 
-fn run(enigo: &mut Enigo, job: InputJob) -> Result<(), enigo::InputError> {
+fn press(enigo: &mut Enigo, chords: &[Chord]) -> Result<(), enigo::InputError> {
+    for chord in chords {
+        for m in &chord.modifiers {
+            enigo.key(*m, Direction::Press)?;
+        }
+        enigo.key(chord.key, Direction::Press)?;
+    }
+    Ok(())
+}
+
+fn release(enigo: &mut Enigo, chords: &[Chord]) -> Result<(), enigo::InputError> {
+    let mut result = Ok(());
+    for chord in chords.iter().rev() {
+        for key in std::iter::once(&chord.key).chain(chord.modifiers.iter().rev()) {
+            // Release every key, even if one fails.
+            result = result.and(enigo.key(*key, Direction::Release));
+        }
+    }
+    result
+}
+
+fn run(
+    enigo: &mut Enigo,
+    latched: &mut Vec<Vec<Chord>>,
+    job: InputJob,
+) -> Result<(), enigo::InputError> {
     match job {
         InputJob::Chords(chords, hold) => {
             for chord in chords {
@@ -84,6 +120,15 @@ fn run(enigo: &mut Enigo, job: InputJob) -> Result<(), enigo::InputError> {
                 result?;
             }
         }
+        InputJob::Latch(chords) => match latched.iter().position(|c| *c == chords) {
+            Some(i) => release(enigo, &latched.remove(i))?,
+            None => {
+                let result = press(enigo, &chords);
+                // Remember even partial presses so the next toggle releases them.
+                latched.push(chords);
+                result?;
+            }
+        },
         InputJob::Text(text) => enigo.text(&text)?,
         InputJob::Tap(key, n) => {
             for _ in 0..n {

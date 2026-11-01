@@ -67,6 +67,13 @@ static ACTIONS: LazyLock<Vec<Value>> = LazyLock::new(|| {
             BOTH,
             vec![
                 with(
+                    field("mode", "Funktion", "select", KEYPAD),
+                    json!({
+                        "options": [["tap", "Antippen"], ["latch", "Einrasten (gedrückt halten bis zum nächsten Druck)"]],
+                        "help": "Einrasten z. B. für Push-to-Talk: einmal drücken hält die Tasten, nochmal drücken lässt sie los.",
+                    }),
+                ),
+                with(
                     field("shortcut", "Tastenkürzel", "shortcut", KEYPAD),
                     json!({ "help": shortcut_help }),
                 ),
@@ -426,6 +433,14 @@ fn effect(instance: &ActionInstance, input: &InputEvent, brightness: u8) -> anyh
     };
 
     Ok(match instance.action.as_str() {
+        HOTKEY if pressed && setting(instance, "mode") == "latch" => {
+            match shortcut(setting(instance, "shortcut"))? {
+                Effect::Input(InputJob::Chords(chords, _)) => {
+                    Effect::Input(InputJob::Latch(chords))
+                }
+                other => other,
+            }
+        }
         HOTKEY if pressed => shortcut(setting(instance, "shortcut"))?,
         HOTKEY if twist != 0 => {
             let s = setting(instance, turn);
@@ -620,6 +635,10 @@ mod tests {
         );
         assert!(
             matches!(effect(&hotkey, &twist(3), 50).unwrap(), Effect::Input(InputJob::Chords(c, _)) if c.len() == 3)
+        );
+        let latch = instance(HOTKEY, json!({ "mode": "latch", "shortcut": "CapsLock" }));
+        assert!(
+            matches!(effect(&latch, &down, 50).unwrap(), Effect::Input(InputJob::Latch(c)) if c.len() == 1)
         );
         let slow = instance(HOTKEY, json!({ "shortcut": "Ctrl+C", "hold": "9999" }));
         assert!(
