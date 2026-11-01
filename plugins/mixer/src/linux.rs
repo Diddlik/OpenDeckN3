@@ -1,34 +1,33 @@
-//! PulseAudio/PipeWire sink inputs (one per playing stream) through `pactl`.
+//! PulseAudio/PipeWire streams through `pactl`: sink inputs (one per playing
+//! stream) and source outputs (one per recording stream).
 
 use anyhow::{Context, Result, ensure};
 use serde_json::Value;
 
-use crate::{Change, Session, Snapshot, same_app, step_volume};
+use crate::{Change, Flow, Session, Snapshot, same_app, step_volume};
 
 /// Raw pactl volume that means 100 %.
 const PA_VOLUME_NORM: f64 = 65536.0;
 
-struct SinkInput {
+struct Stream {
     index: u64,
     session: Session,
 }
 
 pub async fn snapshot() -> Result<Snapshot> {
-    let sessions = sink_inputs()
-        .await?
-        .into_iter()
-        .map(|input| input.session)
-        .collect();
+    let sessions = |streams: Vec<Stream>| streams.into_iter().map(|s| s.session).collect();
     Ok(Snapshot {
-        sessions,
+        sessions: sessions(streams(Flow::Output).await?),
+        mics: sessions(streams(Flow::Input).await?),
         // Linux has no equivalent of the foreground window in pactl.
         foreground: None,
     })
 }
 
-pub async fn change(app: String, change: Change) -> Result<()> {
-    let inputs = sink_inputs().await?;
-    let matching: Vec<&SinkInput> = inputs
+pub async fn change(flow: Flow, app: String, change: Change) -> Result<()> {
+    let kind = kind(flow);
+    let inputs = streams(flow).await?;
+    let matching: Vec<&Stream> = inputs
         .iter()
         .filter(|input| same_app(&input.session.app, &app))
         .collect();
@@ -40,22 +39,32 @@ pub async fn change(app: String, change: Change) -> Result<()> {
             for input in &matching {
                 let level = step_volume(input.session.volume, delta);
                 let percent = format!("{}%", (level * 100.0).round());
-                pactl(&["set-sink-input-volume", &input.index.to_string(), &percent]).await?;
+                let command = format!("set-{kind}-volume");
+                pactl(&[&command, &input.index.to_string(), &percent]).await?;
             }
         }
         Change::ToggleMute => {
             let muted = if first.session.muted { "0" } else { "1" };
             for input in &matching {
-                pactl(&["set-sink-input-mute", &input.index.to_string(), muted]).await?;
+                let command = format!("set-{kind}-mute");
+                pactl(&[&command, &input.index.to_string(), muted]).await?;
             }
         }
     }
     Ok(())
 }
 
-async fn sink_inputs() -> Result<Vec<SinkInput>> {
-    let json = pactl(&["-f", "json", "list", "sink-inputs"]).await?;
-    parse_sink_inputs(&json)
+fn kind(flow: Flow) -> &'static str {
+    match flow {
+        Flow::Output => "sink-input",
+        Flow::Input => "source-output",
+    }
+}
+
+async fn streams(flow: Flow) -> Result<Vec<Stream>> {
+    let list = format!("{}s", kind(flow));
+    let json = pactl(&["-f", "json", "list", &list]).await?;
+    parse_streams(&json)
 }
 
 async fn pactl(args: &[&str]) -> Result<String> {
@@ -73,9 +82,9 @@ async fn pactl(args: &[&str]) -> Result<String> {
     Ok(String::from_utf8(output.stdout)?)
 }
 
-/// Parses `pactl -f json list sink-inputs`. The volume is the first channel;
+/// Parses `pactl -f json list sink-inputs` (or `source-outputs`, same format). The volume is the first channel;
 /// the app is named by its process binary, or by its application name.
-fn parse_sink_inputs(json: &str) -> Result<Vec<SinkInput>> {
+fn parse_streams(json: &str) -> Result<Vec<Stream>> {
     let inputs: Value = serde_json::from_str(json).context("pactl-Ausgabe ungültig")?;
     let inputs = inputs.as_array().context("pactl-Ausgabe ist keine Liste")?;
     Ok(inputs
@@ -87,7 +96,7 @@ fn parse_sink_inputs(json: &str) -> Result<Vec<SinkInput>> {
                 .or_else(|| props["application.name"].as_str())?
                 .to_owned();
             let channel = input["volume"].as_object()?.values().next()?;
-            Some(SinkInput {
+            Some(Stream {
                 index: input["index"].as_u64()?,
                 session: Session {
                     app,
@@ -135,7 +144,7 @@ mod tests {
 
     #[test]
     fn parses_sink_inputs() {
-        let inputs = parse_sink_inputs(SAMPLE).unwrap();
+        let inputs = parse_streams(SAMPLE).unwrap();
         assert_eq!(inputs.len(), 2);
         assert_eq!(inputs[0].index, 42);
         assert_eq!(inputs[0].session.app, "chromium");
@@ -147,7 +156,7 @@ mod tests {
 
     #[test]
     fn rejects_non_list_output() {
-        assert!(parse_sink_inputs("{}").is_err());
-        assert!(parse_sink_inputs("kein JSON").is_err());
+        assert!(parse_streams("{}").is_err());
+        assert!(parse_streams("kein JSON").is_err());
     }
 }

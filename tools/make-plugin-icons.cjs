@@ -116,6 +116,7 @@ const MIXER = {
   'app-on': icon(MUTED_SPEAKER, true),
   focused: icon(WINDOW, false),
   'focused-on': icon(WINDOW, true),
+  mic: icon(AUDIO_MIC, false), 'mic-on': icon(AUDIO_MIC_OFF, true, ['#3a1012', '#ff6b6b']),
 };
 
 // VoiceMeeter: knob for the plugin, fader for levels, speaker for mute (red when muted), crossed lines for routing, prompt for scripts.

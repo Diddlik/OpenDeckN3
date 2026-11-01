@@ -28,6 +28,11 @@ Ein Drehregler pro Anwendung (Spiel, Discord, Browser), wie ein Mischpult.
 Wie oben, aber für die App im Vordergrund (Windows: `GetForegroundWindow` → Prozess; Linux: nicht unterstützt,
 Titel „–“). Erst bauen, wenn `app` fertig ist.
 
+### `de.opendeckn3.mixer.mic` – „App-Mikrofon“ (Keypad)
+
+Wie `app`, aber für Aufnahme-Sitzungen: Windows alle aktiven Geräte aus `EnumAudioEndpoints(eCapture, …)`, Linux
+`pactl list source-outputs` / `set-source-output-mute`. Auswahlliste `source: "mics"`. Titel „an“ bzw. „stumm“.
+
 ## Tests
 
 - Prozessnamen-Vergleich ohne Groß-/Kleinschreibung und mit/ohne `.exe`.

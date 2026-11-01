@@ -3,7 +3,7 @@
   "Name": "Lautstärke pro App",
   "Author": "OpenDeckN3",
   "Version": "0.1.0",
-  "Description": "Ändert die Lautstärke einzelner Anwendungen (Spiel, Discord, Browser) per Drehregler und schaltet sie stumm.",
+  "Description": "Ändert die Lautstärke einzelner Anwendungen (Spiel, Discord, Browser) per Drehregler, schaltet sie stumm und schaltet ihr Mikrofon einzeln stumm.",
   "Category": "Lautstärke",
   "Icon": "imgs/plugin",
   "CodePathWin": "opendeckn3-mixer.exe",
@@ -81,6 +81,32 @@
           "min": 1,
           "max": 20,
           "help": "Prozent je Raste"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.mixer.mic",
+      "Name": "App-Mikrofon",
+      "Tooltip": "Mikrofon für eine festgelegte Anwendung stumm schalten, z. B. im Spiel aus und in Discord an",
+      "Icon": "imgs/mic",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/mic"
+        },
+        {
+          "Image": "imgs/mic-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "app",
+          "label": "Anwendung",
+          "source": "mics",
+          "help": "Prozessname einer Anwendung, die gerade das Mikrofon nutzt, z. B. bf6.exe. Freitext ist möglich."
         }
       ]
     }

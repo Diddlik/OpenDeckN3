@@ -1,16 +1,18 @@
 # Lautstärke-Plugin (pro App)
 
 Ein Drehregler pro Anwendung, wie ein Mischpult: Spiel, Discord oder Browser werden leiser oder lauter, ohne den
-Windows-Mixer zu öffnen. Quellcode: [`plugins/mixer`](../plugins/mixer). Windows und Linux.
+Windows-Mixer zu öffnen. Das Mikrofon lässt sich pro App stummschalten, z. B. im Spiel aus und in Discord an. Quellcode: [`plugins/mixer`](../plugins/mixer). Windows und Linux.
 
 ## Einrichten
 
 Es gibt keine globalen Einstellungen und keine Anmeldung. Das Plugin liest die Audio-Sitzungen des Systems:
 
 - **Windows:** WASAPI-Sitzungen des Standard-Ausgabegeräts. Der Prozessname (z. B. `Discord.exe`) ordnet eine Sitzung
-  einer Anwendung zu. Systemtöne werden nicht angeboten.
+  einer Anwendung zu. Systemtöne werden nicht angeboten. Für „App-Mikrofon“ liest es die Aufnahme-Sitzungen aller
+  aktiven Mikrofone, weil Apps wie Discord oft ein eigenes Gerät statt des Standard-Mikrofons nutzen.
 - **Linux:** PulseAudio bzw. PipeWire (mit `pipewire-pulse`) über `pactl`. Zugeordnet wird über
-  `application.process.binary`, sonst über den Anwendungsnamen. `pactl` muss installiert sein.
+  `application.process.binary`, sonst über den Anwendungsnamen. `pactl` muss installiert sein. „App-Mikrofon“ nutzt
+  die Aufnahme-Streams (`source-outputs`).
 
 Die Anwendung muss gerade Ton ausgeben oder eine Audio-Sitzung offen haben, damit sie in der Auswahl erscheint.
 Freitext ist ebenfalls möglich; Groß-/Kleinschreibung und `.exe` spielen keine Rolle.
@@ -21,10 +23,11 @@ Freitext ist ebenfalls möglich; Groß-/Kleinschreibung und `.exe` spielen keine
 | --- | --- | --- | --- |
 | App-Lautstärke | stumm umschalten | Lautstärke ändern | Prozent bzw. „stumm“; Zustand 1 = stumm |
 | Aktive App | stumm umschalten | Lautstärke ändern | wie oben, für die App im Vordergrund (nur Windows) |
+| App-Mikrofon | Mikrofon dieser App stumm umschalten | – | „an“ bzw. „stumm“; Zustand 1 = stumm |
 
 | Feld | Bemerkung |
 | --- | --- |
-| Anwendung | nur bei „App-Lautstärke“: Prozessname aus der Liste oder Freitext |
+| Anwendung | bei „App-Lautstärke“ und „App-Mikrofon“: Prozessname aus der Liste oder Freitext |
 | Schritt | Prozent je Raste, Standard 2, Bereich 1 bis 20 (nur Drehregler) |
 
 ## Verhalten
@@ -36,9 +39,12 @@ Freitext ist ebenfalls möglich; Groß-/Kleinschreibung und `.exe` spielen keine
 - Läuft die Anwendung nicht oder hat sie keine Audio-Sitzung, zeigt die Taste `–`.
 - „Aktive App“ zeigt `–`, wenn kein Fenster im Vordergrund steht oder dessen Anwendung keine Audio-Sitzung hat.
   Unter Linux gibt es kein Vordergrundfenster in `pactl`, dort bleibt die Aktion ohne Funktion.
+- „App-Mikrofon“ wirkt nur, solange die App das Mikrofon geöffnet hat. Schließt die App das Mikrofon und öffnet es
+  neu, kann die neue Sitzung wieder laut sein; die Taste zeigt dann „an“. Andere Apps hören das
+  Mikrofon weiter. Öffnet eine App das Mikrofon exklusiv, greift die Stummschaltung nicht.
 
 ## Tests
 
 `cargo test -p opendeckn3-mixer` prüft den Vergleich von Prozessnamen, die Auswahlliste ohne Dubletten, die Begrenzung
-der Lautstärke, die Anzeige von Prozent und „stumm“ sowie das Parsen der `pactl`-Ausgabe (Beispiel im Test). Die
+der Lautstärke, die Anzeige von Prozent, „an“ und „stumm“ sowie das Parsen der `pactl`-Ausgabe (Beispiel im Test). Die
 Tests sprechen nicht mit echten Audio-Sitzungen.
