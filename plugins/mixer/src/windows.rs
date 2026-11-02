@@ -1,4 +1,4 @@
-//! WASAPI audio sessions of the default output device and of all microphones.
+//! WASAPI audio sessions of the default output device.
 //!
 //! COM is used from one dedicated thread only. Jobs are queued on a channel
 //! and answered through a oneshot channel, so tokio workers never touch COM.
@@ -10,9 +10,8 @@ use windows::{
     Win32::{
         Foundation::CloseHandle,
         Media::Audio::{
-            DEVICE_STATE_ACTIVE, IAudioSessionControl2, IAudioSessionEnumerator,
-            IAudioSessionManager2, IMMDevice, IMMDeviceEnumerator, ISimpleAudioVolume,
-            MMDeviceEnumerator, eCapture, eMultimedia, eRender,
+            IAudioSessionControl2, IAudioSessionEnumerator, IAudioSessionManager2,
+            IMMDeviceEnumerator, ISimpleAudioVolume, MMDeviceEnumerator, eMultimedia, eRender,
         },
         System::{
             Com::{CLSCTX_ALL, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx},
@@ -26,24 +25,33 @@ use windows::{
     core::{Interface, PWSTR},
 };
 
-use crate::{Change, Flow, Session, Snapshot, same_app, step_volume};
+use crate::{Change, Session, Snapshot, same_app, step_volume};
 
 type Job = Box<dyn FnOnce() + Send>;
 
 pub async fn snapshot() -> Result<Snapshot> {
     on_com(|| {
+        let sessions = audio_sessions()?
+            .into_iter()
+            .filter_map(|(app, volume)| unsafe {
+                Some(Session {
+                    app,
+                    volume: volume.GetMasterVolume().ok()?,
+                    muted: volume.GetMute().ok()?.as_bool(),
+                })
+            })
+            .collect();
         Ok(Snapshot {
-            sessions: sessions(Flow::Output)?,
-            mics: sessions(Flow::Input)?,
+            sessions,
             foreground: foreground_app(),
         })
     })
     .await
 }
 
-pub async fn change(flow: Flow, app: String, change: Change) -> Result<()> {
+pub async fn change(app: String, change: Change) -> Result<()> {
     on_com(move || {
-        let volumes: Vec<ISimpleAudioVolume> = audio_sessions(flow)?
+        let volumes: Vec<ISimpleAudioVolume> = audio_sessions()?
             .into_iter()
             .filter(|(name, _)| same_app(name, &app))
             .map(|(_, volume)| volume)
@@ -98,47 +106,17 @@ fn com_thread() -> &'static std::sync::mpsc::Sender<Job> {
     })
 }
 
-fn sessions(flow: Flow) -> Result<Vec<Session>> {
-    Ok(audio_sessions(flow)?
-        .into_iter()
-        .filter_map(|(app, volume)| unsafe {
-            Some(Session {
-                app,
-                volume: volume.GetMasterVolume().ok()?,
-                muted: volume.GetMute().ok()?.as_bool(),
-            })
-        })
-        .collect())
-}
-
-/// Sessions of the given direction, skipping system sounds (process 0).
-fn audio_sessions(flow: Flow) -> Result<Vec<(String, ISimpleAudioVolume)>> {
-    let mut sessions = Vec::new();
-    for device in devices(flow)? {
-        let manager: IAudioSessionManager2 = unsafe { device.Activate(CLSCTX_ALL, None)? };
-        let list: IAudioSessionEnumerator = unsafe { manager.GetSessionEnumerator()? };
-        let count = unsafe { list.GetCount()? };
-        sessions.extend((0..count).filter_map(|index| audio_session(&list, index)));
-    }
-    Ok(sessions)
-}
-
-/// Output: the default device. Input: every active microphone, because apps
-/// like Discord often record from a chosen device instead of the default one.
-fn devices(flow: Flow) -> Result<Vec<IMMDevice>> {
+/// Sessions of the default output device, skipping system sounds (process 0).
+fn audio_sessions() -> Result<Vec<(String, ISimpleAudioVolume)>> {
     let enumerator: IMMDeviceEnumerator =
         unsafe { CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)? };
-    match flow {
-        Flow::Output => Ok(vec![unsafe {
-            enumerator.GetDefaultAudioEndpoint(eRender, eMultimedia)?
-        }]),
-        Flow::Input => unsafe {
-            let list = enumerator.EnumAudioEndpoints(eCapture, DEVICE_STATE_ACTIVE)?;
-            (0..list.GetCount()?)
-                .map(|index| Ok(list.Item(index)?))
-                .collect()
-        },
-    }
+    let device = unsafe { enumerator.GetDefaultAudioEndpoint(eRender, eMultimedia)? };
+    let manager: IAudioSessionManager2 = unsafe { device.Activate(CLSCTX_ALL, None)? };
+    let list: IAudioSessionEnumerator = unsafe { manager.GetSessionEnumerator()? };
+    let count = unsafe { list.GetCount()? };
+    Ok((0..count)
+        .filter_map(|index| audio_session(&list, index))
+        .collect())
 }
 
 fn audio_session(

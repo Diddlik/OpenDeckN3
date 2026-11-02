@@ -1,6 +1,6 @@
 #![cfg_attr(windows, windows_subsystem = "windows")]
 //! OpenDeckN3 mixer plugin: changes the volume and mute state of single
-//! applications with a dial or a key, and mutes their microphone (Windows: WASAPI sessions, Linux:
+//! applications with a dial or a key (Windows: WASAPI sessions, Linux:
 //! PulseAudio/PipeWire via `pactl`; see `docs/PLUGIN_MIXER.md`).
 
 #[cfg(windows)]
@@ -13,13 +13,13 @@ mod platform;
 
 #[cfg(not(any(windows, target_os = "linux")))]
 mod platform {
-    use crate::{Change, Flow, Snapshot};
+    use crate::{Change, Snapshot};
 
     pub async fn snapshot() -> anyhow::Result<Snapshot> {
         anyhow::bail!("nicht unterstützt")
     }
 
-    pub async fn change(_: Flow, _: String, _: Change) -> anyhow::Result<()> {
+    pub async fn change(_: String, _: Change) -> anyhow::Result<()> {
         anyhow::bail!("nicht unterstützt")
     }
 }
@@ -35,14 +35,6 @@ const TICK: Duration = Duration::from_secs(1);
 const DEFAULT_STEP: f64 = 2.0;
 const ERROR_TITLE: &str = "–";
 const MUTED_TITLE: &str = "stumm";
-const MIC_ON_TITLE: &str = "an";
-
-/// Direction of an audio session: playback or recording.
-#[derive(Clone, Copy)]
-pub enum Flow {
-    Output,
-    Input,
-}
 
 #[derive(Clone, Copy)]
 pub enum Change {
@@ -52,7 +44,7 @@ pub enum Change {
     ToggleMute,
 }
 
-/// One audio session (playback or recording) of one app.
+/// One audio session of the default output device.
 #[derive(Clone)]
 pub struct Session {
     pub app: String,
@@ -63,10 +55,7 @@ pub struct Session {
 
 #[derive(Default)]
 pub struct Snapshot {
-    /// Playback sessions.
     pub sessions: Vec<Session>,
-    /// Recording sessions (apps using a microphone).
-    pub mics: Vec<Session>,
     /// Process name of the window in the foreground, if known.
     pub foreground: Option<String>,
 }
@@ -110,10 +99,10 @@ impl Plugin {
         }
     }
 
-    /// The app a key or dial controls: the setting for `app` and `mic`, the foreground app for `focused`.
+    /// The app a key or dial controls: the setting for `app`, the foreground app for `focused`.
     fn target(&self, inst: &Instance) -> Option<String> {
         match inst.kind() {
-            "app" | "mic" => Some(inst.text("app")).filter(|app| !app.is_empty()),
+            "app" => Some(inst.text("app")).filter(|app| !app.is_empty()),
             "focused" => self.snapshot.foreground.clone(),
             _ => None,
         }
@@ -124,7 +113,7 @@ impl Plugin {
             return;
         };
         if let Some(app) = self.target(inst) {
-            self.change(context, flow(inst), app, Change::ToggleMute);
+            self.change(context, app, Change::ToggleMute);
         }
     }
 
@@ -139,7 +128,6 @@ impl Plugin {
         if let Some(app) = self.target(inst) {
             self.change(
                 context,
-                flow(inst),
                 app,
                 Change::VolumeStep(ticks as f32 * step / 100.0),
             );
@@ -147,10 +135,10 @@ impl Plugin {
     }
 
     /// Runs in its own task so a slow audio service does not block the main loop.
-    fn change(&self, context: &str, flow: Flow, app: String, change: Change) {
+    fn change(&self, context: &str, app: String, change: Change) {
         let (host, context) = (self.host.clone(), context.to_owned());
         tokio::spawn(async move {
-            if let Err(err) = platform::change(flow, app, change).await {
+            if let Err(err) = platform::change(app, change).await {
                 host.alert(&context);
                 host.log(format!("Lautstärke konnte nicht geändert werden: {err:#}"));
             }
@@ -165,10 +153,6 @@ impl Plugin {
                     .await
                     .context("Audiositzungen nicht abrufbar")
                     .map(|s| app_options(&s.sessions)),
-                Some("mics") => platform::snapshot()
-                    .await
-                    .context("Mikrofon-Sitzungen nicht abrufbar")
-                    .map(|s| app_options(&s.mics)),
                 other => Err(anyhow::anyhow!("unbekannte Anfrage {other:?}")),
             };
             host.reply_options(&req, options);
@@ -176,11 +160,7 @@ impl Plugin {
     }
 
     fn on_tick(&mut self) {
-        if self.busy
-            || !["app", "focused", "mic"]
-                .iter()
-                .any(|k| self.contexts.any(k))
-        {
+        if self.busy || !(self.contexts.any("app") || self.contexts.any("focused")) {
             return;
         }
         self.busy = true;
@@ -214,18 +194,16 @@ impl Plugin {
             .map(|(context, inst)| (context.clone(), inst.clone()))
             .collect();
         for (context, inst) in instances {
-            let sessions = match inst.kind() {
-                "app" | "focused" => &self.snapshot.sessions,
-                "mic" => &self.snapshot.mics,
-                _ => continue,
-            };
-            let session = self
-                .target(&inst)
-                .and_then(|app| sessions.iter().find(|s| same_app(&s.app, &app)));
+            if !matches!(inst.kind(), "app" | "focused") {
+                continue;
+            }
+            let session = self.target(&inst).and_then(|app| {
+                self.snapshot
+                    .sessions
+                    .iter()
+                    .find(|s| same_app(&s.app, &app))
+            });
             let (state, title) = match session {
-                Some(session) if inst.kind() == "mic" => {
-                    (u16::from(session.muted), mic_title(session))
-                }
                 Some(session) => (u16::from(session.muted), session_title(session)),
                 None => (0, ERROR_TITLE.to_owned()),
             };
@@ -238,14 +216,6 @@ impl Plugin {
             Msg::Host(msg) => self.on_host(msg),
             Msg::Snapshot(result) => self.on_snapshot(result),
         }
-    }
-}
-
-fn flow(inst: &Instance) -> Flow {
-    if inst.kind() == "mic" {
-        Flow::Input
-    } else {
-        Flow::Output
     }
 }
 
@@ -273,15 +243,6 @@ fn session_title(session: &Session) -> String {
     } else {
         format!("{:.0} %", session.volume * 100.0)
     }
-}
-
-fn mic_title(session: &Session) -> String {
-    if session.muted {
-        MUTED_TITLE
-    } else {
-        MIC_ON_TITLE
-    }
-    .to_owned()
 }
 
 /// Keeps a volume in 0.0 to 1.0 after a dial step.
@@ -354,11 +315,5 @@ mod tests {
     fn title_shows_volume_or_mute() {
         assert_eq!(session_title(&session("a", 0.45, false)), "45 %");
         assert_eq!(session_title(&session("a", 0.45, true)), MUTED_TITLE);
-    }
-
-    #[test]
-    fn mic_title_shows_on_or_mute() {
-        assert_eq!(mic_title(&session("a", 0.45, false)), MIC_ON_TITLE);
-        assert_eq!(mic_title(&session("a", 0.45, true)), MUTED_TITLE);
     }
 }
