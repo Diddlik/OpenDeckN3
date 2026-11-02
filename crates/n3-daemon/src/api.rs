@@ -120,6 +120,9 @@ pub enum ApiCommand {
         /// Data URL or `null` to reset to the plugin default.
         #[serde(default)]
         image: Option<String>,
+        /// Image for states other than the first; `null` = same as `image`.
+        #[serde(default, rename = "activeImage")]
+        active_image: Option<String>,
     },
     SetBrightness {
         device: String,

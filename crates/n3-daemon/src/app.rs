@@ -740,7 +740,7 @@ impl App {
     /// user image → built-in icon / manifest state image → manifest action icon → blank.
     async fn default_image(&self, device: &str, key: u8) -> Option<DynamicImage> {
         let instance = self.devices.get(device)?.page().keys.get(&key)?;
-        if let Some(url) = &instance.image {
+        if let Some(url) = instance.user_image() {
             match render::decode_data_url(url) {
                 Ok(image) => return Some(image),
                 Err(err) => tracing::warn!(%err, "invalid user image"),
@@ -1379,10 +1379,12 @@ impl App {
                 position,
                 title,
                 image,
+                active_image,
             } => {
                 self.update_instance(&device, controller, position, |i| {
                     i.title = title;
                     i.image = image;
+                    i.active_image = active_image;
                 })?;
                 if controller == Controller::Keypad {
                     self.redraw_key(&device, position).await;
@@ -1645,6 +1647,7 @@ impl App {
                         "tooltip": a.tooltip,
                         "controllers": a.controllers,
                         "settingsSchema": a.settings_schema,
+                        "states": a.states.len(),
                         "icon": render::load_icon(&plugin.path, &a.icon)
                             .and_then(|i| render::to_png_data_url(&i).ok()),
                     })

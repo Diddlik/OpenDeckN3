@@ -1150,9 +1150,16 @@ function inspectorHTML() {
       <label>Titel<input class="field" data-in="title" value="${esc(s.title ?? '')}" placeholder="Kein Titel auf der Taste"></label>
       ${isDisplay ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px">
         ${preview ? `<span class="tile" style="width:56px;height:56px;border-radius:10px;overflow:hidden"><img src="${esc(preview)}" alt="Aktuelles Tastenbild"></span>` : tileHTML(s.plugin, s.action, f && f.a.icon, 56, 24, 10, kindOf(s))}
-        <button type="button" class="btn" data-act="pickImage">${ic('image', 16)}Bild wählen</button>
-        <button type="button" class="btn" data-act="iconPick">${ic('grip', 16)}Icon wählen</button>
-        <button type="button" class="btn ghost" data-act="resetImage" ${s.image ? '' : 'disabled'}>Zurücksetzen</button>
+        <button type="button" class="btn" data-act="pickImage" data-arg="image">${ic('image', 16)}Bild wählen</button>
+        <button type="button" class="btn" data-act="iconPick" data-arg="image">${ic('grip', 16)}Icon wählen</button>
+        <button type="button" class="btn ghost" data-act="resetImage" data-arg="image" ${s.image ? '' : 'disabled'}>Zurücksetzen</button>
+      </div>` : ''}
+      ${isDisplay && f && f.a.states > 1 ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px">
+        <span class="tile" style="width:56px;height:56px;border-radius:10px;overflow:hidden">${s.activeImage ? `<img src="${esc(s.activeImage)}" alt="Bild für aktiv">` : ''}</span>
+        <span style="font-size:13px;color:var(--muted)">Aktiv</span>
+        <button type="button" class="btn" data-act="pickImage" data-arg="activeImage">${ic('image', 16)}Bild wählen</button>
+        <button type="button" class="btn" data-act="iconPick" data-arg="activeImage">${ic('grip', 16)}Icon wählen</button>
+        <button type="button" class="btn ghost" data-act="resetImage" data-arg="activeImage" ${s.activeImage ? '' : 'disabled'}>Zurücksetzen</button>
       </div>` : ''}
     </section>
     <section><div style="display:flex;justify-content:space-between;align-items:baseline"><h3>Einstellungen</h3>${isProfile ? '' : `<button type="button" class="linkbtn" data-act="jsonMode" aria-pressed="${S.json}">${S.json ? 'Felder' : '{ } JSON'}</button>`}</div>${settingsEditorHTML(s)}</section>
@@ -1796,7 +1803,8 @@ function clearSlot(id) {
 }
 // Änderungen sofort lokal zeigen, Senden gebündelt.
 const postSettings = debounce((id, settings) => api.run('setActionSettings', { ...slotParams(id), settings }).catch(() => {}), 350);
-const postAppearance = debounce((id, s) => api.run('setActionAppearance', { ...slotParams(id), title: s.title, image: s.image }).catch(() => {}), 350);
+const appearance = (id, s) => ({ ...slotParams(id), title: s.title, image: s.image, activeImage: s.activeImage });
+const postAppearance = debounce((id, s) => api.run('setActionAppearance', appearance(id, s)).catch(() => {}), 350);
 const sendSettings = (id, settings) => { remember([id], true); postSettings(id, settings); };
 const sendAppearance = (id, s) => { remember([id], true); postAppearance(id, s); };
 
@@ -1993,23 +2001,23 @@ const ACTS = {
       s.settings = { ...s.settings, [key]: String(path) }; render(); sendSettings(S.sel, s.settings);
     } catch (e) { toast('err', 'Dateiauswahl: ' + e); }
   },
-  pickImage() {
+  pickImage(key) {
     const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*';
     i.onchange = async () => {
       const file = i.files[0]; const s = slot(S.sel); if (!file || !s) return;
       try {
-        s.image = await imageToDataUrl(file);
+        s[key] = await imageToDataUrl(file);
         remember([S.sel]);
-        await api.run('setActionAppearance', { ...slotParams(S.sel), title: s.title, image: s.image });
+        await api.run('setActionAppearance', appearance(S.sel, s));
         toast('ok', `Bild „${file.name}“ übernommen`);
       } catch (e) { toast('err', e.message); }
     };
     i.click();
   },
-  resetImage() {
-    const s = slot(S.sel); if (!s) return; s.image = null;
+  resetImage(key) {
+    const s = slot(S.sel); if (!s) return; s[key] = null;
     remember([S.sel]);
-    api.run('setActionAppearance', { ...slotParams(S.sel), title: s.title, image: null }).then(() => toast('ok', 'Standardbild wiederhergestellt')).catch(() => {});
+    api.run('setActionAppearance', appearance(S.sel, s)).then(() => toast('ok', 'Standardbild wiederhergestellt')).catch(() => {});
   },
   newProfile() { S.modal = { kind: 'new', value: '', error: '' }; renderOverlay(); },
   copyProfile() { const d = cur(); if (!d) return; S.modal = { kind: 'new', from: d.activeProfile, value: `${d.activeProfile}-kopie`, error: '' }; renderOverlay(); },
@@ -2098,7 +2106,7 @@ const ACTS = {
     };
     i.click();
   },
-  iconPick() { S.modal = { kind: 'icons', q: '', fg: local.get('iconFg', ICON_FG[0]), bg: local.get('iconBg', ICON_BG[1]) }; renderOverlay(); },
+  iconPick(key) { S.modal = { kind: 'icons', key, q: '', fg: local.get('iconFg', ICON_FG[0]), bg: local.get('iconBg', ICON_BG[1]) }; renderOverlay(); },
   iconColor(arg) {
     const [key, c] = arg.split('|'); S.modal[key] = c; local.set(key === 'fg' ? 'iconFg' : 'iconBg', c);
     document.querySelectorAll(`.swatch[data-arg^="${key}|"]`).forEach((b) => b.setAttribute('aria-pressed', b.dataset.arg === arg));
@@ -2106,12 +2114,11 @@ const ACTS = {
   },
   async iconUse(name) {
     const s = slot(S.sel), hit = ICONLIB.find(([n]) => n === name); if (!s || !hit) return;
-    const { fg, bg } = S.modal; S.modal = null; renderOverlay();
+    const { fg, bg, key } = S.modal; S.modal = null; renderOverlay();
     try {
-      const image = await iconImage(hit[2], fg, bg);
+      s[key] = await iconImage(hit[2], fg, bg);
       remember([S.sel]);
-      s.image = image;
-      await api.run('setActionAppearance', { ...slotParams(S.sel), title: s.title, image });
+      await api.run('setActionAppearance', appearance(S.sel, s));
       toast('ok', `Icon „${name}“ übernommen`);
     } catch (e) { toast('err', e.message); }
   },

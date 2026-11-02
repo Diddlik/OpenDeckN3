@@ -89,6 +89,7 @@ interface ActionInstance {
   state: number;
   title: string | null;      // vom Nutzer gesetzt
   image: string | null;      // vom Nutzer gesetzt (Data-URL)
+  activeImage?: string;      // vom Nutzer gesetzt für Zustand ≥ 1, sonst gilt `image`
 }
 
 interface CatalogPlugin {
@@ -100,6 +101,7 @@ interface CatalogPlugin {
     controllers: Controller[];
     icon: string | null;     // PNG-Data-URL
     settingsSchema?: SettingsField[]; // Formular für die Einstellungen (eingebaute Aktionen)
+    states?: number;         // Anzahl der Zustände aus dem Manifest (Plugin-Aktionen)
   }[];
 }
 
@@ -142,7 +144,7 @@ type InputEvent =
 | `setAction` | `device`, `controller`, `position`, `plugin`, `action`, `settings?` | `null` – ersetzt eine vorhandene Belegung; ohne `settings` gelten bei eingebauten Aktionen die Schema-Standardwerte |
 | `clearAction` | `device`, `controller`, `position` | `null` |
 | `setActionSettings` | `device`, `controller`, `position`, `settings` | `null` – Plugin erhält `didReceiveSettings` |
-| `setActionAppearance` | `device`, `controller`, `position`, `title?`, `image?` | `null` – `image: null` = Standardbild |
+| `setActionAppearance` | `device`, `controller`, `position`, `title?`, `image?`, `activeImage?` | `null` – `image: null` = Standardbild; `activeImage` gilt für alle Zustände außer dem ersten (z. B. „an“), `null` = wie `image` |
 | `setBrightness` | `device`, `value` (0–100) | `null` |
 | `setLockKey` | `device`, `key` (Tasten-Position, Regler-Drücken = `keys` + Regler; `null` = keine Sperrtaste, entsperrt das Gerät), `seconds` (1–10) | `null` |
 | `simulateInput` | `device`, `input: InputEvent` | `null` – wie echte Eingabe (ideal für das virtuelle Gerät) |

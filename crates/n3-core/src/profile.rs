@@ -23,6 +23,9 @@ pub struct ActionInstance {
     /// User-chosen image override as data URL.
     #[serde(default)]
     pub image: Option<String>,
+    /// User image for every state other than the first (e.g. "on"); falls back to `image`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_image: Option<String>,
 }
 
 fn empty_object() -> Value {
@@ -38,6 +41,15 @@ impl ActionInstance {
             state: 0,
             title: None,
             image: None,
+            active_image: None,
+        }
+    }
+
+    /// User image for the current state: `active_image` in every state but the first.
+    pub fn user_image(&self) -> Option<&str> {
+        match self.state {
+            0 => self.image.as_deref(),
+            _ => self.active_image.as_deref().or(self.image.as_deref()),
         }
     }
 }
@@ -179,6 +191,19 @@ impl SlotContext {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn active_image_applies_to_later_states_and_falls_back_to_image() {
+        let mut instance = ActionInstance::new("p", "a");
+        instance.image = Some("off".into());
+        assert_eq!(instance.user_image(), Some("off"));
+        instance.state = 1;
+        assert_eq!(instance.user_image(), Some("off"));
+        instance.active_image = Some("on".into());
+        assert_eq!(instance.user_image(), Some("on"));
+        instance.state = 0;
+        assert_eq!(instance.user_image(), Some("off"));
+    }
 
     #[test]
     fn context_roundtrip() {
