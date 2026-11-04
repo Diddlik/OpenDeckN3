@@ -1,4 +1,4 @@
-// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights, MQTT, Teams, timer, GitHub, MIDI and Spotify plugins (144×144 PNG).
+// Renders the key images of the OBS, Home Assistant, mail & calendar, AudioSwitcher, HTTP, media, system monitor, mixer, VoiceMeeter, Twitch, YouTube, lights, MQTT, Teams, timer, GitHub, MIDI, Spotify and AudioRouter plugins (144×144 PNG).
 //
 // Usage: NODE_PATH=$(npm root -g) node tools/make-plugin-icons.cjs
 // Output: plugins/<name>/<uuid>.sdPlugin/imgs/<icon>.png
@@ -276,6 +276,22 @@ const SPOTIFY_SET = {
   device: icon(SPEAKER_DEVICE, false, SPOTIFY),
 };
 
+// AudioRouter: blue line icons; play lights green, privacy and record red while active, toggles and sessions fill in.
+const AR = ['#0f1d33', '#6aa8ff'];
+const AR_ON = ['#1f4fa8', '#ffffff'];
+const RED_ON = ['#3a1012', '#ff6b6b'];
+const REC_DOT = '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/>';
+const AUDIOROUTER = {
+  plugin: icon(ROUTE, false, AR),
+  play: icon(PLAY, false, AR), 'play-on': icon(PLAY, true, ['#06302c', '#4fe0c8']),
+  privacy: icon(AUDIO_MIC, false, AR), 'privacy-on': icon(AUDIO_MIC_OFF, true, RED_ON),
+  toggle: icon(POWER, false, AR), 'toggle-on': icon(POWER, true, AR_ON),
+  level: icon(FADER, false, AR),
+  session: icon(GRID, false, AR), 'session-on': icon(GRID, true, AR_ON),
+  record: icon(REC_DOT, false, AR), 'record-on': icon(REC_DOT, true, RED_ON),
+  sound: icon(NOTE, false, AR),
+};
+
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 144, height: 144 } });
@@ -295,7 +311,8 @@ const SPOTIFY_SET = {
     ['plugins/timer/de.opendeckn3.timer.sdPlugin/imgs', TIMER_SET],
     ['plugins/github/de.opendeckn3.github.sdPlugin/imgs', GITHUB],
     ['plugins/midi/de.opendeckn3.midi.sdPlugin/imgs', MIDI_SET],
-    ['plugins/spotify/de.opendeckn3.spotify.sdPlugin/imgs', SPOTIFY_SET]]) {
+    ['plugins/spotify/de.opendeckn3.spotify.sdPlugin/imgs', SPOTIFY_SET],
+    ['plugins/audiorouter/de.opendeckn3.audiorouter.sdPlugin/imgs', AUDIOROUTER]]) {
     const out = path.resolve(__dirname, '..', dir);
     fs.mkdirSync(out, { recursive: true });
     for (const [name, html] of Object.entries(set)) {

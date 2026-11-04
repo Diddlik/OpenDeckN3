@@ -143,6 +143,7 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit dem echten 
 - [x] GitHub-Plugin: CI-Status eines Branches, offene Pull Requests und Benachrichtigungen – Windows und Linux
 - [x] MIDI-Plugin: Noten, Controller-Werte und Programmwechsel für DAWs und Lightroom (MIDI2LR), mit Rückmeldung der DAW – Windows und Linux
 - [x] Spotify-Plugin: Titel gefällt mir, zur Playlist hinzufügen, Zufall und Wiederholen umschalten, Wiedergabe auf ein anderes Gerät verschieben – Windows und Linux
+- [x] AudioRouter-Plugin: Play/Stop, Session wechseln, Mikrofon-Privacy, Tools umschalten, Pegel per Drehregler, Aufnahme und Soundboard – Windows (Linux über das Netzwerk)
 - [x] Mail-&-Kalender-Plugin: ungelesene Mails und dein nächster Termin – ein Druck und du bist im Meeting (Gmail, Google Kalender, Outlook …)
 - [ ] Multi-Aktionen und Ordner
 - [ ] Automatischer Profilwechsel je nach aktivem Programm

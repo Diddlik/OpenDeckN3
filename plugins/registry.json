@@ -192,6 +192,16 @@
       "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_SPOTIFY.md"
     },
     {
+      "uuid": "de.opendeckn3.audiorouter",
+      "name": "AudioRouter",
+      "description": "AudioRouter steuern: Play/Stop, Session wechseln, Mikrofon-Privacy, Tools umschalten, Pegel per Drehregler, Aufnahme und Soundboard (Windows; Linux über das Netzwerk).",
+      "author": "OpenDeckN3",
+      "repo": "Diddlik/OpenDeckN3",
+      "asset": "de.opendeckn3.audiorouter-windows.streamDeckPlugin",
+      "category": "Audio",
+      "homepage": "https://github.com/Diddlik/OpenDeckN3/blob/main/docs/PLUGIN_AUDIOROUTER.md"
+    },
+    {
       "uuid": "de.opendeckn3.counter",
       "name": "Zähler (Beispiel)",
       "description": "Beispiel-Plugin: zählt Tastendrücke und färbt die Taste ein, Drehregler ändern den Farbton.",

@@ -45,6 +45,7 @@ plugins/timer/      Timer-Plugin: Countdown, Pomodoro, Stoppuhr; Laufzeit in den
 plugins/github/     GitHub-Plugin: CI-Status, Pull Requests, Benachrichtigungen; optionales Token (docs/PLUGIN_GITHUB.md)
 plugins/midi/       MIDI-Plugin: Noten, Controller, Programmwechsel; Rückmeldung per Eingang (docs/PLUGIN_MIDI.md)
 plugins/spotify/    Spotify-Plugin: Gefällt mir, Playlist, Zufall, Wiederholen, Gerät; Anmeldung mit PKCE (docs/PLUGIN_SPOTIFY.md)
+plugins/audiorouter/ AudioRouter-Plugin: Play/Stop, Session, Privacy, Tools, Pegel, Aufnahme, Soundboard (docs/PLUGIN_AUDIOROUTER.md)
 plugins/sdk/       Hilfsbibliothek für Plugins in Rust (Host-Verbindung, Tastenzustand, Einstellungen)
 tools/smoke-test.mjs  End-to-End-Test gegen den laufenden Dienst
 tools/make-iconlib.py  Icon-Bibliothek für Tastenbilder (Auswahl aus Lucide, ISC) in ui/index.html schreiben

@@ -1,0 +1,299 @@
+{
+  "UUID": "de.opendeckn3.audiorouter",
+  "Name": "AudioRouter",
+  "Author": "OpenDeckN3",
+  "Version": "0.1.0",
+  "Description": "Steuert AudioRouter: Play/Stop, Session wechseln, Mikrofon-Privacy, Tools umschalten, Pegel per Drehregler, Aufnahme und Soundboard.",
+  "Category": "Audio",
+  "Icon": "imgs/plugin",
+  "CodePathWin": "opendeckn3-audiorouter.exe",
+  "CodePathLin": "opendeckn3-audiorouter",
+  "CodePathMac": "opendeckn3-audiorouter",
+  "OS": [
+    {
+      "Platform": "windows"
+    },
+    {
+      "Platform": "linux"
+    },
+    {
+      "Platform": "mac"
+    }
+  ],
+  "GlobalSettingsSchema": [
+    {
+      "type": "info",
+      "key": "status",
+      "label": "Status"
+    },
+    {
+      "type": "text",
+      "key": "url",
+      "label": "API-Adresse",
+      "placeholder": "http://127.0.0.1:17891",
+      "help": "Leer = http://127.0.0.1:17891. In AudioRouter: API → Start API. 127.0.0.1 statt localhost verwenden. Von einem anderen PC aus die „Network URL“ aus dem API-Tab."
+    },
+    {
+      "type": "password",
+      "key": "token",
+      "label": "API-Token",
+      "help": "In AudioRouter: API → „Copy API token“."
+    },
+    {
+      "type": "link",
+      "key": "download",
+      "label": "AudioRouter herunterladen",
+      "url": "https://audiorouter.org/"
+    }
+  ],
+  "Actions": [
+    {
+      "UUID": "de.opendeckn3.audiorouter.play",
+      "Name": "Play/Stop",
+      "Tooltip": "Startet oder stoppt die in AudioRouter gewählte Session; leuchtet, solange sie läuft",
+      "Icon": "imgs/play",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/play"
+        },
+        {
+          "Image": "imgs/play-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.audiorouter.privacy",
+      "Name": "Mikrofon-Privacy",
+      "Tooltip": "Schaltet die Privacy-Stummschaltung des Mikrofons um; leuchtet, solange das Mikrofon stumm ist",
+      "Icon": "imgs/privacy",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/privacy"
+        },
+        {
+          "Image": "imgs/privacy-on"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.audiorouter.toggle",
+      "Name": "Tool umschalten",
+      "Tooltip": "Schaltet ein Tool ein/aus, umgeht es (Bypass) oder wechselt eine Ein/Aus- bzw. A/B-Einstellung",
+      "Icon": "imgs/toggle",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/toggle"
+        },
+        {
+          "Image": "imgs/toggle-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "node",
+          "label": "Tool",
+          "source": "nodes",
+          "help": "Tools der gewählten Session. AudioRouter muss verbunden sein."
+        },
+        {
+          "type": "select",
+          "key": "target",
+          "label": "Einstellung",
+          "source": "targets",
+          "dependsOn": [
+            "node"
+          ],
+          "default": "enabled"
+        },
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Verhalten",
+          "default": "latch",
+          "options": [
+            [
+              "latch",
+              "Umschalten je Druck"
+            ],
+            [
+              "momentary",
+              "Nur solange gedrückt"
+            ]
+          ],
+          "help": "„Nur solange gedrückt“ eignet sich z. B. für Push-to-Talk."
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.audiorouter.level",
+      "Name": "Pegel",
+      "Tooltip": "Ändert eine Zahl-Einstellung eines Tools (z. B. Lautstärke oder Gain) per Drehregler oder in Schritten",
+      "Icon": "imgs/level",
+      "Controllers": [
+        "Encoder",
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/level"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "node",
+          "label": "Tool",
+          "source": "levelNodes",
+          "help": "Tools der gewählten Session mit Zahl-Einstellungen."
+        },
+        {
+          "type": "select",
+          "key": "parameter",
+          "label": "Einstellung",
+          "source": "numbers",
+          "dependsOn": [
+            "node"
+          ]
+        },
+        {
+          "type": "number",
+          "key": "step",
+          "label": "Schritt",
+          "default": 1,
+          "help": "Pro Raste bzw. pro Tastendruck; negativ zum Verringern."
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.audiorouter.session",
+      "Name": "Session",
+      "Tooltip": "Wählt eine Session; leuchtet, solange sie gewählt ist",
+      "Icon": "imgs/session",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/session"
+        },
+        {
+          "Image": "imgs/session-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "session",
+          "label": "Session",
+          "source": "sessions"
+        },
+        {
+          "type": "select",
+          "key": "play",
+          "label": "Danach abspielen",
+          "default": "no",
+          "options": [
+            [
+              "no",
+              "Nur wenn vorher etwas lief"
+            ],
+            [
+              "yes",
+              "Immer"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.audiorouter.record",
+      "Name": "Aufnahme",
+      "Tooltip": "Startet oder stoppt die Aufnahme eines Recorders; zeigt die Dauer, solange er aufnimmt",
+      "Icon": "imgs/record",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/record"
+        },
+        {
+          "Image": "imgs/record-on"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "recorder",
+          "label": "Recorder",
+          "source": "recorders",
+          "help": "Recorder-Tools der gewählten Session. Aufnehmen geht nur, während die Session läuft."
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.audiorouter.sound",
+      "Name": "Sound",
+      "Tooltip": "Spielt einen Sound eines Soundboard-Tools",
+      "Icon": "imgs/sound",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/sound"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "soundboard",
+          "label": "Soundboard",
+          "source": "soundboards"
+        },
+        {
+          "type": "number",
+          "key": "slot",
+          "label": "Platz",
+          "default": 1,
+          "min": 1,
+          "max": 9
+        },
+        {
+          "type": "select",
+          "key": "behavior",
+          "label": "Wiedergabe",
+          "default": "slot",
+          "options": [
+            [
+              "slot",
+              "Wie im Soundboard eingestellt"
+            ],
+            [
+              "once",
+              "Einmal"
+            ],
+            [
+              "loop",
+              "Schleife bis zum nächsten Druck"
+            ],
+            [
+              "hold",
+              "Solange gedrückt"
+            ]
+          ]
+        }
+      ]
+    }
+  ]
+}
