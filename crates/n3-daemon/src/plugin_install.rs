@@ -648,9 +648,17 @@ fn pick_asset(assets: &[GhAsset], wanted: Option<&str>, os: &str) -> Option<GhAs
         .map(|(_, a)| a.clone())
 }
 
-/// No marker or another version: the app was installed or updated since the last plugin update.
+/// The marker names another version: the app was updated since the last plugin update.
+/// A new installation (no marker yet) only gets the marker; its plugins come from the
+/// current catalog anyway, and an update right at the first start would race with setup.
 fn app_version_changed(marker: &Path) -> bool {
-    std::fs::read_to_string(marker).map_or(true, |v| v.trim() != env!("CARGO_PKG_VERSION"))
+    match std::fs::read_to_string(marker) {
+        Ok(version) => version.trim() != env!("CARGO_PKG_VERSION"),
+        Err(_) => {
+            std::fs::write(marker, env!("CARGO_PKG_VERSION")).ok();
+            false
+        }
+    }
 }
 
 /// `1.2.0` vs. `1.10.0` etc.; falls back to "different = newer".
@@ -905,7 +913,9 @@ mod tests {
     fn detects_app_updates_by_marker() {
         let tmp = tempfile::tempdir().unwrap();
         let marker = tmp.path().join(APP_VERSION_MARKER);
-        assert!(app_version_changed(&marker), "no marker yet");
+        assert!(!app_version_changed(&marker), "new installation");
+        assert!(marker.exists(), "first start writes the marker");
+        assert!(!app_version_changed(&marker));
         std::fs::write(&marker, "0.0.1").unwrap();
         assert!(app_version_changed(&marker));
         std::fs::write(&marker, format!("{}\n", env!("CARGO_PKG_VERSION"))).unwrap();

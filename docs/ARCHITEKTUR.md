@@ -95,7 +95,7 @@ Displays. Bildänderungen landen in dieser Zeit nur im Zustand; beim Entsperren 
 
 **Plugin-Updates:** Der `Installer` prüft 60 s nach dem Start und dann alle 6 Stunden den Katalog und
 installiert neuere Versionen, solange `autoUpdatePlugins` in `settings.json` gesetzt ist (Standard). Nach einem
-App-Update (die Datei `<plugins>/.app-version` nennt eine andere Version oder fehlt) prüft er schon nach 5 s und
+App-Update (die Datei `<plugins>/.app-version` nennt eine andere Version; beim ersten Start wird sie nur angelegt) prüft er schon nach 5 s und
 unabhängig von dieser Einstellung, weil die eigenen Plugins mit der App veröffentlicht werden. Erst wenn kein Plugin
 fehlschlug, schreibt er die neue Version in die Datei; sonst versucht er es nach 10 Minuten erneut.
 
