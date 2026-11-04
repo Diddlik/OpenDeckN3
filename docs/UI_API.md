@@ -154,7 +154,7 @@ type InputEvent =
 | `pluginStore` | `refresh?` (Cache von 10 min umgehen) | `{ plugins: StoreEntry[], registries: string[], errors: string[] }` |
 | `getGlobalSettings` | `plugin` | globale Einstellungen des Plugins (Objekt) |
 | `pluginRequest` | `plugin`, `payload` (z. B. `{ request: "guilds" }`; für `opendeckn3.builtin` beantwortet der Dienst `{ request: "apps" }` selbst: installierte Programme – Windows: Startmenü-Verknüpfungen, Linux: `.desktop`-Einträge, macOS: `.app`) | Antwort des Plugins (`sendToPropertyInspector`), z. B. `{ options: [[wert, text], …] }`; Fehler, wenn das Plugin `error` liefert oder nicht läuft |
-| `updatePlugins` | – | `{ updated: [{ uuid, name, from, to }], failed: [{ uuid, name, error }] }` – installiert alle neueren Versionen aus dem Katalog |
+| `updatePlugins` | – | `{ updated: [{ uuid, name, from, to }], failed: [{ uuid, name, error }] }` – installiert alle neueren Versionen aus dem Katalog; `failed` nennt auch installierte Plugins, deren Release nicht abgefragt werden konnte |
 | `getAppSettings` | – | `AppSettings` – `{ autoUpdatePlugins: boolean, dimAfterMinutes: number }` (Standard `true`, `0`); `dimAfterMinutes` > 0 dunkelt alle Decks nach so vielen Minuten ohne Tastatur-, Maus- oder Deck-Eingabe auf höchstens 10 % ab (Windows, Linux/X11) |
 | `setAppSettings` | `settings` (Teilobjekt) | zusammengeführte `AppSettings`; gespeichert in `<config>/settings.json` |
 | `setGlobalSettings` | `plugin`, `settings` | zusammengeführte Einstellungen – `settings` wird in die vorhandenen gemischt (vom Plugin gespeicherte Werte wie Tokens bleiben); Plugin erhält `didReceiveGlobalSettings` |

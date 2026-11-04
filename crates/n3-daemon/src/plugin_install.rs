@@ -6,6 +6,7 @@
 //! [`ApiCommand::ActivatePlugin`] (state changes stay in `App`).
 
 use std::{
+    collections::{HashMap, HashSet},
     io::{Cursor, Read},
     path::{Path, PathBuf},
     sync::Arc,
@@ -31,6 +32,12 @@ const MAX_DOWNLOAD: u64 = 200 * 1024 * 1024;
 const MAX_UNPACKED: u64 = 512 * 1024 * 1024;
 const MAX_ENTRIES: usize = 20_000;
 const CACHE_FOR: Duration = Duration::from_secs(10 * 60);
+/// A repository's release list younger than this is reused without asking GitHub again,
+/// so a catalog with many plugins from one repository costs one API request.
+const RELEASES_FRESH: Duration = Duration::from_secs(60);
+const API_TIMEOUT: Duration = Duration::from_secs(20);
+/// Records the app version whose plugins were last brought up to date.
+const APP_VERSION_MARKER: &str = ".app-version";
 const ARCHIVE_EXTENSIONS: [&str; 3] = [".streamdeckplugin", ".zip", ".n3plugin"];
 
 /// One entry of a `registry.json`.
@@ -107,6 +114,14 @@ impl Release {
 
 type Cache = Option<(Instant, Vec<(RegistryEntry, Result<Release, String>)>)>;
 
+/// Release list of one repository with its ETag: GitHub answers a matching
+/// `If-None-Match` with 304, which does not count against the rate limit.
+struct RepoReleases {
+    etag: Option<String>,
+    checked: Instant,
+    releases: Vec<GhRelease>,
+}
+
 /// Handles the plugin commands that need network or disk time.
 #[derive(Clone)]
 pub struct Installer {
@@ -116,9 +131,10 @@ pub struct Installer {
     api: mpsc::Sender<ApiRequest>,
     http: reqwest::Client,
     cache: Arc<Mutex<Cache>>,
+    releases: Arc<Mutex<HashMap<String, RepoReleases>>>,
     /// `uuid@version` of releases whose package carries an older manifest
     /// version: installing them again would not help, so they are skipped.
-    stale: Arc<Mutex<std::collections::HashSet<String>>>,
+    stale: Arc<Mutex<HashSet<String>>>,
 }
 
 impl Installer {
@@ -142,6 +158,7 @@ impl Installer {
             api,
             http,
             cache: Default::default(),
+            releases: Default::default(),
             stale: Default::default(),
         })
     }
@@ -213,6 +230,12 @@ impl Installer {
     async fn update_all(&self) -> anyhow::Result<Value> {
         let store = self.store(true).await?;
         let (mut updated, mut failed) = (Vec::new(), Vec::new());
+        // Without a release lookup nothing was checked: report it instead of "up to date".
+        for plugin in store["plugins"].as_array().into_iter().flatten() {
+            if !plugin["installed"].is_null() && !plugin["error"].is_null() {
+                failed.push(json!({ "uuid": plugin["uuid"], "name": plugin["name"], "error": plugin["error"] }));
+            }
+        }
         let due = store["plugins"]
             .as_array()
             .into_iter()
@@ -257,13 +280,24 @@ impl Installer {
     }
 
     /// Background job: shortly after start and then every few hours, update
-    /// plugins if the user enabled it (`autoUpdatePlugins`).
+    /// plugins if the user enabled it (`autoUpdatePlugins`). After an app
+    /// update the plugins are updated right away and regardless of that
+    /// setting, because the project's own plugins are released together with
+    /// the app.
     pub fn spawn_auto_update(&self, shutdown: CancellationToken) {
         const FIRST_CHECK: Duration = Duration::from_secs(60);
+        const AFTER_APP_UPDATE: Duration = Duration::from_secs(5);
+        const RETRY: Duration = Duration::from_secs(10 * 60);
         const INTERVAL: Duration = Duration::from_secs(6 * 3600);
         let this = self.clone();
+        let marker = self.plugins_dir.join(APP_VERSION_MARKER);
         tokio::spawn(async move {
-            let mut wait = FIRST_CHECK;
+            let mut app_updated = app_version_changed(&marker);
+            let mut wait = if app_updated {
+                AFTER_APP_UPDATE
+            } else {
+                FIRST_CHECK
+            };
             loop {
                 tokio::select! {
                     _ = tokio::time::sleep(wait) => {}
@@ -274,19 +308,29 @@ impl Installer {
                     .call(ApiCommand::GetAppSettings)
                     .await
                     .is_ok_and(|s| s["autoUpdatePlugins"] != false);
-                if !enabled {
+                if !enabled && !app_updated {
                     continue;
                 }
                 match this.update_all().await {
-                    Ok(report) if report["updated"].as_array().is_some_and(|u| !u.is_empty()) => {
-                        this.call(ApiCommand::ReportPluginUpdates {
-                            plugins: report["updated"].clone(),
-                        })
-                        .await
-                        .ok();
+                    Ok(report) => {
+                        if report["updated"].as_array().is_some_and(|u| !u.is_empty()) {
+                            this.call(ApiCommand::ReportPluginUpdates {
+                                plugins: report["updated"].clone(),
+                            })
+                            .await
+                            .ok();
+                        }
+                        if report["failed"].as_array().is_some_and(|f| f.is_empty()) {
+                            if app_updated {
+                                std::fs::write(&marker, env!("CARGO_PKG_VERSION")).ok();
+                            }
+                            app_updated = false;
+                        }
                     }
-                    Ok(_) => {}
                     Err(err) => tracing::warn!("automatic plugin update failed: {err:#}"),
+                }
+                if app_updated {
+                    wait = RETRY;
                 }
             }
         });
@@ -405,29 +449,77 @@ impl Installer {
     // ---------------------------------------------------------------------
 
     async fn latest_release(&self, repo: &str, asset: Option<&str>) -> anyhow::Result<Release> {
+        // Held across the request so parallel lookups of one repository share a single fetch.
+        let mut cache = self.releases.lock().await;
+        let fresh = cache
+            .get(repo)
+            .is_some_and(|c| c.checked.elapsed() < RELEASES_FRESH);
+        if !fresh {
+            let etag = cache.get(repo).and_then(|c| c.etag.clone());
+            match self.fetch_releases(repo, etag.as_deref()).await {
+                Ok(Some((etag, releases))) => {
+                    cache.insert(
+                        repo.to_owned(),
+                        RepoReleases {
+                            etag,
+                            checked: Instant::now(),
+                            releases,
+                        },
+                    );
+                }
+                Ok(None) => {
+                    if let Some(c) = cache.get_mut(repo) {
+                        c.checked = Instant::now();
+                    }
+                }
+                // An older list beats none, e.g. while the rate limit is exhausted.
+                Err(err) if cache.contains_key(repo) => {
+                    tracing::warn!(repo, "using cached releases: {err:#}");
+                }
+                Err(err) => return Err(err),
+            }
+        }
+        let releases = cache.get(repo).map_or(&[][..], |c| &c.releases[..]);
+        pick_release(releases, asset, std::env::consts::OS).with_context(|| {
+            format!("{repo}: kein Release mit Plugin-Datei (.streamDeckPlugin oder .zip)")
+        })
+    }
+
+    /// `None` when GitHub reports the list unchanged since `etag`.
+    async fn fetch_releases(
+        &self,
+        repo: &str,
+        etag: Option<&str>,
+    ) -> anyhow::Result<Option<(Option<String>, Vec<GhRelease>)>> {
         let url = format!("https://api.github.com/repos/{repo}/releases?per_page=20");
-        let res = self
+        let mut req = self
             .http
             .get(&url)
             .header("Accept", "application/vnd.github+json")
-            .send()
-            .await
-            .context("GitHub nicht erreichbar")?;
+            .timeout(API_TIMEOUT);
+        if let Some(etag) = etag {
+            req = req.header("If-None-Match", etag);
+        }
+        let res = req.send().await.context("GitHub nicht erreichbar")?;
         let limited = res
             .headers()
             .get("x-ratelimit-remaining")
             .is_some_and(|v| v == "0");
         match res.status().as_u16() {
             200 => {}
+            304 if etag.is_some() => return Ok(None),
             404 => bail!("Repository {repo} nicht gefunden"),
             429 => bail!("GitHub-Abfragelimit erreicht – bitte später erneut versuchen"),
             403 if limited => bail!("GitHub-Abfragelimit erreicht – bitte später erneut versuchen"),
             code => bail!("GitHub antwortet mit HTTP {code}"),
         }
-        let releases: Vec<GhRelease> = serde_json::from_slice(&res.bytes().await?)?;
-        pick_release(&releases, asset, std::env::consts::OS).with_context(|| {
-            format!("{repo}: kein Release mit Plugin-Datei (.streamDeckPlugin oder .zip)")
-        })
+        let etag = res
+            .headers()
+            .get("etag")
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned);
+        let releases = serde_json::from_slice(&res.bytes().await?)?;
+        Ok(Some((etag, releases)))
     }
 
     async fn download(&self, repo: &str, asset: &GhAsset) -> anyhow::Result<Vec<u8>> {
@@ -554,6 +646,11 @@ fn pick_asset(assets: &[GhAsset], wanted: Option<&str>, os: &str) -> Option<GhAs
         })
         .max_by_key(|(score, _)| *score)
         .map(|(_, a)| a.clone())
+}
+
+/// No marker or another version: the app was installed or updated since the last plugin update.
+fn app_version_changed(marker: &Path) -> bool {
+    std::fs::read_to_string(marker).map_or(true, |v| v.trim() != env!("CARGO_PKG_VERSION"))
 }
 
 /// `1.2.0` vs. `1.10.0` etc.; falls back to "different = newer".
@@ -802,6 +899,17 @@ mod tests {
         assert!(is_newer("1.10.0", "1.9.2"));
         assert!(!is_newer("v1.0.0", "1.0.0"));
         assert!(is_newer("2024-05", "2024-04"));
+    }
+
+    #[test]
+    fn detects_app_updates_by_marker() {
+        let tmp = tempfile::tempdir().unwrap();
+        let marker = tmp.path().join(APP_VERSION_MARKER);
+        assert!(app_version_changed(&marker), "no marker yet");
+        std::fs::write(&marker, "0.0.1").unwrap();
+        assert!(app_version_changed(&marker));
+        std::fs::write(&marker, format!("{}\n", env!("CARGO_PKG_VERSION"))).unwrap();
+        assert!(!app_version_changed(&marker));
     }
 
     #[test]

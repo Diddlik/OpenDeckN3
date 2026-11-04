@@ -94,7 +94,14 @@ Eingabe außer der Sperrtaste (nur das Loslassen vorher gedrückter Tasten kommt
 Displays. Bildänderungen landen in dieser Zeit nur im Zustand; beim Entsperren werden alle Tasten neu gezeichnet.
 
 **Plugin-Updates:** Der `Installer` prüft 60 s nach dem Start und dann alle 6 Stunden den Katalog und
-installiert neuere Versionen, solange `autoUpdatePlugins` in `settings.json` gesetzt ist (Standard).
+installiert neuere Versionen, solange `autoUpdatePlugins` in `settings.json` gesetzt ist (Standard). Nach einem
+App-Update (die Datei `<plugins>/.app-version` nennt eine andere Version oder fehlt) prüft er schon nach 5 s und
+unabhängig von dieser Einstellung, weil die eigenen Plugins mit der App veröffentlicht werden. Erst wenn kein Plugin
+fehlschlug, schreibt er die neue Version in die Datei; sonst versucht er es nach 10 Minuten erneut.
+
+GitHub erlaubt ohne Anmeldung 60 API-Anfragen pro Stunde und IP. Deshalb holt der `Installer` die Release-Liste je
+Repository nur einmal und verwendet sie 60 s lang für alle Plugins aus diesem Repository. Danach fragt er mit dem ETag
+nach (`If-None-Match`). Scheitert die Abfrage, etwa am Limit, nimmt er die zuletzt gelesene Liste.
 
 ## Eingebaute Aktionen & Tastenbilder
 
