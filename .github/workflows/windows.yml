@@ -21,6 +21,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.inputs.release_tag || github.ref }}
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v7
@@ -55,12 +57,35 @@ jobs:
       - name: Dienst (CLI) und Discord-Plugin bauen
         run: cargo build --release -p n3-daemon -p opendeckn3-discord -p opendeckn3-obs -p opendeckn3-homeassistant -p opendeckn3-mailcalendar -p opendeckn3-audioswitcher -p opendeckn3-http -p opendeckn3-media -p opendeckn3-sysmon -p opendeckn3-mixer -p opendeckn3-voicemeeter -p opendeckn3-twitch -p opendeckn3-youtube -p opendeckn3-lights -p opendeckn3-mqtt -p opendeckn3-teams -p opendeckn3-timer -p opendeckn3-github -p opendeckn3-midi -p opendeckn3-spotify -p opendeckn3-audiorouter
 
+      # GitHub's browser download endpoint can return 504 while the asset API works.
+      # These match Tauri CLI 2.12.4; Tauri also verifies its own embedded hashes.
+      - name: NSIS-Werkzeuge laden und verifizieren
+        shell: pwsh
+        run: |
+          $tools = Join-Path $env:LOCALAPPDATA "tauri\NSIS"
+          $downloads = Join-Path $env:RUNNER_TEMP "nsis-tools"
+          New-Item -ItemType Directory -Force $tools, $downloads | Out-Null
+          $assets = @(
+            @{ Repo = "binary-releases"; Id = "623832696"; Name = "nsis-3.13.zip"; Hash = "ba63dffc4410ee89193e1cb5a41989991bd77c61068da17e3156d136b7b0b3d8" },
+            @{ Repo = "nsis-tauri-utils"; Id = "345882097"; Name = "nsis_tauri_utils.dll"; Hash = "5ba143b5db4a87d32d6e7802e033330aae56cbceabe0d1e3ba41948385ad4709" }
+          )
+          foreach ($asset in $assets) {
+            $file = Join-Path $downloads $asset.Name
+            Invoke-WebRequest -Uri "https://api.github.com/repos/tauri-apps/$($asset.Repo)/releases/assets/$($asset.Id)" -Headers @{ Accept = "application/octet-stream" } -OutFile $file -TimeoutSec 60 -MaximumRetryCount 3
+            if ((Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant() -ne $asset.Hash) { throw "NSIS checksum mismatch: $($asset.Name)" }
+          }
+          Expand-Archive -LiteralPath "$downloads\nsis-3.13.zip" -DestinationPath $downloads -Force
+          Copy-Item "$downloads\nsis-3.13\*" $tools -Recurse -Force
+          $plugins = Join-Path $tools "Plugins\x86-unicode\additional"
+          New-Item -ItemType Directory -Force $plugins | Out-Null
+          Copy-Item "$downloads\nsis_tauri_utils.dll" $plugins -Force
+
       - name: Desktop-App + Installer bauen (Tauri)
         shell: pwsh
         working-directory: crates/n3-desktop
         run: |
           @{ version = "${{ steps.version.outputs.version }}" } | ConvertTo-Json | Set-Content "$env:RUNNER_TEMP\tauri-version.json"
-          npx --yes @tauri-apps/cli@2 build --ci --config "$env:RUNNER_TEMP\tauri-version.json"
+          npx --yes @tauri-apps/cli@2.12.4 build --ci --config "$env:RUNNER_TEMP\tauri-version.json"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Pakete zusammenstellen
@@ -133,8 +158,7 @@ jobs:
           name: OpenDeckN3-${{ steps.version.outputs.version }}-windows-x64
           path: target/installer/*
 
-      # Bei Tag-Push oder manuellem Start mit release_tag. Existiert das Tag noch nicht,
-      # legt GitHub es auf dem gebauten Commit an.
+      # Bei Tag-Push oder manuellem Start mit einem vorhandenen release_tag.
       - name: GitHub-Release
         if: steps.version.outputs.tag != ''
         uses: softprops/action-gh-release@v3

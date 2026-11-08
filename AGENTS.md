@@ -110,7 +110,8 @@ Design:
 - Primary languages and runtimes: Rust workspace (edition 2024, MSRV 1.88); web UI in plain HTML/JS; example plugin and tools in Node.js >= 22.
 - Platform-specific constraints: Windows and Linux. Linux device access needs `udev/` rules. Desktop app on Linux needs `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev`; on Windows it needs WebView2. The MIDI plugin needs `libasound2-dev` (ALSA headers) to build on Linux.
 - GUI toolkit, update mechanism, and distribution: Tauri 2 desktop app (`crates/n3-desktop`) loading `ui/` as frontend. Auto-update (`crates/n3-desktop/src/updater.rs`) checks GitHub releases and verifies the installer against the release's `SHA256SUMS.txt`. Windows installer and portable ZIP are built by `.github/workflows/windows.yml`. The app version comes from `[workspace.package] version` in `Cargo.toml`; release tags (`vX.Y.Z`) must match it because the workflow stamps the tag version into the installer. The UI shows it via `getState.version` (desktop: `desktop_paths.version`).
-- Build command: `cargo build`; desktop app: `cargo build -p n3-desktop` (not in `default-members`), installer: `cd crates/n3-desktop && npx @tauri-apps/cli@2 build`.
+- Windows release tooling: `.github/workflows/windows.yml` pins Tauri CLI 2.12.4 and downloads matching NSIS tools through the official GitHub asset API with fixed SHA-256 checksums. Manual releases require an existing `release_tag` and build that tag.
+- Build command: `cargo build`; desktop app: `cargo build -p n3-desktop` (not in `default-members`), installer: `cd crates/n3-desktop && npx @tauri-apps/cli@2.12.4 build`.
 - Test command: `cargo test`; end-to-end without hardware:
   ```sh
   cargo build

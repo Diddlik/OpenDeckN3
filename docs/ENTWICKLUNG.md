@@ -67,7 +67,7 @@ kein Konsolenfenster. Der Dienst läuft in der App mit.
    Autostart lässt sich in den Einstellungen einschalten (startet dann unsichtbar im Tray).
 
 **Release erstellen:** *Actions → Windows-Installer → Run workflow* mit `release_tag` (z. B. `v0.1.0-alpha.2`) starten –
-GitHub legt Tag und Release mit Installer und ZIP an. Tags mit Bindestrich (`-alpha`, `-beta`) werden als Pre-release markiert.
+Das Tag muss bereits existieren; der Workflow baut genau diesen Stand und erstellt den Release mit Installer und ZIP. Tags mit Bindestrich (`-alpha`, `-beta`) werden als Pre-release markiert.
 Ein lokal gepushtes Tag `v*` funktioniert ebenso. Jedes Release enthält `SHA256SUMS.txt` – daran prüft der Auto-Updater der App
 den Installer, bevor er ihn startet. Fertige Versionen: [Releases](https://github.com/Diddlik/OpenDeckN3/releases).
 
@@ -114,3 +114,5 @@ Log-Level über `RUST_LOG`, z. B. `RUST_LOG=debug` oder `RUST_LOG=n3_driver=trac
 ## Lizenz
 
 GPL-3.0-or-later, siehe [LICENSE](../LICENSE).
+
+Der Windows-Workflow verwendet Tauri CLI 2.12.4 und lädt die dazugehörigen NSIS-Werkzeuge über die offizielle GitHub-Asset-API mit festgelegten SHA-256-Prüfsummen. Tauri prüft die Werkzeuge zusätzlich selbst. Das umgeht zeitweilige HTTP-504-Fehler am normalen Download-Endpunkt.
