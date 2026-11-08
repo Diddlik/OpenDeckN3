@@ -46,14 +46,25 @@ impl Default for DeviceConfig {
     }
 }
 
+/// Display used while the deck is idle.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum IdleMode {
+    #[default]
+    Dim,
+    Digital,
+    Analog,
+}
+
 /// Settings of the service itself (not per device).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct AppSettings {
     /// Install newer plugin versions from the catalog automatically.
     pub auto_update_plugins: bool,
-    /// Dim all decks after this many minutes without keyboard, mouse or deck input; 0 = never.
+    /// Enter idle mode after this many minutes without keyboard, mouse or deck input; 0 = never.
     pub dim_after_minutes: u32,
+    pub idle_mode: IdleMode,
 }
 
 impl Default for AppSettings {
@@ -61,6 +72,7 @@ impl Default for AppSettings {
         Self {
             auto_update_plugins: true,
             dim_after_minutes: 0,
+            idle_mode: IdleMode::Dim,
         }
     }
 }
@@ -219,11 +231,16 @@ mod tests {
             .save_app_settings(&AppSettings {
                 auto_update_plugins: false,
                 dim_after_minutes: 5,
+                idle_mode: IdleMode::Analog,
             })
             .unwrap();
         let loaded = store.load_app_settings().unwrap();
         assert!(!loaded.auto_update_plugins);
         assert_eq!(loaded.dim_after_minutes, 5);
+        assert_eq!(loaded.idle_mode, IdleMode::Analog);
+        let old: AppSettings = serde_json::from_str(r#"{"dimAfterMinutes":2}"#).unwrap();
+        assert_eq!(old.idle_mode, IdleMode::Dim);
+        assert!(serde_json::from_str::<AppSettings>(r#"{"idleMode":"invalid"}"#).is_err());
     }
 
     #[test]

@@ -162,6 +162,7 @@ pub struct App {
     next_request: u64,
     /// `AppSettings::dim_after_minutes`, cached for the idle poll.
     dim_after_minutes: u32,
+    idle_mode: crate::store::IdleMode,
     last_deck_input: Instant,
     idle_dimmed: bool,
 }
@@ -180,10 +181,7 @@ impl App {
         device_events: mpsc::Sender<DeviceEvent>,
         shutdown: CancellationToken,
     ) -> Self {
-        let dim_after_minutes = store
-            .load_app_settings()
-            .map(|s| s.dim_after_minutes)
-            .unwrap_or_default();
+        let settings = store.load_app_settings().unwrap_or_default();
         Self {
             store,
             plugins,
@@ -197,7 +195,8 @@ impl App {
             extra_plugin_dirs: Vec::new(),
             plugin_requests: HashMap::new(),
             next_request: 1,
-            dim_after_minutes,
+            dim_after_minutes: settings.dim_after_minutes,
+            idle_mode: settings.idle_mode,
             last_deck_input: Instant::now(),
             idle_dimmed: false,
         }
@@ -550,6 +549,10 @@ impl App {
         let Some(state) = self.devices.get(device) else {
             return;
         };
+        if self.idle_clock() && !state.covered() {
+            self.show_idle_clock(device).await;
+            return;
+        }
         if state.locked {
             self.show_lock_screen(device, LockScreen::Locked).await;
             return;
@@ -832,7 +835,7 @@ impl App {
 
     async fn set_key_image(&mut self, device: &str, key: u8, image: Option<DynamicImage>) {
         // Unlocking redraws every key from the current state.
-        if self.devices.get(device).is_none_or(DeviceState::covered) {
+        if self.idle_clock() || self.devices.get(device).is_none_or(DeviceState::covered) {
             return;
         }
         self.send_key_image(device, key, image).await;
@@ -871,14 +874,60 @@ impl App {
 
     async fn set_idle_dimmed(&mut self, dimmed: bool) {
         self.idle_dimmed = dimmed;
-        for state in self.devices.values() {
+        for device in self.devices.keys().cloned().collect::<Vec<_>>() {
+            let state = &self.devices[&device];
             let value = self.shown_brightness(state.config.brightness);
             state.handle.send(DeviceCommand::SetBrightness(value)).await;
+            self.restore_screens(&device).await;
+        }
+    }
+
+    fn idle_clock(&self) -> bool {
+        self.idle_dimmed && self.idle_mode != crate::store::IdleMode::Dim
+    }
+
+    async fn show_idle_clock(&mut self, device: &str) {
+        let Some(state) = self.devices.get(device) else {
+            return;
+        };
+        if state.covered() {
+            return;
+        }
+        let layout = &state.handle.info.layout;
+        let columns = u32::from(layout.columns).max(1);
+        let keys = layout.display_keys;
+        let tiles = render::clock_tiles(
+            columns,
+            u32::from(keys).div_ceil(columns),
+            self.idle_mode == crate::store::IdleMode::Analog,
+            render::local_clock(),
+        );
+        for (key, tile) in (0..keys).zip(tiles) {
+            self.send_key_image(device, key, Some(tile)).await;
+        }
+    }
+
+    pub async fn on_clock_tick(&mut self) {
+        for device in self.devices.keys().cloned().collect::<Vec<_>>() {
+            if self.idle_clock() {
+                self.show_idle_clock(&device).await;
+            } else if !self.devices[&device].covered() {
+                let keys: Vec<u8> = self.devices[&device]
+                    .page()
+                    .keys
+                    .iter()
+                    .filter(|(_, a)| a.plugin == BUILTIN_PLUGIN && a.action == builtin::CLOCK)
+                    .map(|(key, _)| *key)
+                    .collect();
+                for key in keys {
+                    self.redraw_key(&device, key).await;
+                }
+            }
         }
     }
 
     fn shown_brightness(&self, configured: u8) -> u8 {
-        if self.idle_dimmed {
+        if self.idle_dimmed && self.idle_mode == crate::store::IdleMode::Dim {
             configured.min(IDLE_BRIGHTNESS)
         } else {
             configured
@@ -1439,6 +1488,9 @@ impl App {
                     serde_json::from_value(current).context("ungültige Einstellungen")?;
                 self.store.save_app_settings(&settings)?;
                 self.dim_after_minutes = settings.dim_after_minutes;
+                self.idle_mode = settings.idle_mode;
+                // Apply changes immediately; the next OS poll can re-enter idle mode.
+                self.set_idle_dimmed(false).await;
                 let value = serde_json::to_value(&settings)?;
                 self.emit(json!({ "event": "appSettingsChanged", "settings": value }));
                 Ok(value)
@@ -1714,6 +1766,72 @@ fn idle_dims(dim_after_minutes: u32, idle: Duration) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn idle_clocks_restore_keys_and_respect_lock() {
+        let dir = tempfile::tempdir().unwrap();
+        let (plugin_tx, _plugin_rx) = mpsc::channel(16);
+        let plugins = PluginHost::start(0, plugin_tx).await.unwrap();
+        let (ui, _) = broadcast::channel(128);
+        let (events, mut rx) = mpsc::channel(16);
+        let token = CancellationToken::new();
+        let mut app = App::new(
+            Store::new(dir.path()),
+            plugins,
+            ui,
+            events.clone(),
+            token.clone(),
+        );
+        let task = tokio::spawn(n3_driver::virtual_deck::run_virtual_device(
+            events,
+            token.clone(),
+        ));
+        app.on_device_event(rx.recv().await.unwrap()).await;
+        let id = n3_driver::virtual_deck::VIRTUAL_DEVICE_ID;
+        let normal = app.devices[id].previews.clone();
+        app.dim_after_minutes = 1;
+        app.last_deck_input = Instant::now() - Duration::from_secs(120);
+        for mode in [
+            crate::store::IdleMode::Digital,
+            crate::store::IdleMode::Analog,
+        ] {
+            app.idle_mode = mode;
+            app.on_idle(Duration::from_secs(120)).await;
+            assert!(app.idle_clock());
+            assert_eq!(app.shown_brightness(80), 80);
+            assert_eq!(app.devices[id].previews.len(), 6);
+            let clock = app.devices[id].previews.clone();
+            app.set_key_image(id, 0, None).await;
+            assert_eq!(
+                app.devices[id].previews, clock,
+                "normal redraws cannot overwrite idle clock"
+            );
+            app.on_idle(Duration::ZERO).await;
+            assert_eq!(app.devices[id].previews, normal);
+        }
+        app.idle_mode = crate::store::IdleMode::Dim;
+        app.on_idle(Duration::from_secs(120)).await;
+        assert_eq!(app.shown_brightness(80), 10);
+        assert_eq!(app.shown_brightness(5), 5);
+        app.on_device_event(DeviceEvent::Input {
+            device: id.into(),
+            event: InputEvent::KeyDown { key: 1 },
+        })
+        .await;
+        assert!(!app.idle_dimmed);
+        app.devices.get_mut(id).unwrap().locked = true;
+        app.restore_screens(id).await;
+        let locked = app.devices[id].previews.clone();
+        app.idle_mode = crate::store::IdleMode::Analog;
+        app.set_idle_dimmed(true).await;
+        app.on_clock_tick().await;
+        assert_eq!(
+            app.devices[id].previews, locked,
+            "lock display has priority"
+        );
+        token.cancel();
+        task.await.unwrap();
+    }
 
     #[test]
     fn idle_dims_only_after_the_configured_minutes() {

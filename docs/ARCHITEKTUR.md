@@ -142,7 +142,7 @@ Konfigurationsverzeichnis (Standard `~/.config/opendeckn3`, per `--config-dir` �
 devices/<geräte-id>/device.json            { activeProfile, brightness }
 devices/<geräte-id>/profiles/<profil>.json Profil mit pages: [{ name, keys, encoders }] → ActionInstance
                                            (alte Dateien mit keys/encoders oben werden zu Seite 1)
-settings.json                              { autoUpdatePlugins, dimAfterMinutes } – Einstellungen des Dienstes
+settings.json                              { autoUpdatePlugins, dimAfterMinutes, idleMode } – Einstellungen des Dienstes
 plugin-settings/<plugin-uuid>.json         globale Plugin-Einstellungen
 plugins/<plugin>.sdPlugin/                 installierte Plugins (Standard-Plugin-Verzeichnis)
 ```

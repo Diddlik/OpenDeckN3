@@ -155,7 +155,7 @@ type InputEvent =
 | `getGlobalSettings` | `plugin` | globale Einstellungen des Plugins (Objekt) |
 | `pluginRequest` | `plugin`, `payload` (z. B. `{ request: "guilds" }`; für `opendeckn3.builtin` beantwortet der Dienst `{ request: "apps" }` selbst: installierte Programme – Windows: Startmenü-Verknüpfungen, Linux: `.desktop`-Einträge, macOS: `.app`) | Antwort des Plugins (`sendToPropertyInspector`), z. B. `{ options: [[wert, text], …] }`; Fehler, wenn das Plugin `error` liefert oder nicht läuft |
 | `updatePlugins` | – | `{ updated: [{ uuid, name, from, to }], failed: [{ uuid, name, error }] }` – installiert alle neueren Versionen aus dem Katalog; `failed` nennt auch installierte Plugins, deren Release nicht abgefragt werden konnte |
-| `getAppSettings` | – | `AppSettings` – `{ autoUpdatePlugins: boolean, dimAfterMinutes: number }` (Standard `true`, `0`); `dimAfterMinutes` > 0 dunkelt alle Decks nach so vielen Minuten ohne Tastatur-, Maus- oder Deck-Eingabe auf höchstens 10 % ab (Windows, Linux/X11) |
+| `getAppSettings` | – | `AppSettings` – `{ autoUpdatePlugins: boolean, dimAfterMinutes: number, idleMode: "dim" | "digital" | "analog" }` (Standard `true`, `0`, `"dim"`); `dimAfterMinutes` > 0 aktiviert nach so vielen Minuten ohne Tastatur-, Maus- oder Deck-Eingabe den Ruhemodus (Windows, Linux/X11). `dim`: höchstens 10 % Helligkeit; `digital`: lokale Uhrzeit mit je einer Spalte für Stunden, Minuten, Sekunden auf den sechs N3-Displays (Zehner oben, Einer unten); `analog`: gemeinsames Zifferblatt mit Stunden-, Minuten- und Sekundenzeiger. Uhren aktualisieren sich jede Sekunde ohne geöffnete UI; Sperranzeige hat Vorrang. Eingaben stellen die normale Belegung wieder her |
 | `setAppSettings` | `settings` (Teilobjekt) | zusammengeführte `AppSettings`; gespeichert in `<config>/settings.json` |
 | `setGlobalSettings` | `plugin`, `settings` | zusammengeführte Einstellungen – `settings` wird in die vorhandenen gemischt (vom Plugin gespeicherte Werte wie Tokens bleiben); Plugin erhält `didReceiveGlobalSettings` |
 
@@ -226,6 +226,7 @@ Plugin-UUID `opendeckn3.builtin`, Aktions-UUIDs `opendeckn3.builtin.<name>`:
 
 | Aktion | Einstellungen | Taste | Drehregler |
 | --- | --- | --- | --- |
+| `clock` | `style` (`digital` oder `analog`, Standard `digital`) | zeigt die lokale Uhrzeit auf einer Display-Taste; aktualisiert sich jede Sekunde, Druck ohne Aktion | – |
 | `hotkey` | `mode` (`tap` oder `latch`, fehlt = `tap`), `shortcut`, `clockwise`, `anticlockwise` (z. B. `Ctrl+Shift+M`, mehrere mit Leerzeichen), `hold` (Haltezeit je Taste in ms, 10–500, fehlt = 50) | drückt `shortcut`; `latch`: erster Druck hält die Tasten gedrückt, nächster lässt sie los | drehen = `clockwise`/`anticlockwise` je Raste |
 | `volume` | `mode` (`mute`/`up`/`down`), `step` (1–10) | Funktion aus `mode` | drehen = lauter/leiser |
 | `media` | `mode` (`playpause`/`next`/`previous`/`stop`) | Funktion aus `mode` | drehen = Titel vor/zurück |

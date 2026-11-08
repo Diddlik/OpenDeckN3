@@ -2543,7 +2543,7 @@ dependencies = [
 
 [[package]]
 name = "n3-core"
-version = "1.10.2"
+version = "1.11.0"
 dependencies = [
  "image",
  "serde",
@@ -2553,11 +2553,12 @@ dependencies = [
 
 [[package]]
 name = "n3-daemon"
-version = "1.10.2"
+version = "1.11.0"
 dependencies = [
  "ab_glyph",
  "anyhow",
  "base64 0.22.1",
+ "chrono",
  "clap",
  "data-url",
  "dirs 6.0.0",
@@ -2588,7 +2589,7 @@ dependencies = [
 
 [[package]]
 name = "n3-desktop"
-version = "1.10.2"
+version = "1.11.0"
 dependencies = [
  "anyhow",
  "n3-daemon",
@@ -2612,7 +2613,7 @@ dependencies = [
 
 [[package]]
 name = "n3-driver"
-version = "1.10.2"
+version = "1.11.0"
 dependencies = [
  "futures-lite",
  "image",
@@ -2625,7 +2626,7 @@ dependencies = [
 
 [[package]]
 name = "n3-plugin"
-version = "1.10.2"
+version = "1.11.0"
 dependencies = [
  "anyhow",
  "futures-util",

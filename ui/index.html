@@ -1465,7 +1465,9 @@ function settingsHTML() {
       <section class="scard" id="geraete"><h2>Geräte</h2>
         <div class="srow"><label class="t" for="bri"><b>Helligkeit</b><span>${d ? esc(d.info.name) + ' · ' + esc(d.info.id) : 'Kein Gerät verbunden'}</span></label>
           <div style="display:flex;align-items:center;gap:12px"><input id="bri" type="range" min="0" max="100" value="${d ? d.brightness : 0}" data-in="brightness" ${d ? '' : 'disabled'} style="width:200px;accent-color:var(--accent)"><output class="mono" style="font-size:13px;width:42px;text-align:right">${d ? d.brightness : 0} %</output></div></div>
-        <div class="srow"><label class="t" for="dimAfter"><b>Abdunkeln nach Leerlauf</b><span>Ohne Tastatur-, Maus- oder Deck-Eingabe · jede Eingabe weckt das Deck</span></label>
+        <div class="srow"><label class="t" for="idleMode"><b>Anzeige im Ruhemodus</b><span>Digitaluhr: Stunden, Minuten, Sekunden in drei Spalten über sechs Tasten · lokale Uhrzeit</span></label>
+          <select id="idleMode" class="field" data-in="idleMode" ${S.appSettings ? '' : 'disabled'} style="min-width:180px">${[['dim','Abdunkeln'],['digital','Digitaluhr · 6 Tasten'],['analog','Analoguhr mit Zeigern']].map(([v,l]) => `<option value="${v}" ${(S.appSettings?.idleMode || 'dim') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="srow"><label class="t" for="dimAfter"><b>Ruhemodus nach Leerlauf</b><span>Ohne Tastatur-, Maus- oder Deck-Eingabe · jede Eingabe weckt das Deck</span></label>
           <select id="dimAfter" class="field" data-in="dimAfter" ${S.appSettings ? '' : 'disabled'} style="min-width:180px">${[0, 1, 2, 5, 10, 15, 30, 60].map((m) => `<option value="${m}" ${S.appSettings && S.appSettings.dimAfterMinutes === m ? 'selected' : ''}>${m ? m + ' Min.' : 'Nie'}</option>`).join('')}</select></div>
         <div class="srow"><label class="t" for="lockKey"><b>Sperrtaste</b><span>Gilt auf allen Seiten und Profilen zusätzlich zur Belegung. Gedrückt halten sperrt das Gerät, erneut halten entsperrt es.</span></label>
           <div style="display:flex;gap:8px">${(() => {
@@ -2306,8 +2308,8 @@ document.addEventListener('change', (e) => {
     const seconds = k === 'lockSeconds' ? Number(t.value) : d.lockSeconds;
     api.call('setLockKey', { device: d.info.id, key, seconds }).catch((err) => { toast('err', err.message); render(); });
   }
-  if (k === 'dimAfter') {
-    api.call('setAppSettings', { settings: { dimAfterMinutes: Number(t.value) } })
+  if (k === 'dimAfter' || k === 'idleMode') {
+    api.call('setAppSettings', { settings: k === 'dimAfter' ? { dimAfterMinutes: Number(t.value) } : { idleMode: t.value } })
       .then((v) => { S.appSettings = v; }).catch((err) => { toast('err', err.message); render(); });
   }
   if (k === 'port') {

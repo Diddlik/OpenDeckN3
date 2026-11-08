@@ -155,6 +155,24 @@ ws.addEventListener("open", async () => {
       plugin: "opendeckn3.builtin", action: "opendeckn3.builtin.volume" });
     await waitForDevice((d) => d.profile.keys["3"]?.settings.mode === "mute", "built-in defaults are applied");
 
+    // Live clocks are rendered by the service, even without an open UI.
+    const oldSettings = await call("getAppSettings");
+    for (const idleMode of ["digital", "analog", "dim"]) {
+      const saved = await call("setAppSettings", { settings: { idleMode, dimAfterMinutes: 0 } });
+      assert(saved.idleMode === idleMode, `idle mode ${idleMode} persists`);
+    }
+    await call("setAppSettings", { settings: oldSettings });
+    for (const style of ["digital", "analog"]) {
+      await call("setAction", { device: DEVICE, controller: "Keypad", position: 5,
+        plugin: "opendeckn3.builtin", action: "opendeckn3.builtin.clock", settings: { style } });
+      const first = (await call("getState")).devices.find((d) => d.info.id === DEVICE).previews["5"];
+      assert(first?.startsWith("data:image/png;base64,"), `${style} clock has a display image`);
+      await sleep(2100);
+      const next = (await call("getState")).devices.find((d) => d.info.id === DEVICE).previews["5"];
+      assert(first !== next, `${style} clock updates without UI`);
+    }
+    await call("setSlot", { device: DEVICE, controller: "Keypad", position: 5, instance: null });
+
     const { tmpdir } = await import("node:os");
     const { join } = await import("node:path");
     const { existsSync, readFileSync, rmSync } = await import("node:fs");

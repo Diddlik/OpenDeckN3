@@ -324,6 +324,111 @@ pub fn lock_tiles(columns: u32, rows: u32, screen: LockScreen) -> Vec<DynamicIma
         .collect()
 }
 
+/// Local-time clock, either a single key or one picture split across the displays.
+pub fn clock_tiles(
+    columns: u32,
+    rows: u32,
+    analog: bool,
+    time: (u32, u32, u32),
+) -> Vec<DynamicImage> {
+    let (w, h) = (columns * KEY_SIZE, rows * KEY_SIZE);
+    if w == 0 || h == 0 {
+        return Vec::new();
+    }
+    let mut canvas = RgbaImage::from_pixel(w, h, KEY_BACKGROUND);
+    let (cx, cy) = (w as f32 / 2.0, h as f32 / 2.0);
+    let (hour, minute, second) = time;
+    if analog {
+        let radius = cx.min(cy) * 0.85;
+        fill(&mut canvas, [110, 125, 145], |x, y| {
+            ((x - cx).hypot(y - cy) - radius).abs() - 1.5
+        });
+        for tick in 0..12 {
+            let angle = tick as f32 * std::f32::consts::TAU / 12.0;
+            let (tx, ty) = (cx + radius * angle.sin(), cy - radius * angle.cos());
+            fill(&mut canvas, [220, 230, 240], |x, y| {
+                (x - tx).hypot(y - ty) - 2.5
+            });
+        }
+        for (turn, length, width, color) in [
+            (
+                (hour % 12) as f32 / 12.0 + minute as f32 / 720.0,
+                0.52,
+                3.5,
+                [236, 238, 241],
+            ),
+            (
+                minute as f32 / 60.0 + second as f32 / 3600.0,
+                0.78,
+                2.5,
+                [236, 238, 241],
+            ),
+            (second as f32 / 60.0, 0.85, 1.0, [95, 240, 226]),
+        ] {
+            let angle = turn * std::f32::consts::TAU;
+            let (dx, dy) = (
+                radius * length * angle.sin(),
+                -radius * length * angle.cos(),
+            );
+            fill(&mut canvas, color, |x, y| {
+                let t = (((x - cx) * dx + (y - cy) * dy) / (dx * dx + dy * dy)).clamp(0.0, 1.0);
+                (x - cx - t * dx).hypot(y - cy - t * dy) - width
+            });
+        }
+    } else if columns == 3 && rows == 2 {
+        // One digit per N3 display: hours, minutes and seconds are the three columns.
+        for (column, value) in [hour, minute, second].into_iter().enumerate() {
+            for (row, digit) in [value / 10, value % 10].into_iter().enumerate() {
+                let text = digit.to_string();
+                let scale = PxScale::from(120.0);
+                draw_text(
+                    &mut canvas,
+                    &text,
+                    scale,
+                    column as f32 * KEY_SIZE as f32
+                        + (KEY_SIZE as f32 - text_width(&text, scale)) / 2.0,
+                    row as f32 * KEY_SIZE as f32 + 113.0,
+                    [236, 238, 241],
+                    1.0,
+                );
+            }
+        }
+    } else {
+        let text = format!("{hour:02}:{minute:02}:{second:02}");
+        let (text, scale) = fit_text(&text, w as f32 - 12.0, h as f32 * 0.6, 12.0);
+        draw_text(
+            &mut canvas,
+            &text,
+            scale,
+            cx - text_width(&text, scale) / 2.0,
+            cy + FONT.as_scaled(scale).ascent() * 0.36,
+            [236, 238, 241],
+            1.0,
+        );
+    }
+    (0..rows)
+        .flat_map(|row| (0..columns).map(move |column| (column, row)))
+        .map(|(column, row)| {
+            DynamicImage::ImageRgba8(
+                image::imageops::crop_imm(
+                    &canvas,
+                    column * KEY_SIZE,
+                    row * KEY_SIZE,
+                    KEY_SIZE,
+                    KEY_SIZE,
+                )
+                .to_image(),
+            )
+        })
+        .collect()
+}
+
+pub fn local_clock() -> (u32, u32, u32) {
+    use chrono::Timelike;
+    let now = chrono::Local::now();
+    (now.hour(), now.minute(), now.second())
+}
+
 /// Decodes `data:image/{png,jpeg,bmp};base64,...` into an image.
 pub fn decode_data_url(url: &str) -> anyhow::Result<DynamicImage> {
     let url = DataUrl::process(url).map_err(|e| anyhow::anyhow!("invalid data url: {e:?}"))?;
@@ -461,5 +566,30 @@ mod tests {
             FONT.glyph_id('ä').0 != 0 && FONT.glyph_id('→').0 != 0,
             "font covers umlauts and arrows"
         );
+    }
+}
+
+#[cfg(test)]
+mod clock_tests {
+    use super::*;
+    #[test]
+    fn clocks_cover_all_six_displays_and_advance() {
+        for analog in [false, true] {
+            let tiles = clock_tiles(3, 2, analog, (12, 34, 56));
+            assert_eq!(tiles.len(), 6);
+            assert!(
+                tiles
+                    .iter()
+                    .all(|t| t.width() == KEY_SIZE && t.height() == KEY_SIZE)
+            );
+            assert!(
+                tiles
+                    .iter()
+                    .all(|t| t.to_rgba8().pixels().any(|p| *p != KEY_BACKGROUND))
+            );
+            assert_ne!(tiles, clock_tiles(3, 2, analog, (12, 34, 57)));
+            assert_eq!(clock_tiles(1, 1, analog, (0, 0, 0)).len(), 1);
+        }
+        assert!(clock_tiles(0, 2, false, (0, 0, 0)).is_empty());
     }
 }

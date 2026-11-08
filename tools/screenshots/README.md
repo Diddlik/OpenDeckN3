@@ -14,3 +14,11 @@ convert -delay 14 -loop 0 /tmp/frames/f*.png -resize 760x -gravity center -crop 
   -fuzz 2% -layers Optimize -colors 160 docs/images/demo.gif
 NODE_PATH=$(npm root -g) node tools/screenshots/hero.cjs                # Banner aus editor-dark.png
 ```
+
+Ruhemodus-Einstellungen im Browser prüfen und aufnehmen (nur mit einer entbehrlichen virtuellen Konfiguration: der Test ändert die Leerlaufeinstellungen):
+
+```sh
+NODE_PATH=$(npm root -g) node tools/screenshots/clock.cjs http://127.0.0.1:57132/ 57131 docs/images/idle-settings.png
+```
+
+Der Test wählt alle drei Modi, prüft die Speicherung nach dem Neuladen und erzeugt die Aufnahme des Geräteabschnitts.
