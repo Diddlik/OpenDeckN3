@@ -262,3 +262,12 @@ ws.onmessage = (m) => console.log(JSON.parse(m.data));
 ```
 
 Ein kompletter, automatisierter Ablauf steht in [`tools/smoke-test.mjs`](../tools/smoke-test.mjs).
+
+## Desktop-Updater (Tauri)
+
+Die Desktop-Oberfläche nutzt `update_check` und `update_install` über die Tauri-Bridge.
+Das zurückgegebene Update-Objekt enthält zusätzlich zu den Downloadadressen die optionalen numerischen Felder
+`installerAssetId` und `checksumsAssetId`. Die Oberfläche reicht das Objekt unverändert an `update_install` weiter.
+Bei HTTP- oder Verbindungsfehlern lädt die App das jeweilige Asset mit `Accept: application/octet-stream` über
+`https://api.github.com/repos/Diddlik/OpenDeckN3/releases/assets/<id>`. Die Repository-Beschränkung und die
+verpflichtende Prüfung gegen `SHA256SUMS.txt` gelten weiterhin. Ohne Asset-ID bleibt nur der ursprüngliche Downloadweg.

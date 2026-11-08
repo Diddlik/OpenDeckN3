@@ -119,10 +119,13 @@ nach (`If-None-Match`). Scheitert die Abfrage, etwa am Limit, nimmt er die zulet
 
 `n3-desktop/src/updater.rs` fragt `api.github.com/repos/Diddlik/OpenDeckN3/releases` ab (beim Start nach 8 s und alle
 6 h, gesteuert von der Oberfläche; Vorabversionen optional). Ist ein Release neuer als die App-Version, zeigt die UI einen
-Dialog. „Jetzt aktualisieren“ lädt `…-windows-x64-setup.exe` (nur von `github.com/Diddlik/OpenDeckN3/releases/download/`),
-prüft ihn gegen `SHA256SUMS.txt` aus demselben Release und startet ihn mit `/P /UPDATE /R` (Fortschrittsfenster, keine neuen
-Verknüpfungen, Neustart danach) – dieselben Schalter wie Tauris eigener Updater. Die App beendet sich vorher selbst.
+Dialog. „Jetzt aktualisieren“ lädt `…-windows-x64-setup.exe` aus dem eigenen GitHub-Repository.
+Bei Downloadfehlern werden Prüfsummen und Installer über die GitHub-Asset-API desselben Repositorys geladen
+(numerische Asset-IDs aus der Release-Abfrage). Die App prüft den Installer gegen `SHA256SUMS.txt` aus demselben
+Release und startet ihn mit `/P /UPDATE /R` (Fortschrittsfenster, keine neuen Verknüpfungen, Neustart danach) –
+dieselben Schalter wie Tauris eigener Updater. Die App beendet sich vorher selbst.
 `SHA256SUMS.txt` erzeugt der Release-Workflow; Releases ohne diese Datei werden nicht automatisch installiert.
+Ein bereits installierter Updater ohne API-Fallback benötigt bei anhaltenden HTTP-504-Fehlern einmalig eine manuelle Installation.
 
 ## Plugins installieren
 

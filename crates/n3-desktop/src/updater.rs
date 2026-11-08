@@ -16,6 +16,7 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+const ASSETS_API: &str = "https://api.github.com/repos/Diddlik/OpenDeckN3/releases/assets/";
 const RELEASES_API: &str = "https://api.github.com/repos/Diddlik/OpenDeckN3/releases?per_page=30";
 /// Downloads are only accepted from this repository's release assets.
 const DOWNLOAD_PREFIX: &str = "https://github.com/Diddlik/OpenDeckN3/releases/download/";
@@ -42,6 +43,8 @@ pub struct GhRelease {
 
 #[derive(Debug, Deserialize)]
 struct GhAsset {
+    #[serde(default)]
+    id: u64,
     name: String,
     browser_download_url: String,
     #[serde(default)]
@@ -64,6 +67,11 @@ pub struct UpdateInfo {
     pub installer_name: Option<String>,
     pub installer_size: u64,
     pub checksums_url: Option<String>,
+    /// Numeric IDs are resolved only within this repository, never to a caller-supplied API host.
+    #[serde(default)]
+    pub installer_asset_id: Option<u64>,
+    #[serde(default)]
+    pub checksums_asset_id: Option<u64>,
 }
 
 fn http() -> anyhow::Result<reqwest::Client> {
@@ -107,6 +115,8 @@ pub fn select(
                 installer_name: installer.map(|a| a.name.clone()),
                 installer_size: installer.map_or(0, |a| a.size),
                 checksums_url: checksums.map(|a| a.browser_download_url.clone()),
+                installer_asset_id: installer.map(|a| a.id).filter(|id| *id > 0),
+                checksums_asset_id: checksums.map(|a| a.id).filter(|id| *id > 0),
             }
         })
 }
@@ -144,22 +154,44 @@ pub fn expected_hash(checksums: &str, file: &str) -> Option<String> {
     })
 }
 
-/// Streams `url` into `dest`, returning the SHA-256 of the content.
-pub async fn fetch_to_file(
+/// GitHub's browser download endpoint can fail independently of its asset API.
+async fn fetch_response(
     url: &str,
-    dest: &Path,
-    mut progress: impl FnMut(u64, Option<u64>),
-) -> anyhow::Result<String> {
-    let mut response = http()?
+    fallback_url: Option<&str>,
+) -> anyhow::Result<reqwest::Response> {
+    let client = http()?;
+    match client
         .get(url)
         .send()
         .await
-        .context("Download fehlgeschlagen")?;
-    ensure!(
-        response.status().is_success(),
-        "Download: {}",
-        response.status()
-    );
+        .and_then(reqwest::Response::error_for_status)
+    {
+        Ok(response) => Ok(response),
+        Err(first) => match fallback_url {
+            Some(api_url) => client
+                .get(api_url)
+                .header("Accept", "application/octet-stream")
+                .send()
+                .await
+                .and_then(reqwest::Response::error_for_status)
+                .with_context(|| {
+                    format!(
+                        "Download fehlgeschlagen ({first}); GitHub-API ebenfalls nicht erreichbar"
+                    )
+                }),
+            None => Err(first).context("Download fehlgeschlagen"),
+        },
+    }
+}
+
+/// Streams `url` into `dest`, returning the SHA-256 of the content.
+pub async fn fetch_to_file(
+    url: &str,
+    fallback_url: Option<&str>,
+    dest: &Path,
+    mut progress: impl FnMut(u64, Option<u64>),
+) -> anyhow::Result<String> {
+    let mut response = fetch_response(url, fallback_url).await?;
     let total = response.content_length();
     let mut file = std::fs::File::create(dest)
         .with_context(|| format!("kann {} nicht schreiben", dest.display()))?;
@@ -197,11 +229,16 @@ pub async fn download(
         "unerwarteter Dateiname"
     );
 
-    let sums = http()?
-        .get(sums_url)
-        .send()
+    let sums_api = info
+        .checksums_asset_id
+        .filter(|id| *id > 0)
+        .map(|id| format!("{ASSETS_API}{id}"));
+    let installer_api = info
+        .installer_asset_id
+        .filter(|id| *id > 0)
+        .map(|id| format!("{ASSETS_API}{id}"));
+    let sums = fetch_response(sums_url, sums_api.as_deref())
         .await
-        .and_then(|r| r.error_for_status())
         .context("Prüfsummen nicht abrufbar")?
         .text()
         .await?;
@@ -210,7 +247,7 @@ pub async fn download(
     let dir = std::env::temp_dir().join("OpenDeckN3-update");
     std::fs::create_dir_all(&dir)?;
     let dest = dir.join(name);
-    let actual = fetch_to_file(url, &dest, progress).await?;
+    let actual = fetch_to_file(url, installer_api.as_deref(), &dest, progress).await?;
     if actual != expected {
         std::fs::remove_file(&dest).ok();
         bail!("Prüfsumme stimmt nicht – Download verworfen");
@@ -243,6 +280,7 @@ mod tests {
             assets: assets
                 .iter()
                 .map(|n| GhAsset {
+                    id: 42,
                     name: n.to_string(),
                     browser_download_url: format!("{DOWNLOAD_PREFIX}{tag}/{n}"),
                     size: 10,
@@ -268,8 +306,22 @@ mod tests {
         };
         let update = select(list(), &current, true).unwrap();
         assert_eq!(update.version, "0.1.0-alpha.3");
-        assert!(update.installer_url.unwrap().ends_with("-setup.exe"));
+        assert!(
+            update
+                .installer_url
+                .as_ref()
+                .unwrap()
+                .ends_with("-setup.exe")
+        );
         assert!(update.checksums_url.is_some());
+        let mut legacy = serde_json::to_value(&update).unwrap();
+        legacy.as_object_mut().unwrap().remove("installerAssetId");
+        legacy.as_object_mut().unwrap().remove("checksumsAssetId");
+        let legacy: UpdateInfo = serde_json::from_value(legacy).unwrap();
+        assert!(legacy.installer_asset_id.is_none());
+        assert!(legacy.checksums_asset_id.is_none());
+        assert_eq!(update.installer_asset_id, Some(42));
+        assert_eq!(update.checksums_asset_id, Some(42));
 
         assert!(
             select(list(), &current, false).is_none(),
@@ -322,9 +374,11 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let dest = dir.path().join("f.bin");
         let mut seen = 0;
-        let hash = fetch_to_file(&format!("http://{addr}/f"), &dest, |done, _| seen = done)
-            .await
-            .unwrap();
+        let hash = fetch_to_file(&format!("http://{addr}/f"), None, &dest, |done, _| {
+            seen = done
+        })
+        .await
+        .unwrap();
         assert_eq!(seen, 5);
         assert_eq!(std::fs::read(&dest).unwrap(), b"hallo");
         // sha256("hallo")
@@ -332,6 +386,70 @@ mod tests {
             hash,
             "d3751d33f9cd5049c4af2b462735457e4d3baf130bcbb87f389e349fbaeb20b9"
         );
+    }
+
+    #[tokio::test]
+    async fn falls_back_after_gateway_timeout_and_verifies_download_content() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            for path in ["/browser", "/api"] {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut buf = [0u8; 4096];
+                let n = socket.read(&mut buf).await.unwrap();
+                let request = String::from_utf8_lossy(&buf[..n]).to_ascii_lowercase();
+                assert!(request.starts_with(&format!("get {path} ")));
+                let reply: &[u8] = if path == "/browser" {
+                    b"HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                } else {
+                    assert!(request.contains("accept: application/octet-stream"));
+                    b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: close\r\n\r\nhallo"
+                };
+                socket.write_all(reply).await.unwrap();
+            }
+        });
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("installer.exe");
+        let hash = fetch_to_file(
+            &format!("http://{addr}/browser"),
+            Some(&format!("http://{addr}/api")),
+            &dest,
+            |_, _| {},
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            hash,
+            "d3751d33f9cd5049c4af2b462735457e4d3baf130bcbb87f389e349fbaeb20b9"
+        );
+        assert_eq!(std::fs::read(dest).unwrap(), b"hallo");
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn failed_download_does_not_create_an_installer() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            for _ in 0..2 {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut buf = [0u8; 4096];
+                let _ = socket.read(&mut buf).await.unwrap();
+                socket.write_all(b"HTTP/1.1 504 Gateway Timeout\r\nContent-Length: 0\r\nConnection: close\r\n\r\n").await.unwrap();
+            }
+        });
+        let dir = tempfile::tempdir().unwrap();
+        let dest = dir.path().join("installer.exe");
+        let url = format!("http://{addr}/failed");
+        assert!(
+            fetch_to_file(&url, Some(&url), &dest, |_, _| {})
+                .await
+                .is_err()
+        );
+        assert!(!dest.exists());
+        server.await.unwrap();
     }
 
     #[tokio::test]
@@ -353,6 +471,8 @@ mod tests {
                 .to_string()
                 .contains("Prüfsummen")
         );
+        info.checksums_asset_id = Some(42);
+        info.installer_asset_id = Some(43);
         info.checksums_url = Some("https://evil.example/SHA256SUMS.txt".into());
         assert!(
             download(&info, |_, _| {})
@@ -370,13 +490,9 @@ mod tests {
         let update = check(&Version::new(0, 0, 1), true).await.unwrap();
         println!("{update:#?}");
         let update = update.expect("at least one release");
-        if let Some(url) = &update.installer_url {
-            let dest = std::env::temp_dir().join("opendeckn3-live-download.exe");
-            let hash = fetch_to_file(url, &dest, |_, _| {}).await.unwrap();
-            println!(
-                "downloaded {} bytes, sha256 {hash}",
-                std::fs::metadata(&dest).unwrap().len()
-            );
-        }
+        let dest = download(&update, |_, _| {}).await.unwrap();
+        assert!(std::fs::metadata(&dest).unwrap().len() > 0);
+        println!("downloaded and verified {}", dest.display());
+        std::fs::remove_file(dest).unwrap();
     }
 }
