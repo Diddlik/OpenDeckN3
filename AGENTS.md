@@ -124,7 +124,7 @@ Design:
 - Required environment: stable Rust with rustfmt and clippy; Node.js >= 22 for the smoke test and icon tools; Linux builds of the MIDI plugin need `libasound2-dev` and `pkg-config`.
 - Important entry points: daemon CLI `opendeckn3d` (`crates/n3-daemon/src/main.rs`, library entry `n3_daemon::run`), desktop `crates/n3-desktop/src/main.rs`, UI `ui/index.html`, plugins under `plugins/`.
 - Architecture constraints:
-  - Idle displays and built-in clock actions are rendered by the daemon once per second, without an open UI; lock screens take priority. `dimAfterMinutes` retains its settings key for compatibility; `idleMode` selects `dim` (default), `digital`, or `analog`.
+  - Idle displays and built-in clock actions are rendered by the daemon once per second, without an open UI, also on locked decks. Only the lock key lifts a lock; idle wake-up and device reconnects (in the same daemon run) keep it. `dimAfterMinutes` retains its settings key for compatibility; `idleMode` selects `dim` (default), `digital`, or `analog`.
   - All domain state lives in `App` (`crates/n3-daemon/src/app.rs`) and is mutated only from the main loop. Use channels, never add locks.
   - Document new UI commands/events in `docs/UI_API.md` and new plugin events in `docs/PLUGIN_API.md`.
   - `ui/index.html` is a single file without a build step, embedded via `include_str!`; rebuild with `cargo build` after changes. Design reference: `ui/design/prototyp-claude-design.html`.

@@ -78,7 +78,12 @@ struct LockHold {
 impl DeviceState {
     /// Displays show the lock or its countdown instead of the keys.
     fn covered(&self) -> bool {
-        self.locked || self.lock_hold.as_ref().is_some_and(|h| h.shown)
+        self.locked || self.counting()
+    }
+
+    /// The lock countdown covers the displays (it also hides the idle clock).
+    fn counting(&self) -> bool {
+        self.lock_hold.as_ref().is_some_and(|h| h.shown)
     }
 
     pub fn page(&self) -> &Page {
@@ -165,6 +170,8 @@ pub struct App {
     idle_mode: crate::store::IdleMode,
     last_deck_input: Instant,
     idle_dimmed: bool,
+    /// Devices that disconnected while locked; a lock is only lifted with the lock key.
+    locked_away: BTreeSet<String>,
 }
 
 type PendingRequest = (
@@ -199,6 +206,7 @@ impl App {
             idle_mode: settings.idle_mode,
             last_deck_input: Instant::now(),
             idle_dimmed: false,
+            locked_away: BTreeSet::new(),
         }
     }
 
@@ -333,6 +341,7 @@ impl App {
             .await;
         let encoders = handle.info.layout.encoders as usize;
         let info = handle.info.clone();
+        let locked = self.locked_away.remove(&id) && config.lock_key.is_some();
         self.devices.insert(
             id.clone(),
             DeviceState {
@@ -346,7 +355,7 @@ impl App {
                 titles: BTreeMap::new(),
                 runtime_images: BTreeMap::new(),
                 encoders_pressed: vec![false; encoders],
-                locked: false,
+                locked,
                 lock_hold: None,
             },
         );
@@ -364,7 +373,9 @@ impl App {
             return;
         }
         self.deactivate_profile(id).await;
-        self.devices.remove(id);
+        if self.devices.remove(id).is_some_and(|s| s.locked) {
+            self.locked_away.insert(id.to_owned());
+        }
         self.plugins
             .broadcast(&protocol::device_did_disconnect(id))
             .await;
@@ -544,12 +555,12 @@ impl App {
         self.restore_screens(device).await;
     }
 
-    /// Draws all displays: the lock picture while locked, else every key.
+    /// Draws all displays: the idle clock, the lock picture while locked, else every key.
     async fn restore_screens(&mut self, device: &str) {
         let Some(state) = self.devices.get(device) else {
             return;
         };
-        if self.idle_clock() && !state.covered() {
+        if self.idle_clock() && !state.counting() {
             self.show_idle_clock(device).await;
             return;
         }
@@ -890,7 +901,7 @@ impl App {
         let Some(state) = self.devices.get(device) else {
             return;
         };
-        if state.covered() {
+        if state.counting() {
             return;
         }
         let layout = &state.handle.info.layout;
@@ -1768,7 +1779,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn idle_clocks_restore_keys_and_respect_lock() {
+    async fn idle_clocks_restore_keys_and_keep_lock() {
         let dir = tempfile::tempdir().unwrap();
         let (plugin_tx, _plugin_rx) = mpsc::channel(16);
         let plugins = PluginHost::start(0, plugin_tx).await.unwrap();
@@ -1783,7 +1794,7 @@ mod tests {
             token.clone(),
         );
         let task = tokio::spawn(n3_driver::virtual_deck::run_virtual_device(
-            events,
+            events.clone(),
             token.clone(),
         ));
         app.on_device_event(rx.recv().await.unwrap()).await;
@@ -1819,16 +1830,35 @@ mod tests {
         })
         .await;
         assert!(!app.idle_dimmed);
+        app.set_lock_key(id, Some(0), 3).await.unwrap();
         app.devices.get_mut(id).unwrap().locked = true;
         app.restore_screens(id).await;
         let locked = app.devices[id].previews.clone();
         app.idle_mode = crate::store::IdleMode::Analog;
         app.set_idle_dimmed(true).await;
         app.on_clock_tick().await;
-        assert_eq!(
+        assert_ne!(
             app.devices[id].previews, locked,
-            "lock display has priority"
+            "idle clock shows while locked"
         );
+        app.on_device_event(DeviceEvent::Input {
+            device: id.into(),
+            event: InputEvent::KeyDown { key: 1 },
+        })
+        .await;
+        assert!(app.devices[id].locked, "waking keeps the lock");
+        assert_eq!(app.devices[id].previews, locked);
+
+        token.cancel();
+        task.await.unwrap();
+        app.on_device_event(rx.recv().await.unwrap()).await;
+        let token = CancellationToken::new();
+        let task = tokio::spawn(n3_driver::virtual_deck::run_virtual_device(
+            events,
+            token.clone(),
+        ));
+        app.on_device_event(rx.recv().await.unwrap()).await;
+        assert!(app.devices[id].locked, "reconnecting keeps the lock");
         token.cancel();
         task.await.unwrap();
     }

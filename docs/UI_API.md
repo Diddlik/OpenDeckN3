@@ -62,7 +62,7 @@ interface DeviceSnapshot {
     };
   };
   brightness: number;        // 0..100
-  locked: boolean;           // mit der Sperrtaste gesperrt (nicht gespeichert: nach dem Anstecken entsperrt)
+  locked: boolean;           // mit der Sperrtaste gesperrt (bleibt beim Neuverbinden erhalten, nicht nach Neustart des Dienstes)
   lockKey: number | null;    // Sperrtaste (Tasten-Position, Regler-Drücken = keys + Regler)
   lockSeconds: number;       // so lange halten zum Sperren/Entsperren (1..10, Standard 3)
   activeProfile: string;
@@ -155,7 +155,7 @@ type InputEvent =
 | `getGlobalSettings` | `plugin` | globale Einstellungen des Plugins (Objekt) |
 | `pluginRequest` | `plugin`, `payload` (z. B. `{ request: "guilds" }`; für `opendeckn3.builtin` beantwortet der Dienst `{ request: "apps" }` selbst: installierte Programme – Windows: Startmenü-Verknüpfungen, Linux: `.desktop`-Einträge, macOS: `.app`) | Antwort des Plugins (`sendToPropertyInspector`), z. B. `{ options: [[wert, text], …] }`; Fehler, wenn das Plugin `error` liefert oder nicht läuft |
 | `updatePlugins` | – | `{ updated: [{ uuid, name, from, to }], failed: [{ uuid, name, error }] }` – installiert alle neueren Versionen aus dem Katalog; `failed` nennt auch installierte Plugins, deren Release nicht abgefragt werden konnte |
-| `getAppSettings` | – | `AppSettings` – `{ autoUpdatePlugins: boolean, dimAfterMinutes: number, idleMode: "dim" | "digital" | "analog" }` (Standard `true`, `0`, `"dim"`); `dimAfterMinutes` > 0 aktiviert nach so vielen Minuten ohne Tastatur-, Maus- oder Deck-Eingabe den Ruhemodus (Windows, Linux/X11). `dim`: höchstens 10 % Helligkeit; `digital`: lokale Uhrzeit mit je einer Spalte für Stunden, Minuten, Sekunden auf den sechs N3-Displays (Zehner oben, Einer unten); `analog`: gemeinsames Zifferblatt mit Stunden-, Minuten- und Sekundenzeiger. Uhren aktualisieren sich jede Sekunde ohne geöffnete UI; Sperranzeige hat Vorrang. Eingaben stellen die normale Belegung wieder her |
+| `getAppSettings` | – | `AppSettings` – `{ autoUpdatePlugins: boolean, dimAfterMinutes: number, idleMode: "dim" | "digital" | "analog" }` (Standard `true`, `0`, `"dim"`); `dimAfterMinutes` > 0 aktiviert nach so vielen Minuten ohne Tastatur-, Maus- oder Deck-Eingabe den Ruhemodus (Windows, Linux/X11). `dim`: höchstens 10 % Helligkeit; `digital`: lokale Uhrzeit mit je einer Spalte für Stunden, Minuten, Sekunden auf den sechs N3-Displays (Zehner oben, Einer unten); `analog`: gemeinsames Zifferblatt mit Stunden-, Minuten- und Sekundenzeiger. Uhren aktualisieren sich jede Sekunde ohne geöffnete UI und erscheinen auch auf gesperrten Geräten. Eingaben stellen die normale Belegung bzw. die Sperranzeige wieder her; die Sperre bleibt bestehen |
 | `setAppSettings` | `settings` (Teilobjekt) | zusammengeführte `AppSettings`; gespeichert in `<config>/settings.json` |
 | `setGlobalSettings` | `plugin`, `settings` | zusammengeführte Einstellungen – `settings` wird in die vorhandenen gemischt (vom Plugin gespeicherte Werte wie Tokens bleiben); Plugin erhält `didReceiveGlobalSettings` |
 
