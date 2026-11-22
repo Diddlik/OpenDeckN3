@@ -240,6 +240,7 @@ impl Plugin {
                     json!({ "command": "activate", "profileId": id }),
                 );
             }
+            "toggle" if inst.text("mode") == "next" => self.step_profile(context, 1),
             "toggle" => self.send(Some(context), json!({ "command": "toggle" })),
             "mute" => self.send(Some(context), json!({ "command": "mute" })),
             _ => {}
@@ -248,9 +249,12 @@ impl Plugin {
 
     /// The dial steps through the available profiles in AudioSwitcher's order.
     fn rotate(&mut self, context: &str, ticks: i64) {
-        if self.contexts.get(context).map(Instance::kind) != Some("toggle") {
-            return;
+        if self.contexts.get(context).map(Instance::kind) == Some("toggle") {
+            self.step_profile(context, ticks);
         }
+    }
+
+    fn step_profile(&mut self, context: &str, ticks: i64) {
         if let Some(id) = step(&self.profiles, self.active.as_deref(), ticks) {
             self.send(
                 Some(context),

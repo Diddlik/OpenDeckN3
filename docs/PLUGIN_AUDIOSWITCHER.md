@@ -15,7 +15,7 @@ Nur Windows.
 | Aktion | Taste | Drehregler | Anzeige |
 | --- | --- | --- | --- |
 | Audioprofil | aktiviert das gewählte Profil | – | leuchtet, solange das Profil aktiv ist; Profilname optional als Titel |
-| Profile umschalten | wechselt zwischen den zwei Schnellwechsel-Profilen aus AudioSwitcher | blättert durch alle verfügbaren Profile, Drücken schaltet um | Name des aktiven Profils |
+| Profile umschalten | wechselt zwischen den zwei Schnellwechsel-Profilen aus AudioSwitcher oder, mit Funktion „Nächstes Profil“, der Reihe nach durch alle verfügbaren Profile | blättert durch alle verfügbaren Profile, Drücken schaltet um | Name des aktiven Profils |
 | Mikrofon stumm | schaltet das Standardmikrofon stumm oder wieder ein | – | leuchtet rot, solange das Mikrofon stumm ist – auch wenn es anders stummgeschaltet wurde |
 
 Aktiv ist ein Profil, wenn seine Geräte gerade die Windows-Standardgeräte sind – auch wenn sie anders als über

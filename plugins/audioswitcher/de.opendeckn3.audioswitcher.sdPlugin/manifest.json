@@ -2,7 +2,7 @@
   "UUID": "de.opendeckn3.audioswitcher",
   "Name": "AudioSwitcher",
   "Author": "OpenDeckN3",
-  "Version": "0.2.0",
+  "Version": "0.3.0",
   "Description": "Aktiviert Audioprofile von AudioSwitcher (Ausgabe- und Eingabegerät auf einen Druck), schaltet zwischen ihnen um, auch per Drehregler, und schaltet das Mikrofon stumm.",
   "Category": "AudioSwitcher",
   "Icon": "imgs/plugin",
@@ -71,7 +71,7 @@
     {
       "UUID": "de.opendeckn3.audioswitcher.toggle",
       "Name": "Profile umschalten",
-      "Tooltip": "Taste: zwischen den zwei Schnellwechsel-Profilen umschalten. Drehregler: durch alle Profile blättern",
+      "Tooltip": "Taste: zwischen den zwei Schnellwechsel-Profilen umschalten oder zum nächsten Profil gehen. Drehregler: durch alle Profile blättern",
       "Icon": "imgs/toggle",
       "Controllers": [
         "Keypad",
@@ -80,6 +80,27 @@
       "States": [
         {
           "Image": "imgs/toggle"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Funktion",
+          "controllers": [
+            "Keypad"
+          ],
+          "options": [
+            [
+              "quick",
+              "Zwei Schnellwechsel-Profile"
+            ],
+            [
+              "next",
+              "Nächstes Profil (alle der Reihe nach)"
+            ]
+          ],
+          "default": "quick"
         }
       ]
     },
