@@ -392,6 +392,7 @@ const ICONS = {
   rec: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/>',
   counter: '<path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/>',
   terminal: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9l3 3-3 3M12 15h5"/>',
+  steam: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><circle cx="18.5" cy="7.5" r="2.5"/>',
   mic: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
   profile: '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
   volume: '<path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>',
@@ -449,7 +450,7 @@ const KCOL = {
   brightness: ['#2C240E', '#F7D886'], volume: ['#10202D', '#9DD6FF'], grid: ['#1C2A2A', '#5FF0E2'], key: ['#1C2230', '#C9D3E3'],
   keyboard: ['#1E2235', '#A5B4FC'], text: ['#231F30', '#C4B5FD'], volumeDown: ['#10202D', '#9DD6FF'], mute: ['#2A1416', '#F7A0A0'],
   media: ['#0E2A20', '#6EE7B7'], next: ['#0E2A20', '#6EE7B7'], previous: ['#0E2A20', '#6EE7B7'], stop: ['#0E2A20', '#6EE7B7'],
-  app: ['#2B1B0F', '#FDBA74'], globe: ['#0F2236', '#7DD3FC'],
+  app: ['#2B1B0F', '#FDBA74'], globe: ['#0F2236', '#7DD3FC'], steam: ['#121C2E', '#66C0F4'],
   pages: ['#14243A', '#93C5FD'], pageNext: ['#14243A', '#93C5FD'], pagePrev: ['#14243A', '#93C5FD']
 };
 
@@ -459,7 +460,7 @@ function kindFor(pluginUuid, actionUuid) {
   const a = (actionUuid || '').toLowerCase();
   if (pluginUuid === BUILTIN) {
     return { brightness: 'brightness', profile: 'profile', page: 'pageNext', hotkey: 'keyboard', text: 'text', volume: 'volume',
-      media: 'media', launch: 'app', url: 'globe', command: 'terminal' }[a.slice(BUILTIN.length + 1)] || 'key';
+      media: 'media', launch: 'app', url: 'globe', command: 'terminal', 'steam-status': 'steam' }[a.slice(BUILTIN.length + 1)] || 'key';
   }
   const rules = [['count', 'counter'], ['bright', 'brightness'], ['volume', 'volume'], ['audio', 'volume'], ['mute', 'mic'], ['mic', 'mic'],
     ['record', 'rec'], ['scene', 'camera'], ['obs', 'camera'], ['shell', 'terminal'], ['command', 'terminal'], ['run', 'terminal'], ['profile', 'profile']];

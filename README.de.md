@@ -77,6 +77,7 @@ Kein Plugin-Gebastel für die Basics – diese Aktionen sind direkt eingebaut un
 | 🚀 | **Programm öffnen** | Apps, Dateien und Ordner starten | ✓ |
 | 🌐 | **Website öffnen** | Deine Lieblingsseiten auf Knopfdruck | ✓ |
 | 💻 | **Befehl ausführen** | Für Power-User: jede Kommandozeile | Eigener Befehl je Drehrichtung |
+| 🎮 | **Steam-Status** | Online, abwesend, unsichtbar oder offline gehen | ✓ |
 | 📝 | **Text eingeben** | Signaturen, E-Mail-Adressen, Textbausteine | ✓ |
 | 🗂️ | **Profil wechseln** · ☀️ **Helligkeit** | Ein Knopf, ein neues Layout | Helligkeit stufenlos |
 | 📑 | **Seite wechseln** | Nächste, vorige oder eine bestimmte Seite | Durch die Seiten blättern |

@@ -77,6 +77,7 @@ No plugin tinkering for the basics – these actions are built in and set up in 
 | 🚀 | **Open program** | Launch apps, files, and folders | ✓ |
 | 🌐 | **Open website** | Your favorite sites at the push of a button | ✓ |
 | 💻 | **Run command** | For power users: any command line | Separate command per direction |
+| 🎮 | **Steam status** | Go online, away, invisible, or offline | ✓ |
 | 📝 | **Type text** | Signatures, email addresses, snippets | ✓ |
 | 🗂️ | **Switch profile** · ☀️ **Brightness** | One button, a new layout | Smooth brightness |
 | 📑 | **Switch page** | Next, previous, or a specific page | Flip through pages |

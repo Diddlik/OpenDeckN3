@@ -85,7 +85,7 @@ von Anfang an auf die N3-Familie (6 Display-Tasten, 3 Tasten, 3 Drehregler) zuge
 - ✅ Titel auf den Tasten-Displays (Geist-Schrift, automatisch verkleinert/gekürzt).
 - Plugin-Installation aus `.zip`/`.streamDeckPlugin`, Plugin-Neustart bei Absturz.
 - Tray-Icon, Autostart, Bildschirmschoner/Sleep nach Inaktivität.
-- ✅ Eingebaute Aktionen wie im OpenDeck-Starterpaket: Tastenkürzel, Lautstärke, Medien, Programm öffnen, Website, Befehl,
+- ✅ Eingebaute Aktionen wie im OpenDeck-Starterpaket: Tastenkürzel, Lautstärke, Medien, Programm öffnen, Website, Befehl, Steam-Status,
   Text eingeben – mit Einstellungsformularen in der UI.
 - Multi-Aktion, Ordner/Seiten.
 

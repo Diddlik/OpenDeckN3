@@ -22,7 +22,7 @@ const MAP = {
   brightness: 'brightness', profile: 'profile', 'page-next': 'pageNext', 'page-previous': 'pagePrev', 'page-goto': 'pages', hotkey: 'keyboard', text: 'text',
   'volume-up': 'volume', 'volume-down': 'volumeDown', 'volume-mute': 'mute',
   'media-playpause': 'media', 'media-next': 'next', 'media-previous': 'previous', 'media-stop': 'stop',
-  launch: 'app', url: 'globe', command: 'terminal',
+  launch: 'app', url: 'globe', command: 'terminal', 'steam-status': 'steam',
 };
 
 (async () => {
