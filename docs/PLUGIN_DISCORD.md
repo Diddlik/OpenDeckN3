@@ -99,9 +99,11 @@ undokumentierten.
 ([`social.rs`](../plugins/discord/src/social.rs)). Fehlt die Datei, meldet nur diese Taste einen Fehler. Pro
 Tastendruck: `UpdateToken` (Bearer, das Token der RPC-Anmeldung) → `Connect` → `Ready` → `SetOnlineStatus` →
 `Disconnect`, etwa 2 Sekunden. Die Erneuerung über den SDK-eigenen Token-Endpunkt lehnt Discord für diese Anwendung
-ab (`invalid_client`); deshalb erneuert weiter der RPC-Weg über `discord.com` das gemeinsame Token. Der Release-Workflow
-legt die DLL ins Windows-Paket, wenn die Secrets `DISCORD_SOCIAL_SDK_URL` und `DISCORD_SOCIAL_SDK_SHA256` gesetzt sind
-(siehe `.github/workflows/windows.yml`). Das Verlinken mit dem SDK erlaubt eine Zusatzerlaubnis nach GPLv3 §7 am Ende
+ab (`invalid_client`); deshalb erneuert weiter der RPC-Weg über `discord.com` das gemeinsame Token. Die DLL liegt mit den
+Lizenzhinweisen des SDK AES-verschlüsselt in `third_party/discord-social-sdk.7z`. Der Release-Workflow entpackt sie mit
+dem Secret `DISCORD_SOCIAL_SDK_PASSWORD`, prüft ihre SHA-256 und legt sie ins Windows-Paket des Plugins (siehe
+`.github/workflows/windows.yml`). Neue SDK-Version: Archiv mit `7z a -t7z -mhe=on -p<Passwort>` neu packen und die
+Prüfsumme im Workflow anpassen. Das Verlinken mit dem SDK erlaubt eine Zusatzerlaubnis nach GPLv3 §7 am Ende
 von [`LICENSE`](../LICENSE).
 
 Entwickeln/Testen ohne Discord: `cargo test -p opendeckn3-discord` (simuliertes Discord über einen In-Memory-Stream
