@@ -4,8 +4,8 @@ Steuert die **Discord-Desktop-App** vom TreasLin N3 aus – über Discords lokal
 `\\.\pipe\discord-ipc-0` unter Windows, Unix-Socket `discord-ipc-0` unter Linux/macOS). Es wird kein Discord-Passwort und
 kein Benutzer-Token ausgelesen; der Zugriff wird über Discords eigenes Bestätigungsfenster erteilt.
 
-Quellcode: [`plugins/discord`](../plugins/discord) (Rust, ein einzelnes Programm). Nur die Aktion „Online-Status
-setzen“ braucht zusätzlich das Discord Social SDK (siehe unten).
+Quellcode: [`plugins/discord`](../plugins/discord) (Rust, ein einzelnes Programm). Nur die Aktion „Online-Status“
+braucht zusätzlich das Discord Social SDK (siehe unten).
 
 ## Aktionen
 
@@ -24,7 +24,7 @@ setzen“ braucht zusätzlich das Discord Social SDK (siehe unten).
 | Bildschirmfreigabe ein-/ausschalten | umschalten | – | grün, wenn aktiv |
 | Drücken zum Sprechen | solange gedrückt: Mikro an, danach wieder stumm | – | grün, solange gedrückt |
 | Sprachaktivierung umschalten | Sprachaktivierung ↔ Push-to-Talk | – | Tastatur-Symbol bei Push-to-Talk |
-| Online-Status setzen | Online / Abwesend / Bitte nicht stören / Unsichtbar | – | – |
+| Online-Status | Status setzen; mit „Umschalten mit“ zwischen zwei Status wechseln | – | aktueller Status (grün, gelb, rot, grau), auch bei Änderungen in Discord |
 
 Server, Kanäle, Personen (im eigenen Sprachkanal), Soundboard-Sounds und Audiogeräte wählst du im Inspektor aus
 Listen, die das Plugin live bei Discord abfragt – IDs oder der Entwicklermodus sind nicht nötig.
@@ -73,7 +73,7 @@ Umgebungsvariable `OPENDECKN3_DISCORD_CLIENT_ID` setzen.
 - **Drücken zum Sprechen** arbeitet über die Stummschaltung: In Discord „Sprachaktivierung“ nutzen und das Mikro
   stumm schalten – die Taste hebt die Stummschaltung auf, solange sie gedrückt ist.
 - Nicht freigegebene Anwendungen sind bei Discord auf 50 Tester begrenzt – für den eigenen Rechner reicht das.
-- **Online-Status setzen** gibt es nicht über RPC. Das Plugin nutzt dafür das **Discord Social SDK**: Die Anwendung
+- Den **Online-Status** gibt es nicht über RPC. Das Plugin nutzt dafür das **Discord Social SDK**: Die Anwendung
   braucht dort ein aktiviertes Social SDK, die Anmeldung den Scope `sdk.social_layer_presence`. Wer vor dieser Aktion
   verbunden war, muss sich einmal **abmelden** und neu verbinden. Der Status bleibt nach dem Setzen bestehen, auch
   wenn OpenDeckN3 beendet wird.
@@ -96,9 +96,11 @@ undokumentierten.
 
 **Online-Status:** Das Social SDK ist proprietär und liegt nicht im Repository. Das Plugin lädt
 `discord_partner_sdk.dll` (Linux: `libdiscord_partner_sdk.so`) zur Laufzeit aus seinem eigenen Ordner
-([`social.rs`](../plugins/discord/src/social.rs)). Fehlt die Datei, meldet nur diese Taste einen Fehler. Pro
-Tastendruck: `UpdateToken` (Bearer, das Token der RPC-Anmeldung) → `Connect` → `Ready` → `SetOnlineStatus` →
-`Disconnect`, etwa 2 Sekunden. Die Erneuerung über den SDK-eigenen Token-Endpunkt lehnt Discord für diese Anwendung
+([`social.rs`](../plugins/discord/src/social.rs)). Fehlt die Datei, meldet nur diese Taste einen Fehler. Solange
+eine Status-Taste existiert, hält ein eigener Thread eine SDK-Verbindung: `UpdateToken` (Bearer, das Token der
+RPC-Anmeldung) → `Connect` → `Ready`. Den eigenen Status liest er mit `GetCurrentUser`, Änderungen (auch in Discord
+selbst) meldet `SetUserUpdatedCallback`; ein Tastendruck ruft `SetOnlineStatus`. Eine Verbindung pro Abfrage wäre
+langsamer und liefe in Discords Verbindungslimits. Die Erneuerung über den SDK-eigenen Token-Endpunkt lehnt Discord für diese Anwendung
 ab (`invalid_client`); deshalb erneuert weiter der RPC-Weg über `discord.com` das gemeinsame Token. Die DLL liegt mit den
 Lizenzhinweisen des SDK AES-verschlüsselt in `third_party/discord-social-sdk.7z`. Der Release-Workflow entpackt sie mit
 dem Secret `DISCORD_SOCIAL_SDK_PASSWORD`, prüft ihre SHA-256 und legt sie ins Windows-Paket des Plugins (siehe

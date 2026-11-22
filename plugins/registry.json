@@ -4,7 +4,7 @@
     {
       "uuid": "de.opendeckn3.discord",
       "name": "Discord",
-      "description": "Mikro und Kopfhörer stumm, Sprach- und Textkanäle, Lautstärken (auch einzelner Personen), Soundboard, Audiogerät, Kamera, Bildschirmfreigabe, Push-to-Talk. Verbinden per Klick über die Discord-App.",
+      "description": "Mikro und Kopfhörer stumm, Sprach- und Textkanäle, Lautstärken (auch einzelner Personen), Soundboard, Audiogerät, Kamera, Bildschirmfreigabe, Push-to-Talk, Online-Status. Verbinden per Klick über die Discord-App.",
       "author": "OpenDeckN3",
       "repo": "Diddlik/OpenDeckN3",
       "asset": "de.opendeckn3.discord-windows.streamDeckPlugin",

@@ -1,12 +1,18 @@
 //! Online status via the Discord Social SDK. The local RPC interface cannot
-//! set it. The SDK is proprietary, so it is not linked but loaded at runtime
-//! from next to the plugin binary; without it, only this action fails.
+//! read or set it. The SDK is proprietary, so it is not linked but loaded at
+//! runtime from next to the plugin binary; without it, only the status action
+//! fails.
+//!
+//! A worker thread keeps one SDK connection open so status keys follow
+//! changes made in Discord itself (reconnecting per poll would hit Discord's
+//! connection limits).
 
 use std::ffi::c_void;
-use std::sync::{Mutex, OnceLock};
+use std::sync::OnceLock;
+use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::time::{Duration, Instant};
 
-use anyhow::{Context, anyhow, bail};
+use anyhow::{Context, anyhow};
 use libloading::Library;
 
 #[cfg(windows)]
@@ -15,6 +21,31 @@ const LIB: &str = "discord_partner_sdk.dll";
 const LIB: &str = "libdiscord_partner_sdk.so";
 
 pub const SCOPE: &str = "sdk.social_layer_presence";
+
+pub const ONLINE: i32 = 0;
+pub const IDLE: i32 = 3;
+pub const DND: i32 = 4;
+pub const INVISIBLE: i32 = 5;
+
+/// `online`, `idle`, `dnd` or `invisible`.
+pub fn status_code(name: &str) -> Option<i32> {
+    Some(match name {
+        "online" => ONLINE,
+        "idle" => IDLE,
+        "dnd" => DND,
+        "invisible" => INVISIBLE,
+        _ => return None,
+    })
+}
+
+/// Status a key press sets: `primary`, or `alternate` while `primary` is
+/// already active.
+pub fn press_target(primary: i32, alternate: Option<i32>, current: Option<i32>) -> i32 {
+    match alternate {
+        Some(alternate) if current == Some(primary) => alternate,
+        _ => primary,
+    }
+}
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -43,19 +74,31 @@ impl DStr {
 #[repr(C)]
 struct Handle(*mut c_void);
 
+impl Handle {
+    fn null() -> Self {
+        Self(std::ptr::null_mut())
+    }
+}
+
 type Free = Option<unsafe extern "C" fn(*mut c_void)>;
 type ResultCb = unsafe extern "C" fn(*mut Handle, *mut c_void);
 type StatusCb = unsafe extern "C" fn(i32, i32, i32, *mut c_void);
+type UserCb = unsafe extern "C" fn(u64, *mut c_void);
 
 struct Api {
     run_callbacks: unsafe extern "C" fn(),
     init: unsafe extern "C" fn(*mut Handle),
     drop: unsafe extern "C" fn(*mut Handle),
     on_status: unsafe extern "C" fn(*mut Handle, StatusCb, Free, *mut c_void),
+    on_user: unsafe extern "C" fn(*mut Handle, UserCb, Free, *mut c_void),
     update_token: unsafe extern "C" fn(*mut Handle, i32, DStr, ResultCb, Free, *mut c_void),
     connect: unsafe extern "C" fn(*mut Handle),
     disconnect: unsafe extern "C" fn(*mut Handle),
     set_online_status: unsafe extern "C" fn(*mut Handle, i32, ResultCb, Free, *mut c_void),
+    current_user: unsafe extern "C" fn(*mut Handle, *mut Handle),
+    user_id: unsafe extern "C" fn(*mut Handle) -> u64,
+    user_status: unsafe extern "C" fn(*mut Handle) -> i32,
+    user_drop: unsafe extern "C" fn(*mut Handle),
     successful: unsafe extern "C" fn(*mut Handle) -> bool,
     to_string: unsafe extern "C" fn(*mut Handle, *mut DStr),
 }
@@ -83,124 +126,284 @@ fn load() -> anyhow::Result<Api> {
         init: sym!("Discord_Client_Init"),
         drop: sym!("Discord_Client_Drop"),
         on_status: sym!("Discord_Client_SetStatusChangedCallback"),
+        on_user: sym!("Discord_Client_SetUserUpdatedCallback"),
         update_token: sym!("Discord_Client_UpdateToken"),
         connect: sym!("Discord_Client_Connect"),
         disconnect: sym!("Discord_Client_Disconnect"),
         set_online_status: sym!("Discord_Client_SetOnlineStatus"),
+        current_user: sym!("Discord_Client_GetCurrentUser"),
+        user_id: sym!("Discord_UserHandle_Id"),
+        user_status: sym!("Discord_UserHandle_Status"),
+        user_drop: sym!("Discord_UserHandle_Drop"),
         successful: sym!("Discord_ClientResult_Successful"),
         to_string: sym!("Discord_ClientResult_ToString"),
     })
 }
 
-enum Event {
+/// Reported to the plugin.
+pub enum Event {
+    Status(i32),
+    Failed(String),
+}
+
+enum Cmd {
+    Token(String),
+    Set(i32),
+}
+
+/// Handle to the worker; dropping it disconnects.
+pub struct Social {
+    cmd: Sender<Cmd>,
+}
+
+impl Social {
+    pub fn start(token: String, report: impl Fn(Event) + Send + 'static) -> Self {
+        let (cmd, rx) = mpsc::channel();
+        std::thread::spawn(move || match api() {
+            Ok(api) => Worker::new(api, report).run(token, rx),
+            Err(err) => report(Event::Failed(format!("{err:#}"))),
+        });
+        Self { cmd }
+    }
+
+    pub fn set_token(&self, token: String) {
+        self.cmd.send(Cmd::Token(token)).ok();
+    }
+
+    pub fn set_status(&self, status: i32) {
+        self.cmd.send(Cmd::Set(status)).ok();
+    }
+}
+
+/// Raised by SDK callbacks, which run inside `Discord_RunCallbacks` on the
+/// worker thread.
+enum Sdk {
     TokenSet,
     Ready,
+    Disconnected,
+    UserUpdated(u64),
     StatusSet,
     Failed(String),
 }
 
-/// SDK callbacks run inside `Discord_RunCallbacks` on the calling thread and
-/// report here; `BUSY` keeps concurrent key presses from mixing their events.
-static EVENTS: Mutex<Vec<Event>> = Mutex::new(Vec::new());
-static BUSY: Mutex<()> = Mutex::new(());
-
-fn push(event: Event) {
-    EVENTS.lock().unwrap_or_else(|e| e.into_inner()).push(event);
+struct Callbacks {
+    api: &'static Api,
+    tx: Sender<Sdk>,
 }
 
-fn check(result: *mut Handle, what: &str, ok: Event) {
-    let Ok(api) = api() else { return };
-    if unsafe { (api.successful)(result) } {
-        push(ok);
-    } else {
-        let mut text = DStr {
-            ptr: std::ptr::null(),
-            size: 0,
+impl Callbacks {
+    unsafe fn from<'a>(user_data: *mut c_void) -> &'a Self {
+        unsafe { &*(user_data as *const Self) }
+    }
+
+    fn result(&self, result: *mut Handle, what: &str, ok: Sdk) {
+        let event = if unsafe { (self.api.successful)(result) } {
+            ok
+        } else {
+            let mut text = DStr {
+                ptr: std::ptr::null(),
+                size: 0,
+            };
+            unsafe { (self.api.to_string)(result, &mut text) };
+            Sdk::Failed(format!("{what}: {}", text.text()))
         };
-        unsafe { (api.to_string)(result, &mut text) };
-        push(Event::Failed(format!("{what}: {}", text.text())));
+        self.tx.send(event).ok();
     }
 }
 
-unsafe extern "C" fn on_token(result: *mut Handle, _: *mut c_void) {
-    check(result, "Token", Event::TokenSet);
+unsafe extern "C" fn on_token(result: *mut Handle, user_data: *mut c_void) {
+    unsafe { Callbacks::from(user_data) }.result(result, "Token", Sdk::TokenSet);
 }
 
-unsafe extern "C" fn on_set(result: *mut Handle, _: *mut c_void) {
-    check(result, "Status", Event::StatusSet);
+unsafe extern "C" fn on_set(result: *mut Handle, user_data: *mut c_void) {
+    unsafe { Callbacks::from(user_data) }.result(result, "Status", Sdk::StatusSet);
 }
 
-unsafe extern "C" fn on_status(status: i32, error: i32, detail: i32, _: *mut c_void) {
-    const READY: i32 = 3;
+unsafe extern "C" fn on_status(status: i32, error: i32, detail: i32, user_data: *mut c_void) {
     const DISCONNECTED: i32 = 0;
-    if status == READY {
-        push(Event::Ready);
-    } else if status == DISCONNECTED && error != 0 {
-        push(Event::Failed(format!(
-            "Verbindung abgelehnt (Fehler {error}/{detail})"
-        )));
-    }
+    const READY: i32 = 3;
+    let event = match status {
+        READY => Sdk::Ready,
+        DISCONNECTED if error != 0 => {
+            Sdk::Failed(format!("Verbindung abgelehnt (Fehler {error}/{detail})"))
+        }
+        DISCONNECTED => Sdk::Disconnected,
+        _ => return,
+    };
+    unsafe { Callbacks::from(user_data) }.tx.send(event).ok();
 }
 
-/// `online`, `idle`, `dnd` or `invisible`.
-pub fn status_code(name: &str) -> Option<i32> {
-    Some(match name {
-        "online" => 0,
-        "idle" => 3,
-        "dnd" => 4,
-        "invisible" => 5,
-        _ => return None,
-    })
+unsafe extern "C" fn on_user(user: u64, user_data: *mut c_void) {
+    unsafe { Callbacks::from(user_data) }
+        .tx
+        .send(Sdk::UserUpdated(user))
+        .ok();
 }
 
-/// Connects with the plugin's OAuth2 token, sets the status and disconnects;
-/// Discord keeps the status afterwards. Blocking.
-pub fn set_online_status(access_token: &str, status: i32) -> anyhow::Result<()> {
-    let api = api()?;
-    let _busy = BUSY.lock().unwrap_or_else(|e| e.into_inner());
-    EVENTS.lock().unwrap_or_else(|e| e.into_inner()).clear();
-    const BEARER: i32 = 1;
-    let null = std::ptr::null_mut();
-    let mut client = Handle(null);
-    unsafe {
-        (api.init)(&mut client);
-        (api.on_status)(&mut client, on_status, None, null);
-        (api.update_token)(
-            &mut client,
-            BEARER,
-            DStr::of(access_token),
-            on_token,
-            None,
-            null,
-        );
-    }
-    let result = run(api, &mut client, status);
-    unsafe {
-        (api.disconnect)(&mut client);
-        (api.run_callbacks)();
-        (api.drop)(&mut client);
-    }
-    result
+struct Worker<R> {
+    api: &'static Api,
+    report: R,
+    client: Handle,
+    /// Boxed so the pointer handed to the SDK stays valid.
+    callbacks: Box<Callbacks>,
+    sdk: mpsc::Receiver<Sdk>,
+    ready: bool,
+    connecting: bool,
+    pending: Option<i32>,
+    requested: Option<i32>,
+    reported: Option<i32>,
 }
 
-fn run(api: &Api, client: &mut Handle, status: i32) -> anyhow::Result<()> {
-    let deadline = Instant::now() + Duration::from_secs(20);
-    while Instant::now() < deadline {
-        unsafe { (api.run_callbacks)() };
-        let events = std::mem::take(&mut *EVENTS.lock().unwrap_or_else(|e| e.into_inner()));
-        for event in events {
-            match event {
-                Event::TokenSet => unsafe { (api.connect)(client) },
-                Event::Ready => unsafe {
-                    (api.set_online_status)(client, status, on_set, None, std::ptr::null_mut())
-                },
-                Event::StatusSet => return Ok(()),
-                Event::Failed(err) => bail!("{err}"),
+impl<R: Fn(Event)> Worker<R> {
+    fn new(api: &'static Api, report: R) -> Self {
+        let (tx, sdk) = mpsc::channel();
+        let mut worker = Self {
+            api,
+            report,
+            client: Handle::null(),
+            callbacks: Box::new(Callbacks { api, tx }),
+            sdk,
+            ready: false,
+            connecting: false,
+            pending: None,
+            requested: None,
+            reported: None,
+        };
+        let data = worker.user_data();
+        unsafe {
+            (api.init)(&mut worker.client);
+            (api.on_status)(&mut worker.client, on_status, None, data);
+            (api.on_user)(&mut worker.client, on_user, None, data);
+        }
+        worker
+    }
+
+    fn user_data(&self) -> *mut c_void {
+        &*self.callbacks as *const Callbacks as *mut c_void
+    }
+
+    fn run(mut self, mut token: String, rx: mpsc::Receiver<Cmd>) {
+        self.sign_in(&token);
+        let mut polled = Instant::now();
+        loop {
+            match rx.recv_timeout(Duration::from_millis(20)) {
+                Ok(Cmd::Token(fresh)) if fresh != token => {
+                    token = fresh;
+                    unsafe { (self.api.disconnect)(&mut self.client) };
+                    self.sign_in(&token);
+                }
+                Ok(Cmd::Token(_)) => {}
+                Ok(Cmd::Set(status)) if self.ready => self.set(status),
+                Ok(Cmd::Set(status)) => {
+                    self.pending = Some(status);
+                    if !self.connecting {
+                        self.sign_in(&token);
+                    }
+                }
+                Err(RecvTimeoutError::Timeout) => {}
+                Err(RecvTimeoutError::Disconnected) => break,
+            }
+            unsafe { (self.api.run_callbacks)() };
+            while let Ok(event) = self.sdk.try_recv() {
+                self.on_sdk(event);
+            }
+            // Changes made in Discord itself do not always raise
+            // `UserUpdated`; the SDK's cached user is cheap to read.
+            if polled.elapsed() >= Duration::from_secs(2) {
+                polled = Instant::now();
+                self.report_current(None);
             }
         }
-        std::thread::sleep(Duration::from_millis(20));
+        unsafe {
+            (self.api.disconnect)(&mut self.client);
+            (self.api.run_callbacks)();
+            (self.api.drop)(&mut self.client);
+        }
     }
-    bail!("Zeitüberschreitung beim Setzen des Status")
+
+    fn sign_in(&mut self, token: &str) {
+        const BEARER: i32 = 1;
+        self.ready = false;
+        self.connecting = true;
+        let data = self.user_data();
+        unsafe {
+            (self.api.update_token)(
+                &mut self.client,
+                BEARER,
+                DStr::of(token),
+                on_token,
+                None,
+                data,
+            )
+        };
+    }
+
+    fn set(&mut self, status: i32) {
+        self.requested = Some(status);
+        let data = self.user_data();
+        unsafe { (self.api.set_online_status)(&mut self.client, status, on_set, None, data) };
+    }
+
+    fn on_sdk(&mut self, event: Sdk) {
+        match event {
+            Sdk::TokenSet => unsafe { (self.api.connect)(&mut self.client) },
+            Sdk::Ready => {
+                self.ready = true;
+                self.connecting = false;
+                match self.pending.take() {
+                    Some(status) => self.set(status),
+                    None => self.report_current(None),
+                }
+            }
+            Sdk::Disconnected => {
+                self.ready = false;
+                self.connecting = false;
+            }
+            Sdk::UserUpdated(user) => self.report_current(Some(user)),
+            Sdk::StatusSet => {
+                if let Some(status) = self.requested.take() {
+                    self.report(status);
+                }
+            }
+            Sdk::Failed(err) => {
+                self.ready = false;
+                self.reported = None;
+                self.connecting = false;
+                self.pending = None;
+                (self.report)(Event::Failed(err));
+            }
+        }
+    }
+
+    /// Reports the signed-in user's status; `only_for` skips updates about
+    /// other users (friends).
+    fn report_current(&mut self, only_for: Option<u64>) {
+        if !self.ready {
+            return;
+        }
+        let mut user = Handle::null();
+        unsafe { (self.api.current_user)(&mut self.client, &mut user) };
+        if user.0.is_null() {
+            return;
+        }
+        let (id, status) = unsafe {
+            (
+                (self.api.user_id)(&mut user),
+                (self.api.user_status)(&mut user),
+            )
+        };
+        unsafe { (self.api.user_drop)(&mut user) };
+        if only_for.is_none_or(|u| u == id) {
+            self.report(status);
+        }
+    }
+
+    fn report(&mut self, status: i32) {
+        if self.reported != Some(status) {
+            self.reported = Some(status);
+            (self.report)(Event::Status(status));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -209,8 +412,23 @@ mod tests {
 
     #[test]
     fn status_names() {
-        assert_eq!(status_code("dnd"), Some(4));
-        assert_eq!(status_code("invisible"), Some(5));
+        assert_eq!(status_code("dnd"), Some(DND));
+        assert_eq!(status_code("invisible"), Some(INVISIBLE));
         assert_eq!(status_code("busy"), None);
+    }
+
+    #[test]
+    fn press_toggles_only_from_primary() {
+        assert_eq!(
+            press_target(ONLINE, Some(INVISIBLE), Some(ONLINE)),
+            INVISIBLE
+        );
+        assert_eq!(
+            press_target(ONLINE, Some(INVISIBLE), Some(INVISIBLE)),
+            ONLINE
+        );
+        assert_eq!(press_target(ONLINE, Some(INVISIBLE), Some(DND)), ONLINE);
+        assert_eq!(press_target(ONLINE, Some(INVISIBLE), None), ONLINE);
+        assert_eq!(press_target(DND, None, Some(DND)), DND);
     }
 }

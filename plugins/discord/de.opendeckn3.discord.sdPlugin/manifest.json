@@ -536,8 +536,8 @@
     },
     {
       "UUID": "de.opendeckn3.discord.status",
-      "Name": "Online-Status setzen",
-      "Tooltip": "Setzt deinen Discord-Status (Online, Abwesend, Bitte nicht stören, Unsichtbar)",
+      "Name": "Online-Status",
+      "Tooltip": "Zeigt deinen Discord-Status und setzt ihn oder schaltet zwischen zwei Status um",
       "Icon": "imgs/status",
       "Controllers": [
         "Keypad"
@@ -545,6 +545,18 @@
       "States": [
         {
           "Image": "imgs/status"
+        },
+        {
+          "Image": "imgs/status-online"
+        },
+        {
+          "Image": "imgs/status-idle"
+        },
+        {
+          "Image": "imgs/status-dnd"
+        },
+        {
+          "Image": "imgs/status-invisible"
         }
       ],
       "SettingsSchema": [
@@ -571,6 +583,35 @@
             ]
           ],
           "default": "dnd"
+        },
+        {
+          "type": "select",
+          "key": "toggle",
+          "label": "Umschalten mit",
+          "options": [
+            [
+              "",
+              "– (nur setzen)"
+            ],
+            [
+              "online",
+              "Online"
+            ],
+            [
+              "idle",
+              "Abwesend"
+            ],
+            [
+              "dnd",
+              "Bitte nicht stören"
+            ],
+            [
+              "invisible",
+              "Unsichtbar"
+            ]
+          ],
+          "default": "",
+          "help": "Ist der Status oben schon aktiv, setzt die Taste diesen hier."
         }
       ]
     }

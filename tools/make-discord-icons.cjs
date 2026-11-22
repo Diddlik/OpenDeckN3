@@ -22,6 +22,8 @@ const SLIDERS = '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h
 const NORMAL = ['#1E2140', '#8C96FF'];
 const OFF = ['#3A1518', '#FF7A7D'];
 const ON = ['#10301D', '#57E08A'];
+const IDLE = ['#33290F', '#F0B232'];
+const HIDDEN = ['#24262B', '#9AA0A8'];
 
 const ICONS = {
   plugin: [NORMAL, '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/><path d="M9 11h.01M12 11h.01M15 11h.01"/>'],
@@ -50,6 +52,10 @@ const ICONS = {
   voicemode: [NORMAL, WAVE],
   'voicemode-ptt': [NORMAL, KEYBOARD],
   status: [NORMAL, USER + '<circle cx="18.5" cy="18.5" r="3" fill="currentColor" stroke="none"/>'],
+  'status-online': [ON, USER + '<circle cx="18.5" cy="18.5" r="3.5" fill="currentColor" stroke="none"/>'],
+  'status-idle': [IDLE, USER + '<path d="M20.5 15.5a3.5 3.5 0 1 0 1 5.5 3 3 0 0 1-1-5.5z" fill="currentColor" stroke="none"/>'],
+  'status-dnd': [OFF, USER + '<circle cx="18.5" cy="18.5" r="3.5" fill="currentColor" stroke="none"/><path d="M16.8 18.5h3.4" stroke="#3A1518"/>'],
+  'status-invisible': [HIDDEN, USER + '<circle cx="18.5" cy="18.5" r="2.8"/>'],
 };
 
 (async () => {

@@ -115,6 +115,7 @@ enum Msg {
     Channel(u64, Value),
     VoiceSettings(u64, Value),
     CallFailed(Option<String>, String),
+    Social(social::Event),
 }
 
 struct Plugin {
@@ -138,6 +139,9 @@ struct Plugin {
     video: bool,
     screenshare: bool,
     ptt_restore: Option<bool>,
+    social: Option<social::Social>,
+    /// Own online status as the Social SDK last reported it.
+    online_status: Option<i32>,
 }
 
 impl Plugin {
@@ -165,6 +169,8 @@ impl Plugin {
             video: false,
             screenshare: false,
             ptt_restore: None,
+            social: None,
+            online_status: None,
         }
     }
 
@@ -275,6 +281,7 @@ impl Plugin {
             }
             self.set_status("Abgemeldet");
             self.save_global();
+            self.sync_social();
             return;
         }
         if creds != self.creds {
@@ -382,6 +389,7 @@ impl Plugin {
         );
         self.save_global();
         self.log(format!("connected as {}", session.user));
+        self.sync_social();
 
         let rpc = session.rpc;
         self.rpc = Some(rpc.clone());
@@ -563,7 +571,17 @@ impl Plugin {
                 on(self.voice["mode"]["type"] == "PUSH_TO_TALK"),
                 String::new(),
             ),
-            Act::TextChannel | Act::Soundboard | Act::Status => (0, String::new()),
+            Act::Status => {
+                let state = match self.online_status {
+                    Some(social::ONLINE) => 1,
+                    Some(social::IDLE) => 2,
+                    Some(social::DND) => 3,
+                    Some(social::INVISIBLE) => 4,
+                    _ => 0,
+                };
+                (state, String::new())
+            }
+            Act::TextChannel | Act::Soundboard => (0, String::new()),
         }
     }
 
@@ -624,10 +642,12 @@ impl Plugin {
                     inst.shown = None;
                 }
                 self.refresh(&context);
+                self.sync_social();
             }
             "sendToPlugin" => self.on_request(msg["payload"].clone()),
             "willDisappear" => {
                 self.contexts.remove(&context);
+                self.sync_social();
             }
             "keyDown" => self.on_press(&context, false),
             "dialDown" => self.on_press(&context, true),
@@ -773,7 +793,11 @@ impl Plugin {
             Act::Camera => self.call(Some(context), "TOGGLE_VIDEO", json!({})),
             Act::Screenshare => self.call(Some(context), "TOGGLE_SCREENSHARE", json!({})),
             Act::Soundboard => self.play_sound(context, inst.text("sound")),
-            Act::Status => self.set_online_status(context, &inst.mode("dnd")),
+            Act::Status => {
+                let primary = social::status_code(&inst.mode("dnd"));
+                let alternate = social::status_code(&inst.text("toggle"));
+                self.press_status(context, primary, alternate);
+            }
             Act::AudioDevice => {
                 let target = target_of(inst);
                 match find_device(&self.voice, target, &inst.text("device")) {
@@ -894,25 +918,55 @@ impl Plugin {
         self.refresh_all();
     }
 
-    fn set_online_status(&self, context: &str, status: &str) {
-        let Some(code) = social::status_code(status) else {
+    /// Keeps one Social SDK connection while status keys exist and a token
+    /// is saved; passes refreshed tokens on.
+    fn sync_social(&mut self) {
+        let token = self.global_str("accessToken");
+        let wanted = !token.is_empty() && self.contexts.values().any(|i| i.act == Act::Status);
+        match (&self.social, wanted) {
+            (Some(social), true) => social.set_token(token),
+            (None, true) => {
+                let tx = self.tx.clone();
+                self.social = Some(social::Social::start(token, move |event| {
+                    tx.send(Msg::Social(event)).ok();
+                }));
+            }
+            (Some(_), false) => {
+                self.social = None;
+                self.online_status = None;
+                self.refresh_all();
+            }
+            (None, false) => {}
+        }
+    }
+
+    fn press_status(&mut self, context: &str, primary: Option<i32>, alternate: Option<i32>) {
+        let (Some(primary), Some(social)) = (primary, &self.social) else {
             return self.alert(context);
         };
-        let (token, tx, context) = (
-            self.global_str("accessToken"),
-            self.tx.clone(),
-            context.to_owned(),
-        );
-        tokio::task::spawn_blocking(move || {
-            if let Err(err) = social::set_online_status(&token, code) {
-                let hint = "falls schon länger verbunden: einmal „Abmelden“ und neu verbinden";
-                tx.send(Msg::CallFailed(
-                    Some(context),
-                    format!("Status: {err:#} ({hint})"),
-                ))
-                .ok();
+        let target = social::press_target(primary, alternate, self.online_status);
+        social.set_status(target);
+    }
+
+    fn on_social(&mut self, event: social::Event) {
+        match event {
+            social::Event::Status(status) => self.online_status = Some(status),
+            social::Event::Failed(err) => {
+                if err.contains("SDK fehlt") {
+                    self.log(format!("Status: {err}"));
+                } else {
+                    let hint = "falls schon länger verbunden: einmal „Abmelden“ und neu verbinden";
+                    self.log(format!("Status: {err} ({hint})"));
+                }
+                self.online_status = None;
+                for (context, inst) in &self.contexts {
+                    if inst.act == Act::Status {
+                        self.alert(context);
+                    }
+                }
             }
-        });
+        }
+        self.refresh_all();
     }
 
     fn play_sound(&self, context: &str, wanted: String) {
@@ -977,6 +1031,7 @@ impl Plugin {
                 }
             }
             Msg::CallFailed(context, error) => self.on_call_failed(context, error),
+            Msg::Social(event) => self.on_social(event),
         }
     }
 }
