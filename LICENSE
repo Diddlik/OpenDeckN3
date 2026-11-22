@@ -673,3 +673,13 @@ the library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.  But first, please read
 <https://www.gnu.org/licenses/why-not-lgpl.html>.
 
+
+                     ADDITIONAL PERMISSION UNDER GNU GPL VERSION 3 SECTION 7
+
+  If you modify this Program, or any covered work, by linking or combining
+it with the Discord Social SDK (or a modified version of that library),
+containing parts covered by the terms of the Discord Social SDK Terms, the
+licensors of this Program grant you additional permission to convey the
+resulting work. Corresponding Source for a non-source form of such a
+combination shall not include the source code for the parts of the Discord
+Social SDK used as well as that of the covered work.

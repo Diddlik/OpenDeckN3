@@ -90,8 +90,21 @@ jobs:
 
       - name: Pakete zusammenstellen
         shell: pwsh
+        env:
+          # Proprietäres Discord Social SDK (nur für „Online-Status setzen“), nicht im Repository.
+          DISCORD_SOCIAL_SDK_URL: ${{ secrets.DISCORD_SOCIAL_SDK_URL }}
+          DISCORD_SOCIAL_SDK_SHA256: ${{ secrets.DISCORD_SOCIAL_SDK_SHA256 }}
         run: |
           $v = "${{ steps.version.outputs.version }}"
+          $socialSdk = $null
+          if ($env:DISCORD_SOCIAL_SDK_URL) {
+            $socialSdk = "$env:RUNNER_TEMP\discord_partner_sdk.dll"
+            Invoke-WebRequest $env:DISCORD_SOCIAL_SDK_URL -OutFile $socialSdk
+            $hash = (Get-FileHash $socialSdk -Algorithm SHA256).Hash
+            if ($hash -ne $env:DISCORD_SOCIAL_SDK_SHA256) { throw "Discord Social SDK: Prüfsumme stimmt nicht" }
+          } else {
+            Write-Warning "Discord Social SDK nicht konfiguriert – Online-Status-Aktion ohne SDK"
+          }
           # target/ kommt teils aus dem Cache – keine alten Pakete mitveröffentlichen.
           Remove-Item -Recurse -Force target\installer, target\portable -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force target\installer | Out-Null
@@ -125,6 +138,7 @@ jobs:
             New-Item -ItemType Directory -Force $dir | Out-Null
             Copy-Item -Recurse "plugins\$p\$uuid.sdPlugin\*" $dir
             Copy-Item "target\release\opendeckn3-$p.exe" $dir
+            if ($p -eq "discord" -and $socialSdk) { Copy-Item $socialSdk $dir }
             # Textersetzung statt JSON-Rundreise (PowerShell verändert sonst verschachtelte Arrays).
             $m = Get-Content "$dir\manifest.json" -Raw -Encoding utf8
             $m = $m -replace '"Version":\s*"[^"]*"', ('"Version": "' + $v + '"')

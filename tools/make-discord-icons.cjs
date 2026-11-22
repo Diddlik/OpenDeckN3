@@ -49,6 +49,7 @@ const ICONS = {
   'ptt-on': [ON, '<rect x="9.5" y="5" width="5" height="9" rx="2.5"/><path d="M17 11.5a5 5 0 0 1-10 0M12 16.5V19"/><circle cx="12" cy="12" r="10.5"/>'],
   voicemode: [NORMAL, WAVE],
   'voicemode-ptt': [NORMAL, KEYBOARD],
+  status: [NORMAL, USER + '<circle cx="18.5" cy="18.5" r="3" fill="currentColor" stroke="none"/>'],
 };
 
 (async () => {

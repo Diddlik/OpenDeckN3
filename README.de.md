@@ -126,7 +126,7 @@ Und das Beste: Jede Taste zeigt auf dem Display, was sie tut – mit dem echten 
 - [x] Sperrtaste: gedrückt halten sperrt das Deck auf allen Seiten und Profilen, erneut halten entsperrt es
 - [x] Eingebaut: Tastenkürzel, Lautstärke, Medien, Programme, Websites, Befehle, Text
 - [x] Plugins per Klick installieren – aus Datei oder direkt aus GitHub-Releases
-- [x] Discord-Plugin: Mikro, Kopfhörer, Kanäle, Lautstärken, Soundboard, Kamera, Bildschirmfreigabe
+- [x] Discord-Plugin: Mikro, Kopfhörer, Kanäle, Lautstärken, Soundboard, Kamera, Bildschirmfreigabe, Online-Status
 - [x] OBS-Studio-Plugin: Aufnahme mit Laufzeit, Stream, Szenen, Quellen, Filter, Audio, Makros
 - [x] Home-Assistant-Plugin: Webhooks, Dienste, Schalter, Dimmer, Zustände
 - [x] AudioSwitcher-Plugin: Lautsprecher, Headset und Mikro auf einen Druck wechseln – die Taste zeigt das aktive Profil, dazu eine Taste zum Stummschalten des Mikrofons

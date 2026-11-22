@@ -17,12 +17,14 @@ const BASE_SCOPES: [&str; 5] = [
     "rpc.voice.write",
     "rpc.notifications.read",
 ];
-/// Camera and screen share; Discord may refuse them for unapproved apps.
-const EXTRA_SCOPES: [&str; 4] = [
+/// Camera, screen share and online status (Social SDK); Discord may refuse
+/// them for unapproved apps.
+const EXTRA_SCOPES: [&str; 5] = [
     "rpc.video.read",
     "rpc.video.write",
     "rpc.screenshare.read",
     "rpc.screenshare.write",
+    crate::social::SCOPE,
 ];
 
 #[derive(Clone, Debug, Default, PartialEq)]

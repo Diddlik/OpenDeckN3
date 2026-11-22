@@ -6,6 +6,7 @@
 
 mod auth;
 mod ipc;
+mod social;
 
 use std::{collections::HashMap, time::Duration};
 
@@ -49,6 +50,7 @@ enum Act {
     Screenshare,
     PushToTalk,
     VoiceMode,
+    Status,
 }
 
 impl Act {
@@ -67,6 +69,7 @@ impl Act {
             "screenshare" => Self::Screenshare,
             "pushtotalk" => Self::PushToTalk,
             "voicemode" => Self::VoiceMode,
+            "status" => Self::Status,
             _ => return None,
         })
     }
@@ -560,7 +563,7 @@ impl Plugin {
                 on(self.voice["mode"]["type"] == "PUSH_TO_TALK"),
                 String::new(),
             ),
-            Act::TextChannel | Act::Soundboard => (0, String::new()),
+            Act::TextChannel | Act::Soundboard | Act::Status => (0, String::new()),
         }
     }
 
@@ -770,6 +773,7 @@ impl Plugin {
             Act::Camera => self.call(Some(context), "TOGGLE_VIDEO", json!({})),
             Act::Screenshare => self.call(Some(context), "TOGGLE_SCREENSHARE", json!({})),
             Act::Soundboard => self.play_sound(context, inst.text("sound")),
+            Act::Status => self.set_online_status(context, &inst.mode("dnd")),
             Act::AudioDevice => {
                 let target = target_of(inst);
                 match find_device(&self.voice, target, &inst.text("device")) {
@@ -888,6 +892,27 @@ impl Plugin {
             json!({ "user_id": user, "volume": volume }),
         );
         self.refresh_all();
+    }
+
+    fn set_online_status(&self, context: &str, status: &str) {
+        let Some(code) = social::status_code(status) else {
+            return self.alert(context);
+        };
+        let (token, tx, context) = (
+            self.global_str("accessToken"),
+            self.tx.clone(),
+            context.to_owned(),
+        );
+        tokio::task::spawn_blocking(move || {
+            if let Err(err) = social::set_online_status(&token, code) {
+                let hint = "falls schon länger verbunden: einmal „Abmelden“ und neu verbinden";
+                tx.send(Msg::CallFailed(
+                    Some(context),
+                    format!("Status: {err:#} ({hint})"),
+                ))
+                .ok();
+            }
+        });
     }
 
     fn play_sound(&self, context: &str, wanted: String) {

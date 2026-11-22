@@ -126,7 +126,7 @@ And the best part: every key shows on its display what it does – with the real
 - [x] Lock key: hold it to lock the deck on every page and profile, hold again to unlock
 - [x] Built in: hotkeys, volume, media, programs, websites, commands, text
 - [x] One-click plugin install – from a file or straight from GitHub releases
-- [x] Discord plugin: mic, headphones, channels, volumes, soundboard, camera, screen share
+- [x] Discord plugin: mic, headphones, channels, volumes, soundboard, camera, screen share, online status
 - [x] OBS Studio plugin: recording with timer, stream, scenes, sources, filters, audio, macros
 - [x] Home Assistant plugin: webhooks, services, switches, dimmers, states
 - [x] AudioSwitcher plugin: switch speakers, headset, and mic with one press – the key shows the active profile, plus a microphone mute key

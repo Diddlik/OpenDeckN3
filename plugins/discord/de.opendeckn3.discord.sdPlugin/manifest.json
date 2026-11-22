@@ -3,7 +3,7 @@
   "Name": "Discord",
   "Author": "OpenDeckN3",
   "Version": "0.1.0",
-  "Description": "Steuert die Discord-App: Mikro und Kopfhörer stumm, Kanäle, Lautstärken, Soundboard, Kamera, Bildschirmfreigabe. Verbinden mit einem Klick unter „Einstellungen“ – Server, Kanäle, Personen und Sounds zum Auswählen.",
+  "Description": "Steuert die Discord-App: Mikro und Kopfhörer stumm, Kanäle, Lautstärken, Soundboard, Kamera, Bildschirmfreigabe, Online-Status. Verbinden mit einem Klick unter „Einstellungen“ – Server, Kanäle, Personen und Sounds zum Auswählen.",
   "Category": "Discord",
   "Icon": "imgs/plugin",
   "CodePathWin": "opendeckn3-discord.exe",
@@ -531,6 +531,46 @@
         },
         {
           "Image": "imgs/voicemode-ptt"
+        }
+      ]
+    },
+    {
+      "UUID": "de.opendeckn3.discord.status",
+      "Name": "Online-Status setzen",
+      "Tooltip": "Setzt deinen Discord-Status (Online, Abwesend, Bitte nicht stören, Unsichtbar)",
+      "Icon": "imgs/status",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/status"
+        }
+      ],
+      "SettingsSchema": [
+        {
+          "type": "select",
+          "key": "mode",
+          "label": "Status",
+          "options": [
+            [
+              "online",
+              "Online"
+            ],
+            [
+              "idle",
+              "Abwesend"
+            ],
+            [
+              "dnd",
+              "Bitte nicht stören"
+            ],
+            [
+              "invisible",
+              "Unsichtbar"
+            ]
+          ],
+          "default": "dnd"
         }
       ]
     }
