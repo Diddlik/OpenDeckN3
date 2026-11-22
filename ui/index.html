@@ -1149,13 +1149,13 @@ function inspectorHTML() {
     ${p && p.connected && p.globalSettingsSchema ? pluginStatusHTML(p) : ''}
     <section><h3>Darstellung</h3>
       <label>Titel<input class="field" data-in="title" value="${esc(s.title ?? '')}" placeholder="Kein Titel auf der Taste"></label>
-      ${isDisplay ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px">
+      ${isDisplay && f && f.a.states > 2 ? stateImagesHTML(s, f.a) : isDisplay ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px">
         ${preview ? `<span class="tile" style="width:56px;height:56px;border-radius:10px;overflow:hidden"><img src="${esc(preview)}" alt="Aktuelles Tastenbild"></span>` : tileHTML(s.plugin, s.action, f && f.a.icon, 56, 24, 10, kindOf(s))}
         <button type="button" class="btn" data-act="pickImage" data-arg="image">${ic('image', 16)}Bild wählen</button>
         <button type="button" class="btn" data-act="iconPick" data-arg="image">${ic('grip', 16)}Icon wählen</button>
         <button type="button" class="btn ghost" data-act="resetImage" data-arg="image" ${s.image ? '' : 'disabled'}>Zurücksetzen</button>
       </div>` : ''}
-      ${isDisplay && f && f.a.states > 1 ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px">
+      ${isDisplay && f && f.a.states === 2 ? `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px">
         <span class="tile" style="width:56px;height:56px;border-radius:10px;overflow:hidden">${s.activeImage ? `<img src="${esc(s.activeImage)}" alt="Bild für aktiv">` : ''}</span>
         <span style="font-size:13px;color:var(--muted)">Aktiv</span>
         <button type="button" class="btn" data-act="pickImage" data-arg="activeImage">${ic('image', 16)}Bild wählen</button>
@@ -1166,6 +1166,28 @@ function inspectorHTML() {
     <section><div style="display:flex;justify-content:space-between;align-items:baseline"><h3>Einstellungen</h3>${isProfile ? '' : `<button type="button" class="linkbtn" data-act="jsonMode" aria-pressed="${S.json}">${S.json ? 'Felder' : '{ } JSON'}</button>`}</div>${settingsEditorHTML(s)}</section>
     <section class="danger"><h3>Gefahrbereich</h3><button type="button" class="btn danger" data-act="clear">${ic('trash', 16)}Belegung entfernen</button></section>
   </aside>`;
+}
+
+// One image per state, for actions with more than two states (e.g. an online status).
+function stateImagesHTML(s, a) {
+  return Array.from({ length: a.states }, (_, i) => {
+    const img = (s.stateImages || {})[i], key = `state:${i}`;
+    const label = (a.stateNames || [])[i] || `Zustand ${i + 1}`;
+    return `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px">
+        <span class="tile" style="width:56px;height:56px;border-radius:10px;overflow:hidden">${img ? `<img src="${esc(img)}" alt="Bild für ${esc(label)}">` : ''}</span>
+        <span style="font-size:13px;color:var(--muted);min-width:96px">${esc(label)}</span>
+        <button type="button" class="btn" data-act="pickImage" data-arg="${key}">${ic('image', 16)}Bild wählen</button>
+        <button type="button" class="btn" data-act="iconPick" data-arg="${key}">${ic('grip', 16)}Icon wählen</button>
+        <button type="button" class="btn ghost" data-act="resetImage" data-arg="${key}" ${img ? '' : 'disabled'}>Zurücksetzen</button>
+      </div>`;
+  }).join('');
+}
+// `key` is `image`, `activeImage` or `state:<index>`.
+function setSlotImage(s, key, value) {
+  if (!key.startsWith('state:')) { s[key] = value; return; }
+  const images = { ...(s.stateImages || {}) }, i = key.slice(6);
+  if (value) images[i] = value; else delete images[i];
+  s.stateImages = images;
 }
 
 function editorHTML() {
@@ -1806,7 +1828,7 @@ function clearSlot(id) {
 }
 // Änderungen sofort lokal zeigen, Senden gebündelt.
 const postSettings = debounce((id, settings) => api.run('setActionSettings', { ...slotParams(id), settings }).catch(() => {}), 350);
-const appearance = (id, s) => ({ ...slotParams(id), title: s.title, image: s.image, activeImage: s.activeImage });
+const appearance = (id, s) => ({ ...slotParams(id), title: s.title, image: s.image, activeImage: s.activeImage, stateImages: s.stateImages || {} });
 const postAppearance = debounce((id, s) => api.run('setActionAppearance', appearance(id, s)).catch(() => {}), 350);
 const sendSettings = (id, settings) => { remember([id], true); postSettings(id, settings); };
 const sendAppearance = (id, s) => { remember([id], true); postAppearance(id, s); };
@@ -2009,7 +2031,7 @@ const ACTS = {
     i.onchange = async () => {
       const file = i.files[0]; const s = slot(S.sel); if (!file || !s) return;
       try {
-        s[key] = await imageToDataUrl(file);
+        setSlotImage(s, key, await imageToDataUrl(file));
         remember([S.sel]);
         await api.run('setActionAppearance', appearance(S.sel, s));
         toast('ok', `Bild „${file.name}“ übernommen`);
@@ -2018,7 +2040,7 @@ const ACTS = {
     i.click();
   },
   resetImage(key) {
-    const s = slot(S.sel); if (!s) return; s[key] = null;
+    const s = slot(S.sel); if (!s) return; setSlotImage(s, key, null);
     remember([S.sel]);
     api.run('setActionAppearance', appearance(S.sel, s)).then(() => toast('ok', 'Standardbild wiederhergestellt')).catch(() => {});
   },
@@ -2119,7 +2141,7 @@ const ACTS = {
     const s = slot(S.sel), hit = ICONLIB.find(([n]) => n === name); if (!s || !hit) return;
     const { fg, bg, key } = S.modal; S.modal = null; renderOverlay();
     try {
-      s[key] = await iconImage(hit[2], fg, bg);
+      setSlotImage(s, key, await iconImage(hit[2], fg, bg));
       remember([S.sel]);
       await api.run('setActionAppearance', appearance(S.sel, s));
       toast('ok', `Icon „${name}“ übernommen`);

@@ -78,6 +78,9 @@ pub struct ActionState {
     pub image: String,
     #[serde(default)]
     pub title: Option<String>,
+    /// Label for the state in the app's per-state image picker.
+    #[serde(default)]
+    pub name: Option<String>,
 }
 
 impl PluginManifest {

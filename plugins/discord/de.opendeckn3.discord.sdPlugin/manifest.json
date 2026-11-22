@@ -544,19 +544,24 @@
       ],
       "States": [
         {
-          "Image": "imgs/status"
+          "Image": "imgs/status",
+          "Name": "Unbekannt"
         },
         {
-          "Image": "imgs/status-online"
+          "Image": "imgs/status-online",
+          "Name": "Online"
         },
         {
-          "Image": "imgs/status-idle"
+          "Image": "imgs/status-idle",
+          "Name": "Abwesend"
         },
         {
-          "Image": "imgs/status-dnd"
+          "Image": "imgs/status-dnd",
+          "Name": "Bitte nicht stören"
         },
         {
-          "Image": "imgs/status-invisible"
+          "Image": "imgs/status-invisible",
+          "Name": "Unsichtbar"
         }
       ],
       "SettingsSchema": [

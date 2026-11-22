@@ -26,6 +26,13 @@ pub struct ActionInstance {
     /// User image for every state other than the first (e.g. "on"); falls back to `image`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub active_image: Option<String>,
+    /// User image per state (index as string, e.g. `"2"` → data URL) for
+    /// actions with more than two states. When set, every state shows only its
+    /// own image or the plugin's, without falling back to `image`/`active_image`.
+    /// String keys: instances also travel inside tagged API enums, which do not
+    /// convert JSON keys to numbers.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub state_images: BTreeMap<String, String>,
 }
 
 fn empty_object() -> Value {
@@ -42,11 +49,19 @@ impl ActionInstance {
             title: None,
             image: None,
             active_image: None,
+            state_images: BTreeMap::new(),
         }
     }
 
-    /// User image for the current state: `active_image` in every state but the first.
+    /// User image for the current state: `state_images` if any are set,
+    /// otherwise `active_image` in every state but the first.
     pub fn user_image(&self) -> Option<&str> {
+        if !self.state_images.is_empty() {
+            return self
+                .state_images
+                .get(&self.state.to_string())
+                .map(String::as_str);
+        }
         match self.state {
             0 => self.image.as_deref(),
             _ => self.active_image.as_deref().or(self.image.as_deref()),
@@ -203,6 +218,24 @@ mod tests {
         assert_eq!(instance.user_image(), Some("on"));
         instance.state = 0;
         assert_eq!(instance.user_image(), Some("off"));
+    }
+
+    #[test]
+    fn state_images_replace_fallbacks() {
+        let mut instance = ActionInstance::new("p", "a");
+        instance.image = Some("base".into());
+        instance.state_images.insert("2".into(), "two".into());
+        instance.state = 2;
+        assert_eq!(instance.user_image(), Some("two"));
+        instance.state = 1;
+        assert_eq!(instance.user_image(), None);
+        instance.state = 0;
+        assert_eq!(instance.user_image(), None);
+
+        let json = serde_json::to_string(&instance).unwrap();
+        assert!(json.contains(r#""stateImages":{"2":"two"}"#), "{json}");
+        let back: ActionInstance = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, instance);
     }
 
     #[test]

@@ -46,6 +46,8 @@ de.example.myplugin.sdPlugin/
 - `CodePath*`: plattformspezifischer Pfad hat Vorrang. Endung `.js/.mjs/.cjs` → Start mit `node`,
   `.py` → `python3`, sonst direkt ausführbar.
 - `Controllers`: Standard `["Keypad"]`.
+- `States[].Name`: optionale Bezeichnung des Zustands. Bei mehr als zwei Zuständen wählt der Nutzer in der App ein Bild
+  je Zustand und sieht dort diese Namen.
 
 ### Einstellungsformulare (OpenDeckN3-Erweiterung)
 

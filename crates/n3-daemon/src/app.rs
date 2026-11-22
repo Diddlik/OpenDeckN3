@@ -1440,11 +1440,13 @@ impl App {
                 title,
                 image,
                 active_image,
+                state_images,
             } => {
                 self.update_instance(&device, controller, position, |i| {
                     i.title = title;
                     i.image = image;
                     i.active_image = active_image;
+                    i.state_images = state_images;
                 })?;
                 if controller == Controller::Keypad {
                     self.redraw_key(&device, position).await;
@@ -1711,6 +1713,7 @@ impl App {
                         "controllers": a.controllers,
                         "settingsSchema": a.settings_schema,
                         "states": a.states.len(),
+                        "stateNames": a.states.iter().map(|s| s.name.clone()).collect::<Vec<_>>(),
                         "icon": render::load_icon(&plugin.path, &a.icon)
                             .and_then(|i| render::to_png_data_url(&i).ok()),
                     })

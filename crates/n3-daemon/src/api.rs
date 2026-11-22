@@ -123,6 +123,9 @@ pub enum ApiCommand {
         /// Image for states other than the first; `null` = same as `image`.
         #[serde(default, rename = "activeImage")]
         active_image: Option<String>,
+        /// Image per state index (`"2"`) for actions with more than two states.
+        #[serde(default, rename = "stateImages")]
+        state_images: std::collections::BTreeMap<String, String>,
     },
     SetBrightness {
         device: String,
