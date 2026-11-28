@@ -169,6 +169,10 @@ GitHub-Release über **Plugins → Katalog**. Wie man ein Plugin auf GitHub ver�
 Bei einem Update beendet der Dienst den alten Prozess, ersetzt den Ordner und startet die neue Version; danach
 bekommt das Plugin wie gewohnt `willAppear` für seine Belegungen.
 
+Endet ein Plugin-Prozess mit Fehler (Exit-Code ≠ 0 oder Absturz), startet der Dienst ihn nach etwa einer Sekunde
+neu. Stürzt er dreimal hintereinander innerhalb einer Minute nach dem Start ab, gibt der Dienst auf und schreibt
+das ins Log. Ein Plugin, das sich mit Exit-Code 0 beendet, bleibt beendet.
+
 ## Noch nicht unterstützt
 
 `sendToPropertyInspector`, `sendToPlugin`, `setFeedback`, `setFeedbackLayout`, `switchToProfile`,

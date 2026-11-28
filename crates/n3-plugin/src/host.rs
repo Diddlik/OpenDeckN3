@@ -6,6 +6,7 @@ use std::{
     path::{Path, PathBuf},
     process::Stdio,
     sync::Arc,
+    time::{Duration, Instant},
 };
 
 use anyhow::Context;
@@ -191,6 +192,72 @@ impl PluginHost {
     }
 
     async fn launch(&self, plugin: &InstalledPlugin, info: &Value) -> anyhow::Result<()> {
+        let pid = self.spawn(plugin, info).await?;
+        tokio::spawn(self.clone().supervise(plugin.uuid.clone(), pid));
+        Ok(())
+    }
+
+    /// Restarts the plugin when its process ends with an error. Stops once
+    /// the process was stopped or replaced, or after repeated crashes right
+    /// after start, so a broken plugin does not restart forever.
+    async fn supervise(self, uuid: String, mut pid: Option<u32>) {
+        const POLL: Duration = Duration::from_secs(1);
+        const STABLE: Duration = Duration::from_secs(60);
+        const MAX_QUICK_CRASHES: u32 = 3;
+        let mut started = Instant::now();
+        let mut quick_crashes = 0;
+        loop {
+            tokio::time::sleep(POLL).await;
+            let status = {
+                let mut children = self.inner.children.lock().await;
+                let Some(child) = children.get_mut(&uuid).filter(|c| c.id() == pid) else {
+                    return;
+                };
+                match child.try_wait() {
+                    Ok(None) => continue,
+                    Ok(Some(status)) => status,
+                    Err(err) => {
+                        tracing::warn!(plugin = %uuid, %err, "cannot query plugin process");
+                        return;
+                    }
+                }
+            };
+            self.inner.children.lock().await.remove(&uuid);
+            if status.success() {
+                tracing::info!(plugin = %uuid, "plugin exited");
+                return;
+            }
+            quick_crashes = if started.elapsed() < STABLE {
+                quick_crashes + 1
+            } else {
+                1
+            };
+            if quick_crashes > MAX_QUICK_CRASHES {
+                tracing::error!(plugin = %uuid, %status, "plugin keeps crashing, not restarting");
+                return;
+            }
+            tracing::warn!(plugin = %uuid, %status, "plugin crashed, restarting");
+            let (Some(plugin), info) = (
+                self.get(&uuid).await,
+                self.inner.app_info.read().await.clone(),
+            ) else {
+                return;
+            };
+            match self.spawn(&plugin, &info).await {
+                Ok(new_pid) => {
+                    pid = new_pid;
+                    started = Instant::now();
+                }
+                Err(err) => {
+                    tracing::error!(plugin = %uuid, %err, "failed to restart plugin");
+                    return;
+                }
+            }
+        }
+    }
+
+    /// Starts the plugin process and returns its PID.
+    async fn spawn(&self, plugin: &InstalledPlugin, info: &Value) -> anyhow::Result<Option<u32>> {
         let code_path = plugin
             .manifest
             .code_path_for_current_os()
@@ -234,7 +301,8 @@ impl PluginHost {
         let mut child = command
             .spawn()
             .with_context(|| format!("spawning {}", full_path.display()))?;
-        tracing::info!(plugin = %plugin.uuid, pid = child.id(), "plugin started");
+        let pid = child.id();
+        tracing::info!(plugin = %plugin.uuid, pid, "plugin started");
         if let Some(out) = child.stdout.take() {
             tokio::spawn(log_lines(plugin.uuid.clone(), out));
         }
@@ -246,7 +314,7 @@ impl PluginHost {
             .lock()
             .await
             .insert(plugin.uuid.clone(), child);
-        Ok(())
+        Ok(pid)
     }
 
     /// Stops all plugin processes.
@@ -376,4 +444,45 @@ pub fn plugin_uuid(manifest: &PluginManifest, dir: &Path) -> String {
         let name = dir.file_name().unwrap_or_default().to_string_lossy();
         name.trim_end_matches(".sdPlugin").to_owned()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A plugin that logs each start and crashes at once is restarted until
+    /// the quick-crash limit stops it.
+    #[tokio::test]
+    async fn restarts_crashed_plugin_until_limit() {
+        let dir = std::env::temp_dir().join(format!("n3-crash-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("manifest.json"),
+            r#"{ "Name": "Crash", "UUID": "test.crash", "Version": "1.0.0",
+                 "CodePath": "crash.js", "Actions": [] }"#,
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("crash.js"),
+            "require('fs').appendFileSync('starts.txt', 'x'); process.exit(1);",
+        )
+        .unwrap();
+
+        let (tx, _rx) = mpsc::channel(16);
+        let host = PluginHost::start(0, tx).await.unwrap();
+        let plugin = host.add(&dir).await.unwrap();
+        host.launch_all(&Value::Null).await;
+        assert_eq!(plugin.uuid, "test.crash");
+
+        let starts = || std::fs::read_to_string(dir.join("starts.txt")).unwrap_or_default();
+        for _ in 0..30 {
+            if starts().len() >= 4 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
+        tokio::time::sleep(Duration::from_secs(3)).await;
+        assert_eq!(starts().len(), 4, "1 start + 3 restarts");
+        std::fs::remove_dir_all(&dir).ok();
+    }
 }

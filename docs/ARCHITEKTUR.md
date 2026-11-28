@@ -173,5 +173,4 @@ Alle binden nur an `127.0.0.1` und sind per CLI änderbar (`--plugin-port`, `--a
 ## Offene technische Punkte
 
 - SVG-Bilder von Plugins werden noch nicht unterstützt.
-- Plugin-Prozesse werden nach Absturz nicht automatisch neu gestartet.
 - Physische Lage der Drehregler/Tasten am Gerät mit echter Hardware verifizieren (siehe Gerätedoku).
