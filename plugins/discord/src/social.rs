@@ -5,7 +5,10 @@
 //!
 //! A worker thread keeps one SDK connection open so status keys follow
 //! changes made in Discord itself (reconnecting per poll would hit Discord's
-//! connection limits).
+//! connection limits). The worker lives as long as the process: the SDK keeps
+//! callback pointers and runs callbacks of every client from any thread that
+//! calls `Discord_RunCallbacks`, so tearing a worker down and starting another
+//! one crashed the plugin.
 
 use std::ffi::c_void;
 use std::sync::OnceLock;
@@ -149,9 +152,10 @@ pub enum Event {
 enum Cmd {
     Token(String),
     Set(i32),
+    Stop,
 }
 
-/// Handle to the worker; dropping it disconnects.
+/// Handle to the worker; `stop` disconnects, `set_token` connects again.
 pub struct Social {
     cmd: Sender<Cmd>,
 }
@@ -172,6 +176,10 @@ impl Social {
 
     pub fn set_status(&self, status: i32) {
         self.cmd.send(Cmd::Set(status)).ok();
+    }
+
+    pub fn stop(&self) {
+        self.cmd.send(Cmd::Stop).ok();
     }
 }
 
@@ -284,15 +292,29 @@ impl<R: Fn(Event)> Worker<R> {
 
     fn run(mut self, mut token: String, rx: mpsc::Receiver<Cmd>) {
         self.sign_in(&token);
+        let mut active = true;
         let mut polled = Instant::now();
         loop {
             match rx.recv_timeout(Duration::from_millis(20)) {
-                Ok(Cmd::Token(fresh)) if fresh != token => {
+                Ok(Cmd::Token(fresh)) if fresh != token || !active => {
                     token = fresh;
-                    unsafe { (self.api.disconnect)(&mut self.client) };
+                    if active {
+                        unsafe { (self.api.disconnect)(&mut self.client) };
+                    }
+                    active = true;
                     self.sign_in(&token);
                 }
                 Ok(Cmd::Token(_)) => {}
+                Ok(Cmd::Stop) if active => {
+                    active = false;
+                    self.ready = false;
+                    self.connecting = false;
+                    self.pending = None;
+                    self.reported = None;
+                    unsafe { (self.api.disconnect)(&mut self.client) };
+                }
+                Ok(Cmd::Stop) => {}
+                Ok(Cmd::Set(_)) if !active => {}
                 Ok(Cmd::Set(status)) if self.ready => self.set(status),
                 Ok(Cmd::Set(status)) => {
                     self.pending = Some(status);

@@ -931,10 +931,11 @@ impl Plugin {
                     tx.send(Msg::Social(event)).ok();
                 }));
             }
-            (Some(_), false) => {
-                self.social = None;
-                self.online_status = None;
-                self.refresh_all();
+            (Some(social), false) => {
+                social.stop();
+                if self.online_status.take().is_some() {
+                    self.refresh_all();
+                }
             }
             (None, false) => {}
         }
@@ -944,6 +945,9 @@ impl Plugin {
         let (Some(primary), Some(social)) = (primary, &self.social) else {
             return self.alert(context);
         };
+        if self.global_str("accessToken").is_empty() {
+            return self.alert(context);
+        }
         let target = social::press_target(primary, alternate, self.online_status);
         social.set_status(target);
     }
